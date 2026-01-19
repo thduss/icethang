@@ -11,7 +11,7 @@ public class OAuth2UserInfoFactory {
         if (AuthProvider.KAKAO.name().equalsIgnoreCase(registrationId)) {
             return new KakaoOAuth2UserInfo(attributes);
         }
-        // 나중에 NAVER, GOOGLE 추가 시 여기에 else if 추가
+        // 나중에 NAVER 추가 시 여기에 else if 추가
         throw new OAuth2AuthenticationException("Sorry! Login with " + registrationId + " is not supported yet.");
     }
 }

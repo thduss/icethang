@@ -11,8 +11,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Getter
-@MappedSuperclass
+@MappedSuperclass // 컬럼만 준다
 @EntityListeners(AuditingEntityListener.class)
+// JPA Auditing
 public class BaseEntity {
     @CreatedDate
     @Column(name = "created_at", updatable = false)

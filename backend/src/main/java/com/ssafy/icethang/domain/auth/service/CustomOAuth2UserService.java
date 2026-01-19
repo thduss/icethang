@@ -84,14 +84,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
         auth.setTeacherName(userInfo.getName());
         auth.setEmail(userInfo.getEmail());
         auth.setSchoolId(0); // 기본값
-        // auth.setImageUrl(userInfo.getImageUrl()); // Auth 엔티티에 이미지 필드 있으면 추가
 
         return authRepository.save(auth);
     }
 
     private Auth updateExistingUser(Auth existingAuth, OAuth2UserInfo userInfo) {
         existingAuth.setTeacherName(userInfo.getName());
-        // existingAuth.setImageUrl(userInfo.getImageUrl());
         return authRepository.save(existingAuth);
     }
 }
