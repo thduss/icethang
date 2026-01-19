@@ -1,4 +1,55 @@
 package com.ssafy.icethang.global.config;
 
+import com.ssafy.icethang.domain.auth.service.CustomOAuth2UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+// url 권한 관리, OAuth2 설정
+// 로그인 성공하면 CustomOAuth2UserService 호출 -> DB 저장
 public class SecurityConfig {
+    private final CustomOAuth2UserService customOAuth2UserService;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                // 1. CSRF 보안 끄기
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // 2. Form 로그인 & Basic 인증 끄기 (우리는 소셜 로그인만 할때)
+                // 나중에 통합 로그인시 다시 찾아보기
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+
+                // 3. 세션 설정 (나중에 JWT 쓸거면 STATELESS로 바꾸지만, 일단은 기본값 사용)
+                // .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // 4. 권한 설정 (누가 어디를 갈 수 있는지)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
+                        .requestMatchers("/login/**", "/oauth2/**").permitAll() // 로그인 관련 URL 허용
+                        .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
+                )
+
+                // 5. 소셜 로그인 설정
+                .oauth2Login(oauth2 -> oauth2
+                                // 로그인 성공 시 이동할 페이지
+                                .defaultSuccessUrl("/")
+
+                                // 사용자 정보 가져오는 설정
+                                .userInfoEndpoint(userInfo -> userInfo
+                                        .userService(customOAuth2UserService)
+                                )
+                        // 나중에 핸들러 추가시 여기 추가
+                );
+
+        return http.build();
+    }
 }
