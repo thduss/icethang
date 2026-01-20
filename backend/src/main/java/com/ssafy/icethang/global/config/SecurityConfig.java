@@ -1,12 +1,19 @@
 package com.ssafy.icethang.global.config;
 
 import com.ssafy.icethang.domain.auth.service.CustomOAuth2UserService;
+import com.ssafy.icethang.global.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -16,6 +23,20 @@ import org.springframework.security.web.SecurityFilterChain;
 // 로그인 성공하면 CustomOAuth2UserService 호출 -> DB 저장
 public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailsService); // 넌 이 서비스 써!
+        authProvider.setPasswordEncoder(passwordEncoderr()); // 넌 이 암호화 방식 써!
+        return authProvider;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -29,12 +50,13 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
 
                 // 3. 세션 설정 (나중에 JWT 쓸거면 STATELESS로 바꾸지만, 일단은 기본값 사용)
-                // .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // 4. 권한 설정 (누가 어디를 갈 수 있는지)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
                         .requestMatchers("/login/**", "/oauth2/**").permitAll() // 로그인 관련 URL 허용
+                        .requestMatchers("/auth/**", "/error").permitAll() // 로그인 로직 허용
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
                 )
 
@@ -49,7 +71,12 @@ public class SecurityConfig {
                                 )
                         // 나중에 핸들러 추가시 여기 추가
                 );
-
+        http.authenticationProvider(authenticationProvider());
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoderr() {
+        return new BCryptPasswordEncoder();
     }
 }
