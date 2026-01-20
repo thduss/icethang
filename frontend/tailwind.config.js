@@ -4,7 +4,14 @@ module.exports = {
 
   presets: [require('nativewind/preset')],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        yeogi: ['YeogiOttaeJalnan'],
+        netmarble: ['NetmarbleM'],
+        susukkang : ['Susukkang'],
+        boardmaker : ['Boardmaker'],
+    },
   },
   plugins: [],
-};
+}
+}
