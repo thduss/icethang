@@ -7,7 +7,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>로그인화면</Text>
+      <Text style={styles.title} className='font-yeogi'>로그인화면</Text>
       
       <Pressable 
         style={styles.button} 
