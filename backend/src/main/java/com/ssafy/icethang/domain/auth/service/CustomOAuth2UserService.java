@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -39,8 +40,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
     private OAuth2User processOAuth2User(OAuth2UserRequest userRequest, OAuth2User oAuth2User) {
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
+        // 네이버 response 태그 찾기 추가
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+        if ("naver".equals(registrationId)) {
+            attributes = (Map<String, Object>) attributes.get("response");
+        }
+
         // 1. Factory를 통해 카카오/네이버 등 구별 없이 정보 추출
-        OAuth2UserInfo userInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, oAuth2User.getAttributes());
+        OAuth2UserInfo userInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, attributes);
 
         if (userInfo.getEmail() == null || userInfo.getEmail().isEmpty()) {
             throw new OAuth2AuthenticationException("Email not found from OAuth2 provider");
