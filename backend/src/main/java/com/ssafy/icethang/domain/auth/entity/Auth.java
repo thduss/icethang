@@ -22,6 +22,8 @@ public class Auth extends BaseEntity {
     @Column(nullable = false)
     private String teacherName;
 
+    // 소셜로그인은 password 필요없으니까 null허용
+    @Column(nullable = true)
     private String password;
 
     @Column(nullable = false, length = 20)
