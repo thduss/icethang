@@ -1,5 +1,6 @@
 package com.ssafy.icethang.domain.auth.controller;
 
+import com.ssafy.icethang.domain.auth.dto.request.LoginRequest;
 import com.ssafy.icethang.domain.auth.dto.request.SignupRequest;
 import com.ssafy.icethang.domain.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,12 @@ public class AuthController {
 
     // 학생 로그인
     // 선생님 로그인
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
+        String token = authService.login(request);
+        // 토큰을 헤더에 넣을지 바디에 넣을지는 프론트랑 합의 (보통 바디나 헤더)
+        return ResponseEntity.ok(token);
+    }
 
     // 토큰 재발급
 }
