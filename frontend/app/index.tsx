@@ -1,26 +1,34 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useEffect } from 'react';
+import { Pressable, ImageBackground, StyleSheet, View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import "../global.css"
-export default function TitleScreen() {
+import "../global.css"; 
+
+export default function WelcomeScreen() {
   const router = useRouter();
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // ✅ 주소 변경! (폴더 구조에 맞게 수정)
+      router.replace('/screens/select'); 
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>메인화면</Text>
-       <Text className="text-xl font-bold text-blue-500">테일윈드 돌아가는지 체크좀하자</Text>
-      <Pressable 
-        style={styles.button} 
-        onPress={() => router.push('/screens/login')}
+    <Pressable style={{ flex: 1 }} onPress={() => router.replace('/screens/select')}>
+      <ImageBackground 
+        source={require('../assets/welcome.png')} 
+        style={styles.background}
+        resizeMode="cover"
       >
-        <Text style={styles.buttonText}>게임 시작</Text>
-      </Pressable>
-    </View>
+      </ImageBackground>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
-  title: { fontSize: 40, color: '#fff', fontWeight: 'bold', marginBottom: 50 },
-  button: { backgroundColor: '#4A90E2', paddingHorizontal: 40, paddingVertical: 15, borderRadius: 10 },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+  background: { flex: 1, width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  contentContainer: { alignItems: 'center', padding: 20 },
+  title: { fontSize: 80, fontWeight: '800', color: 'white', marginBottom: 20, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: {width: 2, height: 2}, textShadowRadius: 5 },
+  subtitle: { fontSize: 24, fontWeight: 'bold', color: 'white', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 3 }
 });
