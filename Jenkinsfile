@@ -7,6 +7,10 @@ pipeline {
         BACKEND_DIR = 'backend'
         IMAGE_NAME = 'icethang-backend-server'
         CONTAINER_NAME = 'icethang-backend-server'
+
+        // java 17 버전 설정
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
         
         // 서버 내 설정 파일 경로
         HOST_CONF_DIR = '/home/ubuntu/server-conf'
