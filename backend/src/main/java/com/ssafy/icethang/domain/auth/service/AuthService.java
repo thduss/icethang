@@ -2,6 +2,7 @@ package com.ssafy.icethang.domain.auth.service;
 
 import com.ssafy.icethang.domain.auth.dto.request.LoginRequest;
 import com.ssafy.icethang.domain.auth.dto.request.SignupRequest;
+import com.ssafy.icethang.domain.auth.dto.request.UpdateUserRequest;
 import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.auth.entity.AuthProvider;
 import com.ssafy.icethang.domain.auth.repository.AuthRepository;
@@ -53,5 +54,29 @@ public class AuthService {
         String accessToken = tokenProvider.createToken(authentication);
 
         return accessToken;
+    }
+
+    // 회원정보 조회
+    @Transactional
+    public Auth getUser(String email) {
+        return authRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+    }
+
+    // 회원정보 수정
+    @Transactional
+    public void updateUser(String email, UpdateUserRequest request) {
+        Auth auth = authRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+        // 이름 변경 요청
+        if (request.getTeacherName() != null) {
+            auth.setTeacherName(request.getTeacherName());
+        }
+
+        // 비밀번호 변경 요청
+        if (request.getPassword() != null) {
+            auth.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
     }
 }
