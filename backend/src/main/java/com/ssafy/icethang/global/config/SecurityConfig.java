@@ -2,6 +2,7 @@ package com.ssafy.icethang.global.config;
 
 import com.ssafy.icethang.domain.auth.service.CustomOAuth2UserService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
+import com.ssafy.icethang.global.security.TokenAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -24,6 +26,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomUserDetailsService customUserDetailsService;
+    private final TokenAuthenticationFilter tokenAuthenticationFilter;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -55,8 +58,8 @@ public class SecurityConfig {
                 // 4. 권한 설정 (누가 어디를 갈 수 있는지)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
-                        .requestMatchers("/login/**", "/oauth2/**").permitAll() // 로그인 관련 URL 허용
-                        .requestMatchers("/auth/**", "/error").permitAll() // 로그인 로직 허용
+                        .requestMatchers("/auth/signup", "/auth/login","/login/**", "/oauth2/**").permitAll() // 로그인 관련 URL 허용
+                        .requestMatchers("/auth/**").authenticated() // 로그인 로직 허용
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
                 )
 
@@ -72,6 +75,7 @@ public class SecurityConfig {
                         // 나중에 핸들러 추가시 여기 추가
                 );
         http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
