@@ -13,5 +13,4 @@ public class IcethangApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(IcethangApplication.class, args);
 	}
-
 }
