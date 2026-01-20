@@ -3,6 +3,8 @@ import { Pressable, ImageBackground, StyleSheet, View, Text } from 'react-native
 import { useRouter } from 'expo-router';
 import "../global.css"; 
 
+
+
 export default function WelcomeScreen() {
   const router = useRouter();
 
