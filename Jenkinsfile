@@ -85,7 +85,7 @@ stages {
                     // 2. 새 컨테이너 실행 (/config/application-prod.yml 읽음)
                     sh """
                         docker run -d \
-                        -p 8080:8080 \
+                        -p 8081:8080 \
                         --name ${CONTAINER_NAME} \
                         -v ${HOST_CONF_DIR}:/config \
                         -e SPRING_PROFILES_ACTIVE=prod \
