@@ -109,7 +109,8 @@ stages {
                 // mattermostSend 플러그인이 깔려있어야 작동합니다.
                  mattermostSend(color: 'good', 
                     message: "### ✅ E204 백엔드 배포 성공!\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
-                    endpoint: "${MATTERMOST_URL}"
+                    endpoint: "${MATTERMOST_URL}",
+                    channel: '#team-e204'
                 )
             }
         }
@@ -117,7 +118,8 @@ stages {
             script {
                  mattermostSend(color: 'danger', 
                     message: "### 🚨 E204 백엔드 배포 실패... 로그를 확인해주세요.",
-                    endpoint: "${MATTERMOST_URL}"
+                    endpoint: "${MATTERMOST_URL}",
+                    channel: '#team-e204'
                 )
             }
         }
