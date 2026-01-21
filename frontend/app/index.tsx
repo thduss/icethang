@@ -1,36 +1,52 @@
 import React, { useEffect } from 'react';
-import { Pressable, ImageBackground, StyleSheet, View, Text } from 'react-native';
+import { ImageBackground, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import "../global.css"; 
+import { AuthService } from './services/auth';
 
-
-
-export default function WelcomeScreen() {
+export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // ✅ 주소 변경! (폴더 구조에 맞게 수정)
-      router.replace('/screens/select'); 
-    }, 3000);
-    return () => clearTimeout(timer);
+    const initializeApp = async () => {
+      // 1. 최소 2초간 얼음땡 로고 보여주기
+      const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2000));
+      const sessionCheck = AuthService.checkSession();
+
+      // 2. 로딩과 데이터 확인을 동시에 진행
+      const [_, session] = await Promise.all([minLoadingTime, sessionCheck]);
+
+      // 3. 상태에 따라 이동
+      if (session && session.isLoggedIn) {
+        if (session.role === 'teacher') router.replace('/screens/teacher_home');
+        else router.replace('/screens/student_home');
+      } else {
+        router.replace('/screens/select'); // 로그인 안 되어 있으면 선택 화면으로
+      }
+    };
+
+    initializeApp();
   }, []);
 
   return (
-    <Pressable style={{ flex: 1 }} onPress={() => router.replace('/screens/select')}>
-      <ImageBackground 
-        source={require('../assets/welcome.png')} 
-        style={styles.background}
-        resizeMode="cover"
-      >
-      </ImageBackground>
-    </Pressable>
+    <ImageBackground 
+      source={require('../assets/welcome.png')} // 📌 목업의 "얼음땡" 배경 이미지
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#FF6B6B" />
+          <Text style={styles.loadingText}>로딩중...</Text>
+        </View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  contentContainer: { alignItems: 'center', padding: 20 },
-  title: { fontSize: 80, fontWeight: '800', color: 'white', marginBottom: 20, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: {width: 2, height: 2}, textShadowRadius: 5 },
-  subtitle: { fontSize: 24, fontWeight: 'bold', color: 'white', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 3 }
+  background: { flex: 1, width: '100%', height: '100%' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)' },
+  logoText: { fontSize: 60, fontWeight: '900', color: '#FF6B6B', marginBottom: 200, textShadowColor: 'white', textShadowRadius: 10 },
+  loadingBox: { position: 'absolute', bottom: 100, alignItems: 'center' },
+  loadingText: { marginTop: 10, color: '#555', fontWeight: 'bold' }
 });
