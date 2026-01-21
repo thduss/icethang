@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
-import { useAppTheme } from '../../context/ThemeContext'; // Context 경로 확인 필요
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Pressable, 
+  Dimensions, 
+  Image, 
+  ImageSourcePropType 
+} from 'react-native';
+import { useAppTheme } from '../../context/ThemeContext';
 
-// 데이터 타입 정의
+// 1. 데이터 타입 정의
 interface GridItem {
   id: number;
   name: string;
-  themeKey?: 'blue' | 'pink'; // 테마 키 추가
+  themeKey?: 'blue' | 'pink' | 'jungle' | 'universe' | 'city' | 'sea' ; // 테마 키 옵션 추가
+  image?: ImageSourcePropType; // 이미지 속성 추가
 }
 
 const { width } = Dimensions.get('window');
@@ -14,24 +23,24 @@ const ITEMS_PER_PAGE = 4;
 const ITEM_WIDTH = (width - 100) / ITEMS_PER_PAGE;
 
 export default function ReusableGridScreen() {
-  const { theme, setTheme } = useAppTheme(); // 테마 상태 가져오기
+  const { theme, setTheme } = useAppTheme();
   const [activeTab, setActiveTab] = useState<'theme' | 'character'>('theme');
   const [currentPage, setCurrentPage] = useState(0);
 
-  // 1. 테마 데이터 설정 (themeKey를 실제 Context와 매칭)
+  // 2. 테마 데이터 설정 (이미지 경로 포함)
   const themeData: GridItem[] = [
-    { id: 1, name: '기본 블루', themeKey: 'blue' },
-    { id: 2, name: '러블리 핑크', themeKey: 'pink' },
-    { id: 3, name: '심플 블랙', themeKey: 'blue' }, // 추가 예시
-    { id: 4, name: '스카이', themeKey: 'blue' },
+    { id: 1, name: '정글', themeKey: 'jungle', image: require('../../../assets/themes/jungle.jpg') },
+    { id: 2, name: '우주', themeKey: 'universe', image: require('../../../assets/themes/universe.jpg') },
+    { id: 3, name: '도시', themeKey: 'city', image: require('../../../assets/themes/city.jpg') },
+    { id: 4, name: '바다', themeKey: 'sea', image: require('../../../assets/themes/sea.jpg') },
   ];
 
   const characterData: GridItem[] = Array.from({ length: 12 }, (_, i) => ({
     id: i,
     name: `캐릭터 ${i + 1}`,
+    // 캐릭터는 이미지가 없을 경우를 대비해 비워둠
   }));
 
-  // 현재 데이터 및 페이지 계산
   const currentData = activeTab === 'theme' ? themeData : characterData;
   const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
   const displayedItems = currentData.slice(
@@ -39,10 +48,9 @@ export default function ReusableGridScreen() {
     (currentPage + 1) * ITEMS_PER_PAGE
   );
 
-  // 2. 클릭 시 동작 (테마 변경 적용)
   const handleSelect = (item: GridItem) => {
     if (activeTab === 'theme' && item.themeKey) {
-      setTheme(item.themeKey); // 전역 테마 변경!
+      setTheme(item.themeKey);
     } else {
       console.log(`${item.name} 선택됨`);
     }
@@ -54,10 +62,9 @@ export default function ReusableGridScreen() {
   };
 
   return (
-    // 스타일을 theme 변수와 연동
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       
-      {/* 상단 탭 - 활성화된 테마 색상 적용 */}
+      {/* 상단 탭 */}
       <View style={styles.tabContainer}>
         <Pressable 
           style={[styles.tab, activeTab === 'theme' && { borderBottomColor: theme.primary }]} 
@@ -83,22 +90,34 @@ export default function ReusableGridScreen() {
           <Text style={[styles.arrowText, { color: theme.primary }]}>◀</Text>
         </Pressable>
 
-        {/* 아이템 4개 */}
-        <View style={styles.itemsContainer}>
+        {/* 그리드 아이템 */}
+        <View className='pt-8' style={styles.itemsContainer}>
           {displayedItems.map((item) => (
             <Pressable 
               key={item.id} 
               style={[styles.gridButton, { backgroundColor: theme.card }]}
               onPress={() => handleSelect(item)}
             >
-              <View style={[styles.iconPlaceholder, { backgroundColor: theme.primary }]} />
-              <Text style={[styles.gridButtonText, { color: theme.text }]}>{item.name}</Text>
+              {/* 이미지가 있으면 이미지 표시, 없으면 플레이스홀더 표시 */}
+              {item.image ? (
+                <Image 
+                  source={item.image} 
+                  style={styles.imageThumbnail} 
+                  resizeMode="cover" 
+                />
+              ) : (
+                <View style={[styles.iconPlaceholder, { backgroundColor: theme.primary }]} />
+              )}
+              <Text className='pt-6 font-yeogi text-2xl' style={[styles.gridButtonText, { color: theme.text }]} numberOfLines={1}>
+                {item.name}
+              </Text>
             </Pressable>
           ))}
-          {/* 빈 공간 채우기 */}
+          
+          {/* 빈 공간 채우기 (정렬 유지용) */}
           {displayedItems.length < ITEMS_PER_PAGE && 
             Array.from({ length: ITEMS_PER_PAGE - displayedItems.length }).map((_, i) => (
-              <View key={`empty-${i}`} style={[styles.gridButton, { backgroundColor: 'transparent' }]} />
+              <View key={`empty-${i}`} style={[styles.gridButton, { backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />
             ))
           }
         </View>
@@ -130,18 +149,34 @@ const styles = StyleSheet.create({
   arrowText: { fontSize: 30, fontWeight: 'bold', padding: 10 },
   gridButton: {
     width: ITEM_WIDTH,
-    height: ITEM_WIDTH + 15,
+    height: ITEM_WIDTH + 25, // 텍스트 공간 확보를 위해 높이 증가
     marginHorizontal: 5,
     borderRadius: 12,
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // 위에서부터 정렬
     alignItems: 'center',
-    // 그림자 효과 (선택사항)
+    overflow: 'hidden', // 이미지가 튀어나가지 않게 함
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
   },
-  iconPlaceholder: { width: 40, height: 40, borderRadius: 20, marginBottom: 8 },
-  gridButtonText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  imageThumbnail: {
+    width: '100%',
+    height: '75%', // 이미지 영역 비율
+    marginBottom: 4,
+  },
+  iconPlaceholder: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    marginTop: 10,
+    marginBottom: 8 
+  },
+  gridButtonText: { 
+    fontSize: 10, 
+    fontWeight: '600', 
+    textAlign: 'center',
+    paddingHorizontal: 2
+  },
   pageIndicator: { textAlign: 'center', marginTop: 30, fontSize: 13 }
 });
