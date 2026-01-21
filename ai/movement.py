@@ -37,10 +37,11 @@ baseline_done = False
 start_time = time.time()
 
 # ==============================
-# Thresholds (기준값)
+# Thresholds
 # ==============================
 # 시선
-GAZE_RATIO_TH = 0.10
+GAZE_RATIO_TH_X = 0.08
+GAZE_RATIO_TH_Y = 0.03
 
 # 시선 보정 감도
 GAZE_CORRECTION_YAW = 0.005
@@ -52,15 +53,15 @@ EYE_CLOSED_TIME_LIMIT = 20.0
 
 # 움직임 감지 - 개선된 설정
 MOVEMENT_HISTORY_SIZE = 15  # 히스토리 크기 증가
-HEAD_MOVEMENT_TH_PER_FRAME = 3.0  # 프레임당 움직임 threshold
-BODY_MOVEMENT_TH_PER_FRAME = 0.010  # 프레임당 몸 움직임 threshold (조정: 덜 민감하게)
+HEAD_MOVEMENT_TH_PER_FRAME = 3.0  # 프레임당 머리 움직임 threshold
+BODY_MOVEMENT_TH_PER_FRAME = 0.010  # 프레임당 몸 움직임 threshold
 CONTINUOUS_MOVEMENT_COUNT = 5  # 연속 움직임 최소 횟수
 
 # ==============================
 # Smoothing 설정
 # ==============================
 SMOOTHING_ALPHA = 0.5 
-SMOOTHING_ALPHA_BODY = 0.3  # Body는 더 강한 smoothing 적용
+SMOOTHING_ALPHA_BODY = 0.3
 
 prev_head_pose = None  
 prev_gaze = None       
@@ -80,10 +81,18 @@ head_pitch_history = deque(maxlen=MOVEMENT_HISTORY_SIZE)
 head_roll_history = deque(maxlen=MOVEMENT_HISTORY_SIZE)
 body_center_history = deque(maxlen=MOVEMENT_HISTORY_SIZE)
 
-# 움직임 상태 추적 (NEW)
+# 움직임 상태 추적
 is_head_moving = False
 is_body_moving = False
 STABLE_FRAMES_TO_RESET = 5  # 5프레임 동안 안정적이면 moving 상태 해제
+
+# 눈 깜빡임을 위한 변수 추가
+last_blink_time = 0
+BLINK_BUFFER_TIME = 1.5
+
+# Gaze Off가 연속으로 몇 번 떴는지 세는 카운터
+gaze_fail_count = 0
+GAZE_FAIL_LIMIT = 3
 
 # ==============================
 # Helper Functions
@@ -191,7 +200,7 @@ def calc_body_center(pose_landmarks):
     return np.array([center_x, center_y])
 
 # ==============================
-# 개선된 연속 움직임 감지 함수
+# 연속 움직임 감지 함수
 # ==============================
 def check_continuous_movement(history, threshold_per_frame, min_count):
     """
@@ -211,7 +220,7 @@ def check_continuous_movement(history, threshold_per_frame, min_count):
     values = list(history)
     movement_count = 0
     
-    # 각 프레임 간 차이를 계산하고, threshold를 넘는 횟수를 셉니다
+    # 각 프레임 간 차이를 계산하고, threshold를 넘는 횟수 카운트
     for i in range(len(values) - 1):
         diff = abs(values[i+1] - values[i])
         if diff > threshold_per_frame:
@@ -286,13 +295,13 @@ while cap.isOpened():
     if face_result.multi_face_landmarks:
         face = face_result.multi_face_landmarks[0]
 
-        # 1. Raw Data 계산
+        # Raw Data 계산
         raw_head_pose = calc_head_pose_3d(face, w, h)
         raw_gaze = calc_gaze_ratio(face)
         raw_body_center = calc_body_center(pose_result.pose_landmarks)
         eyes_open, ear_value = is_eye_open(face)
 
-        # 2. Smoothing
+        # Smoothing
         cur_head_pose = apply_smoothing(raw_head_pose, prev_head_pose, SMOOTHING_ALPHA)
         prev_head_pose = cur_head_pose
         yaw, pitch, roll = cur_head_pose
@@ -306,7 +315,7 @@ while cap.isOpened():
         
         gaze_x, gaze_y = corrected_gaze_x, corrected_gaze_y
 
-        # Body Smoothing (더 강한 smoothing 적용)
+        # Body Smoothing
         if raw_body_center is not None:
             cur_body = apply_smoothing(raw_body_center, prev_body, SMOOTHING_ALPHA_BODY)
             prev_body = cur_body
@@ -336,18 +345,19 @@ while cap.isOpened():
             if not eyes_open:
                 if eye_closed_start is None:
                     eye_closed_start = current_time
+                last_blink_time = current_time
                 eye_closed_duration = current_time - eye_closed_start
                 if eye_closed_duration >= EYE_CLOSED_TIME_LIMIT:
                     eyes_too_long_closed = True
-                    cv2.putText(image, "SLEEPING?", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-                    focus_start = None
                 else:
                     eyes_too_long_closed = False
             else:
                 eye_closed_start = None
                 eyes_too_long_closed = False
 
-            # 개선된 움직임 체크 with 상태 유지
+            is_in_blink_buffer = (current_time - last_blink_time) < BLINK_BUFFER_TIME
+
+            # 움직임 체크
             body_move_count = 0
             body_max_move = 0.0
             
@@ -373,7 +383,6 @@ while cap.isOpened():
                 is_head_moving = True
                 head_stable_count = 0
             elif is_head_moving:
-                # 이미 moving 상태인 경우, 최근 움직임이 없으면 stable count 증가
                 if not head_recent:
                     head_stable_count = getattr(check_continuous_movement, 'head_stable_count', 0) + 1
                     check_continuous_movement.head_stable_count = head_stable_count
@@ -393,7 +402,6 @@ while cap.isOpened():
                 is_body_moving = True
                 body_stable_count = 0
             elif is_body_moving:
-                # 이미 moving 상태인 경우, 최근 움직임이 없으면 stable count 증가
                 if not body_recent:
                     body_stable_count = getattr(check_body_continuous_movement, 'body_stable_count', 0) + 1
                     check_body_continuous_movement.body_stable_count = body_stable_count
@@ -409,33 +417,67 @@ while cap.isOpened():
             # 시선 체크
             gaze_x_diff = abs(gaze_x - base_gx)
             gaze_y_diff = abs(gaze_y - base_gy)
-            gaze_focused = (gaze_x_diff < GAZE_RATIO_TH and gaze_y_diff < GAZE_RATIO_TH)
+            gaze_focused = (gaze_x_diff < GAZE_RATIO_TH_X and gaze_y_diff < GAZE_RATIO_TH_Y)
 
-            # 최종 판단
-            if not eyes_open and not eyes_too_long_closed:
-                focused = (focus_start is not None)
-                focus_status = "BLINKING"
-                status_color = (255, 165, 0)
-            elif eyes_too_long_closed:
+            # ==============================
+            # 최종 판단 로직
+            # ==============================
+            final_status = ""
+            
+            # 1. 눈을 너무 오래 감음 (수면)
+            if eyes_too_long_closed:
                 focused = False
-                focus_status = "SLEEPING"
+                final_status = "SLEEPING"
                 status_color = (0, 0, 255)
+                gaze_fail_count = 0
+            
+            # 2. 눈 감음 (깜빡임)
+            elif not eyes_open:
+                focused = True
+                final_status = "BLINKING"
+                status_color = (255, 165, 0)
+                gaze_fail_count = 0
+                
+            # 3. 눈 뜬 직후 (버퍼)
+            elif is_in_blink_buffer:
+                focused = True
+                final_status = "FOCUSED"
+                status_color = (0, 255, 0)
+                gaze_fail_count = 0
+                
+            # 4. 몸/고개 움직임
             elif head_moving or body_moving:
                 focused = False
-                focus_status = "MOVING"
+                final_status = "MOVING"
                 status_color = (0, 0, 255)
+                gaze_fail_count = 0
+                
+            # 5. 시선이 맞음 (FOCUSED)
             elif gaze_focused:
                 focused = True
-                focus_status = "FOCUSED"
+                final_status = "FOCUSED"
                 status_color = (0, 255, 0)
+                gaze_fail_count = 0
+                
+            # 6. 시선이 나감 (GAZE OFF) - 핵심 수정 사항
             else:
-                focused = False
-                focus_status = "GAZE OFF"
-                status_color = (0, 0, 255)
+                gaze_fail_count += 1
+                
+                if gaze_fail_count > GAZE_FAIL_LIMIT:
+                    # 지정한 프레임보다 오래 시선이 나가 있으면 진짜 딴짓
+                    focused = False
+                    final_status = "GAZE OFF"
+                    status_color = (0, 0, 255)
+                else:
+                    # 아직 인식을 못한 경우일 수 있으므로 기존 상태 유지
+                    focused = True
+                    final_status = "FOCUSED"
+                    status_color = (0, 255, 0)
 
             # 타이머
             if focused:
-                if focus_start is None: focus_start = current_time
+                if focus_start is None: 
+                    focus_start = current_time
                 elif (current_time - focus_start) >= FOCUS_TIME:
                     reward += 1
                     focus_start = current_time
@@ -443,7 +485,7 @@ while cap.isOpened():
                 focus_start = None
 
             # UI
-            cv2.putText(image, focus_status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, status_color, 2)
+            cv2.putText(image, final_status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, status_color, 2)
             cv2.putText(image, f"Reward: {reward}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 0), 2)
             
             # 진행바
@@ -460,11 +502,11 @@ while cap.isOpened():
                        (20, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
             cv2.putText(image, f"Body Moving: {body_moving} (Cnt:{body_move_count}, Avg:{body_max_move:.4f}, Stb:{stable_body})", 
                        (20, y_pos+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
-            cv2.putText(image, f"Body Threshold: {BODY_MOVEMENT_TH_PER_FRAME:.4f}, Smoothing: {SMOOTHING_ALPHA_BODY}", 
+            cv2.putText(image, f"Gaze Fail Count: {gaze_fail_count}/{GAZE_FAIL_LIMIT}", 
                        (20, y_pos+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
             cv2.putText(image, f"Gaze Focused: {gaze_focused}", (20, y_pos+60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
 
-    cv2.imshow("Improved Movement Detection", image)
+    cv2.imshow("Focus Detection with Gaze Fail Count", image)
     if cv2.waitKey(1) & 0xFF == 27:
         break
 
