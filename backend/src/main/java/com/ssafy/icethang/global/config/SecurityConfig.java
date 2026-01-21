@@ -2,7 +2,10 @@ package com.ssafy.icethang.global.config;
 
 import com.ssafy.icethang.domain.auth.service.CustomOAuth2UserService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
+import com.ssafy.icethang.global.security.OAuth2FailureHandler;
+import com.ssafy.icethang.global.security.OAuth2SuccessHandler;
 import com.ssafy.icethang.global.security.TokenAuthenticationFilter;
+import com.ssafy.icethang.global.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +30,9 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomUserDetailsService customUserDetailsService;
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -65,14 +71,19 @@ public class SecurityConfig {
 
                 // 5. 소셜 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
-                                // 로그인 성공 시 이동할 페이지
-                                .defaultSuccessUrl("/")
+                        // 로그인 성공 시 이동할 페이지
+                        .defaultSuccessUrl("/")
 
-                                // 사용자 정보 가져오는 설정
-                                .userInfoEndpoint(userInfo -> userInfo
-                                        .userService(customOAuth2UserService)
-                                )
-                        // 나중에 핸들러 추가시 여기 추가
+                        // 사용자 정보 가져오는 설정
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
+                        // 세션 대신 쿠키 쓰기
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorization")
+                                .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                        )
                 );
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
