@@ -1,16 +1,7 @@
-import { Stack } from "expo-router";
-import "../global.css"; 
-import { ThemeProvider } from './context/ThemeContext';
+import { Slot } from 'expo-router';
+import "../global.css"; // 여기서 스타일 불러오기
 
-export default function RootLayout() {
-  return (
-    <ThemeProvider>
-      <Stack 
-        screenOptions={{
-          headerShown: false, // 헤더 사용X 
-          animation: 'slide_from_right', // 슬라이드 효과 O
-        }} 
-      />
-    </ThemeProvider>
-  );
+export default function Layout() {
+  // Slot은 "자식 화면(index.tsx 등)을 여기에 보여줘!" 라는 뜻입니다.
+  return <Slot />;
 }
