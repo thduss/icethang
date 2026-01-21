@@ -29,7 +29,7 @@ export default function SplashScreen() {
 
   return (
     <ImageBackground 
-      source={require('../assets/welcome.png')} // 📌 목업의 "얼음땡" 배경 이미지
+      source={require('../assets/welcome.png')} //  배경 이미지
       style={styles.background}
       resizeMode="cover"
     >
