@@ -80,8 +80,8 @@ public class AuthService {
             throw new RuntimeException("Refresh Token이 유효하지 않습니다.");
         }
 
-        // 2. Access Token에서 User ID(이메일) 가져오기
-        Authentication authentication = tokenProvider.getAuthentication(request.getAccessToken());
+        // 2. Refresh Token에서 User ID(이메일) 가져오기
+        Authentication authentication = tokenProvider.getAuthentication(request.getRefreshToken());
         String email = authentication.getName();
 
         // 3. Redis에서 저장된 Refresh Token 가져오기
