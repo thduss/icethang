@@ -3,7 +3,6 @@ package com.ssafy.icethang.domain.auth.service;
 import com.ssafy.icethang.domain.auth.dto.request.LoginRequest;
 import com.ssafy.icethang.domain.auth.dto.request.SignupRequest;
 import com.ssafy.icethang.domain.auth.dto.request.UpdateUserRequest;
-import com.ssafy.icethang.domain.auth.dto.response.TokenRequestDto;
 import com.ssafy.icethang.domain.auth.dto.response.TokenResponseDto;
 import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.auth.entity.AuthProvider;
@@ -74,21 +73,21 @@ public class AuthService {
     }
 
     // 토큰 재발급
-    public TokenResponseDto reissue(TokenRequestDto request) {
+    public TokenResponseDto reissue(String refreshToken) {
         // 1. Refresh Token 검증
-        if (!tokenProvider.validateToken(request.getRefreshToken())) {
+        if (!tokenProvider.validateToken(refreshToken)) {
             throw new RuntimeException("Refresh Token이 유효하지 않습니다.");
         }
 
         // 2. Refresh Token에서 User ID(이메일) 가져오기
-        Authentication authentication = tokenProvider.getAuthentication(request.getRefreshToken());
+        Authentication authentication = tokenProvider.getAuthentication(refreshToken);
         String email = authentication.getName();
 
         // 3. Redis에서 저장된 Refresh Token 가져오기
         String redisRefreshToken = redisService.getValues(email);
 
         // 4. 검사: Redis에 없거나, 요청온 토큰과 다르면 에러
-        if (redisRefreshToken == null || !redisRefreshToken.equals(request.getRefreshToken())) {
+        if (redisRefreshToken == null || !redisRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("토큰의 유저 정보가 일치하지 않습니다.");
         }
 
