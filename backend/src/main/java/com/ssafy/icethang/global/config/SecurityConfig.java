@@ -2,8 +2,10 @@ package com.ssafy.icethang.global.config;
 
 import com.ssafy.icethang.domain.auth.service.CustomOAuth2UserService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
+import com.ssafy.icethang.global.security.OAuth2FailureHandler;
 import com.ssafy.icethang.global.security.OAuth2SuccessHandler;
 import com.ssafy.icethang.global.security.TokenAuthenticationFilter;
+import com.ssafy.icethang.global.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,6 +31,8 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -74,6 +78,12 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
+                        // 세션 대신 쿠키 쓰기
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorization")
+                                .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                        )
                 );
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
