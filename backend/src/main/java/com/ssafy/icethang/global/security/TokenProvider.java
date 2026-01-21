@@ -8,10 +8,13 @@ import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
 
 @Slf4j
@@ -40,13 +43,13 @@ public class TokenProvider {
 
     // 엑세스 토큰 생성
     public String createToken(Authentication authentication) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        String email = authentication.getName();
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + appProperties.getAuth().getTokenExpirationMsec());
 
         return Jwts.builder()
-                .setSubject(userPrincipal.getEmail())
+                .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -55,17 +58,57 @@ public class TokenProvider {
 
     // 리프레시 토큰 생성
     public String createRefreshToken(Authentication authentication) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        String email = authentication.getName();
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRE_TIME);
 
         return Jwts.builder()
-                .setSubject(userPrincipal.getEmail())
+                .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
+    }
+
+    // 토큰에서 인증 정보 꺼내기
+    public Authentication getAuthentication(String accessToken) {
+
+        Claims claims = parseClaims(accessToken);
+
+        // 권한 정보가 없으면 기본 권한(USER) 부여 (필요에 따라 로직 수정 가능)
+
+        // UserDetails 객체를 만들어서 Authentication 리턴
+        // 비밀번호는 모르니까 빈 문자열("")
+        User principal = new User(claims.getSubject(), "", Collections.emptyList());
+
+        return new UsernamePasswordAuthenticationToken(principal, accessToken, Collections.emptyList());
+    }
+
+    // 헬퍼 메서드
+    private Claims parseClaims(String accessToken) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(accessToken)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
+        }
+    }
+
+    // 토큰 유효시간
+    public Long getExpiration(String accessToken){
+        Date expiration = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(accessToken)
+                .getBody()
+                .getExpiration();
+
+        Long now  = new Date().getTime();
+        return (expiration.getTime() - now);
     }
 
     // 토큰에서 Email 추출
