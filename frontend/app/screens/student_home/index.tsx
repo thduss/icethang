@@ -12,14 +12,14 @@ export default function StudentTitleScreen() {
       <View style={styles.buttonContainer}>
         <Pressable 
           style={styles.button} 
-          onPress={() => router.push('/screens/login')}
+          onPress={() => router.push('/screens/Login')}
         >
           <Text style={styles.buttonText}>수업 시작하기</Text>
         </Pressable>
 
         <Pressable 
           style={styles.button} 
-          onPress={() => router.push('/screens/change_theme')} // 필요시 경로 수정
+          onPress={() => router.push('/screens/Change_Theme')} // 필요시 경로 수정
         >
           <Text style={styles.buttonText}>테마 변경</Text>
         </Pressable>
