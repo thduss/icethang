@@ -36,15 +36,15 @@ export default function SelectRoleScreen() {
             />
           </View>
           <View style={styles.textArea}>
-            <Text className='font-yeogi' style={[styles.mainTextOutline, { fontSize: 22 * scale }]}>선생님이에요!</Text>
-            <Text className='font-yeogi' style={[styles.mainText, { fontSize: 22 * scale }]}>선생님이에요!</Text>
+            <Text  style={[styles.mainTextOutline, { fontSize: 22 * scale }]}>선생님이에요!</Text>
+            <Text  style={[styles.mainText, { fontSize: 22 * scale }]}>선생님이에요!</Text>
           </View>
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
             onPress={() => router.push('/screens/teacher_login')}
             activeOpacity={0.8}
           >
-            <Text className='font-yeogi' style={[styles.buttonText, { fontSize: 15 * scale }]}>선생님으로 시작하기</Text>
+            <Text style={[styles.buttonText, { fontSize: 15 * scale }]}>선생님으로 시작하기</Text>
           </TouchableOpacity>
         </View>
 
@@ -63,15 +63,15 @@ export default function SelectRoleScreen() {
             />
           </View>
           <View style={styles.textArea}>
-            <Text className='font-yeogi' style={[styles.mainTextOutline, { fontSize: 22 * scale }]}>학생이에요!</Text>
-            <Text className= 'font-yeogi' style={[styles.mainText, { fontSize: 22 * scale }]}>학생이에요!</Text>
+            <Text style={[styles.mainTextOutline, { fontSize: 22 * scale }]}>학생이에요!</Text>
+            <Text style={[styles.mainText, { fontSize: 22 * scale }]}>학생이에요!</Text>
           </View>
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
             onPress={() => router.push('/screens/student_login')}
             activeOpacity={0.8}
           >
-            <Text className='font-yeogi' style={[styles.buttonText, { fontSize: 15 * scale }]}>학생으로 시작하기</Text>
+            <Text style={[styles.buttonText, { fontSize: 15 * scale }]}>학생으로 시작하기</Text>
           </TouchableOpacity>
         </View>
 
