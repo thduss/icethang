@@ -1,26 +1,39 @@
 import React, { useEffect } from 'react';
 import { ImageBackground, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AuthService } from './services/auth';
+// AuthService가 없거나 에러날 수 있으니 일단 주석 처리하거나, 에러 처리를 해야 함
+import { AuthService } from './services/auth'; 
 
 export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
     const initializeApp = async () => {
-      // 1. 최소 2초간 얼음땡 로고 보여주기
-      const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2000));
-      const sessionCheck = AuthService.checkSession();
+      try {
+        // 1. 최소 2초간 로딩 (이건 유지)
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // 2. 로딩과 데이터 확인을 동시에 진행
-      const [_, session] = await Promise.all([minLoadingTime, sessionCheck]);
+        // 2. 세션 체크 시도 (에러나면 catch로 넘어감)
+        let session = null;
+        try {
+           session = await AuthService.checkSession();
+        } catch (e) {
+           console.log("세션 체크 실패 (무시하고 진행):", e);
+        }
 
-      // 3. 상태에 따라 이동
-      if (session && session.isLoggedIn) {
-        if (session.role === 'teacher') router.replace('/screens/teacher_home');
-        else router.replace('/screens/student_home');
-      } else {
-        router.replace('/screens/select'); // 로그인 안 되어 있으면 선택 화면으로
+        // 3. 상태에 따라 이동
+        if (session && session.isLoggedIn) {
+          if (session.role === 'teacher') router.replace('/screens/Teacher_MainPage/TeacherMainPage');
+          else router.replace('/screens/student_home');
+        } else {
+          // 세션이 없거나 에러나면 무조건 선택 화면으로!
+          router.replace('/screens/select'); 
+        }
+
+      } catch (error) {
+        // 4. 정말 치명적인 에러가 나도 무조건 선택 화면으로 보냄 (무한로딩 방지)
+        console.error("초기화 에러:", error);
+        router.replace('/screens/select');
       }
     };
 
@@ -29,7 +42,7 @@ export default function SplashScreen() {
 
   return (
     <ImageBackground 
-      source={require('../assets/welcome.png')} //  배경 이미지
+      source={require('../assets/welcome.png')} 
       style={styles.background}
       resizeMode="cover"
     >
@@ -46,7 +59,6 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   background: { flex: 1, width: '100%', height: '100%' },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)' },
-  logoText: { fontSize: 60, fontWeight: '900', color: '#FF6B6B', marginBottom: 200, textShadowColor: 'white', textShadowRadius: 10 },
   loadingBox: { position: 'absolute', bottom: 100, alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#555', fontWeight: 'bold' }
 });
