@@ -3,24 +3,33 @@ import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, P
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-// 👇 [추가] 소셜 로그인 라이브러리 가져오기
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
 
-// 🎨 디자인 설정
 const CONFIG = {
   colors: {
-    textTitle: '#6B7280', 
-    inputBorder: '#E2E8F0',
+    textTitle: '#AEC7EC', 
+    inputBorder: '#D4E4F7',
     inputBg: '#F8FAFC',
     btnBackground: '#8CB6F0', 
     btnBorder: '#6A94D0',
   },
 };
 
+interface InputBoxProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  placeholder: string;
+  value: string;
+  onChange: (text: string) => void;
+  isPassword?: boolean;
+  height: number;
+  fontSize: number;
+  color: string;
+}
+
 export default function SignupScreen() {
   const router = useRouter();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,34 +39,41 @@ export default function SignupScreen() {
   const [agreed, setAgreed] = useState(false);
 
   // 📐 [크기 설정]
-  const cardWidth = Math.min(screenWidth * 0.75, 600); 
-  const cardHeight = cardWidth * 1.2; 
-  const inputHeight = Math.min(cardHeight * 0.075, 48); 
+  const CARD_RATIO = 1.35;
+  let finalWidth = Math.min(screenWidth * 0.75, 600);
+  let finalHeight = finalWidth * CARD_RATIO;
+
+  if (finalHeight > screenHeight * 0.85) {
+    finalHeight = screenHeight * 0.85;
+    finalWidth = finalHeight / CARD_RATIO;
+  }
+
+  const cardWidth = finalWidth;
+  const cardHeight = finalHeight;
+  
+  const inputHeight = Math.min(cardHeight * 0.065, 50); 
   const fontSizeInput = Math.min(cardWidth * 0.04, 16);
-  const titleSize = Math.min(cardWidth * 0.08, 32);
-  const robotSize = Math.min(cardWidth * 0.35, 160); 
-  const spacing = Math.min(cardHeight * 0.02, 10); 
-  const paddingH = cardWidth * 0.16; 
+  const titleSize = Math.min(cardWidth * 0.1, 40);
+  const robotSize = Math.min(cardWidth * 0.4, 180); 
+  
+  const spacing = Math.min(cardHeight * 0.015, 10); 
+  const paddingH = cardWidth * 0.14; 
   const paddingV = cardHeight * 0.08; 
 
-  // ⚡️ [추가] 네이버 초기화 (로그인 화면과 동일하게 키 입력 필요!)
   useEffect(() => {
     NaverLogin.initialize({
       appName: 'IceTag',
-      consumerKey: '여기에_Client_ID_붙여넣기',     // 👈 백엔드에서 받은 키
-      consumerSecret: '여기에_Client_Secret_붙여넣기', // 👈 백엔드에서 받은 키
+      consumerKey: '여기에_Client_ID_붙여넣기',     
+      consumerSecret: '여기에_Client_Secret_붙여넣기', 
       serviceUrlSchemeIOS: 'icetag',
       disableNaverAppAuthIOS: true,
     });
   }, []);
 
-  // 🟡 [기능 1] 카카오로 가입하기
   const handleKakaoSignup = async () => {
     try {
       const token = await login();
       console.log('카카오 가입 토큰:', token);
-      
-      // 가입 성공 시 알림 -> 로그인 화면으로 이동
       Alert.alert("성공", "카카오 계정으로 가입되었습니다!\n로그인 해주세요.", [
         { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
       ]);
@@ -67,14 +83,11 @@ export default function SignupScreen() {
     }
   };
 
-  // 🟢 [기능 2] 네이버로 가입하기
   const handleNaverSignup = async () => {
     try {
       const { successResponse, failureResponse } = await NaverLogin.login();
       if (successResponse) {
         console.log("네이버 가입 토큰:", successResponse.accessToken);
-        
-        // 가입 성공 시 알림 -> 로그인 화면으로 이동
         Alert.alert("성공", "네이버 계정으로 가입되었습니다!\n로그인 해주세요.", [
           { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
         ]);
@@ -86,7 +99,6 @@ export default function SignupScreen() {
     }
   };
 
-  // 🔵 [기능 3] 일반 이메일 가입하기
   const handleSignup = () => {
     if (!name || !email || !password || !school) {
       Alert.alert("알림", "모든 정보를 입력해주세요.");
@@ -100,33 +112,44 @@ export default function SignupScreen() {
       Alert.alert("알림", "이용약관에 동의해주세요.");
       return;
     }
-    
     Alert.alert("성공", "회원가입이 완료되었습니다!\n로그인 해주세요.", [
       { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
     ]);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FDFCF6' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFFDF5' }}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
           <View style={{ width: cardWidth, height: cardHeight, justifyContent: 'center', alignItems: 'center' }}>
             
             <Image
               source={require('../../../assets/login_background.png')} 
-              style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}
+              style={{ position: 'absolute', width: '130%', height: '95%', top: 0, left: -75 }}
               resizeMode="stretch"
             />
 
-            <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: paddingH, paddingVertical: paddingV, zIndex: 10 }}>
+            <View style={{ 
+              width: '100%', 
+              height: '100%', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              paddingHorizontal: paddingH, 
+              // 👇 [수정됨] 상단 여백을 줄여서(0.4) 내용물을 위로 올림
+              paddingTop: paddingV * 0.4, 
+              paddingBottom: paddingV * 1.6, 
+              zIndex: 10 
+            }}>
               
-              <Text style={{ fontSize: titleSize, color: '#7CB3F5', fontWeight: '900', marginBottom: spacing * 1.5, textShadowColor: 'white', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4 }}>
+              <Text style={{ fontSize: titleSize, color: CONFIG.colors.textTitle, fontWeight: '900', marginBottom: spacing, textShadowColor: '#5C7CFA', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 1 }}>
                 교사 회원가입
               </Text>
 
@@ -143,8 +166,8 @@ export default function SignupScreen() {
                 onPress={() => setAgreed(!agreed)}
                 style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing, marginBottom: spacing }}
               >
-                <Ionicons name={agreed ? "checkbox" : "square-outline"} size={20} color={agreed ? "#7CB3F5" : "#A0AEC0"} />
-                <Text style={{ marginLeft: 8, color: '#718096', fontWeight: 'bold', fontSize: fontSizeInput * 0.8 }}>이용약관 동의</Text>
+                <Ionicons name={agreed ? "checkbox" : "square-outline"} size={22} color={agreed ? "#7CB3F5" : "#A0AEC0"} />
+                <Text style={{ marginLeft: 8, color: '#718096', fontWeight: 'bold', fontSize: fontSizeInput * 0.9 }}>이용약관 동의</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -159,27 +182,51 @@ export default function SignupScreen() {
                 <Text style={{ color: '#A0AEC0', textDecorationLine: 'underline', fontSize: fontSizeInput * 0.8 }}>뒤로가기</Text>
               </TouchableOpacity>
 
-              {/* 🏷️ 소셜 가입 버튼 (기능 연결됨) */}
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing * 0.2 }}>
-                <SocialButton 
-                  text="카카오톡으로 가입" 
-                  color="#FEE500" 
-                  icon="K" 
-                  textColor="#371D1E" 
-                  fontSize={fontSizeInput * 0.8} 
-                  onPress={handleKakaoSignup} // 👈 연결!
-                />
-                <SocialButton 
-                  text="네이버로 가입" 
-                  color="#03C75A" 
-                  icon="N" 
-                  fontSize={fontSizeInput * 0.8} 
-                  onPress={handleNaverSignup} // 👈 연결!
-                />
-              </View>
+              <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
+                
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={handleKakaoSignup} 
+                  style={{ 
+                    flex: 1, 
+                    flexDirection: 'row',
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: inputHeight,
+                    borderRadius: 15, 
+                    backgroundColor: '#FEE500', 
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="chatbubble-sharp" size={fontSizeInput * 1.2} color="#371D1E" />
+                  <Text style={{ color: '#371D1E', fontWeight: 'bold', fontSize: fontSizeInput }}>
+                    카카오톡
+                  </Text>
+                </TouchableOpacity>
 
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  onPress={handleNaverSignup} 
+                  style={{ 
+                    flex: 1, 
+                    flexDirection: 'row',
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: inputHeight, 
+                    borderRadius: 15, 
+                    backgroundColor: '#03C75A', 
+                    gap: 6
+                  }}
+                >
+                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>N</Text>
+                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput }}>
+                    네이버
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
+            {/* 🤖 로봇 */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -187,13 +234,13 @@ export default function SignupScreen() {
                 zIndex: 20, 
                 width: robotSize, 
                 height: robotSize, 
-                top: -cardHeight * 0.02, 
-                left: -cardWidth * 0.12, 
+                top: cardHeight * 0.08, 
+                left: -cardWidth * 0.18, 
                 transform: [{ rotate: '-15deg' }] 
               }}
             >
               <Image
-                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png' }} 
+                source={require('../../../assets/robot.png')}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="contain"
               />
@@ -206,8 +253,7 @@ export default function SignupScreen() {
   );
 }
 
-// 📦 [부품 1] 입력창 컴포넌트
-const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: any) => (
+const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: InputBoxProps) => (
   <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderWidth: 3, borderRadius: 999, paddingHorizontal: 14, borderColor: color, height: height, width: '100%' }}>
     <Ionicons name={icon} size={fontSize * 1.3} color={color === '#F4D4D4' ? '#C68D8D' : '#8DA6C6'} />
     <TextInput
@@ -220,15 +266,4 @@ const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, font
       autoCapitalize="none"
     />
   </View>
-);
-
-// 📦 [부품 2] 소셜 버튼 컴포넌트 (onPress 추가됨!)
-const SocialButton = ({ text, color, icon, textColor = 'white', fontSize, onPress }: any) => (
-  <TouchableOpacity 
-    onPress={onPress} // 👈 클릭 기능 활성화
-    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: color, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 }}
-  >
-    <Text style={{ fontWeight: '900', color: textColor, marginRight: 6, fontSize: fontSize }}>{icon}</Text>
-    <Text style={{ fontWeight: 'bold', color: textColor, fontSize: fontSize }}>{text}</Text>
-  </TouchableOpacity>
 );
