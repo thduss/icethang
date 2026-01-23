@@ -4,7 +4,7 @@ import MainArea from './MainArea'
 import Header from './Header'
 
 // 최상위 화면
-const TeacherMainPage = () => {
+const index = () => {
   return (
     <View style={styles.outer}>
       {/* 컴포넌트 고정 view */}
@@ -19,7 +19,7 @@ const TeacherMainPage = () => {
     </View>
   )
 }
-export default TeacherMainPage
+export default index
 
 const styles = StyleSheet.create({
   outer: {
