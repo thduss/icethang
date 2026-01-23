@@ -8,13 +8,13 @@ export default function ReusableGridScreen() {
   const chestRef = useRef<LottieView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // 상태 관리 
-  const [totalExp, setTotalExp] = useState(12000); // DB 데이터 (예시)
+  // 상태 관리 DB랑 연결
+  const [totalExp, setTotalExp] = useState(12000); 
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isOpened, setIsOpened] = useState(false);
 
-  //  경험치 로직 (차이만큼)
+  //  경험치 로직 (차이만큼 넣은건데 추후 DB와 수정)
   const rewardThresholds = [100, 300, 600, 1000];
   const nextThreshold = rewardThresholds.find(t => t > (totalExp - 1)) || 1000;
   const prevThreshold = rewardThresholds[rewardThresholds.indexOf(nextThreshold) - 1] || 0;
@@ -51,15 +51,11 @@ export default function ReusableGridScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      
-      {/* --- 메인 화면 헤더 --- */}
       <View style={styles.header}>
         
         <Text style={[styles.title, { color: theme.text }]}>🌟 보물 상자 열기 🌟</Text>
         <Text style={[styles.subtitle, { color: theme.text }]}>수업에 열심히 참여해 경험치를 얻어보세요!</Text>
       </View>
-
-      {/* --- 메인 화면 콘텐츠 --- */}
       <View style={styles.content}>
         <View style={styles.mainBoxContainer}>
             <LottieView
@@ -96,7 +92,6 @@ export default function ReusableGridScreen() {
         </Pressable>
       </View>
 
-      {/* --- 보상 연출 모달 --- */}
       <Modal animationType="fade" transparent={true} visible={modalVisible}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
@@ -106,7 +101,6 @@ export default function ReusableGridScreen() {
             </Text>
 
             <View style={styles.animationWrapper}>
-              {/* 상자 애니메이션 */}
               <LottieView
                 ref={chestRef}
                 source={require('../../../assets/animations/treasure-chest.json')}
@@ -115,8 +109,6 @@ export default function ReusableGridScreen() {
                 style={styles.modalLottie}
                 onAnimationFinish={onChestFinish}
               />
-
-              {/* 폭죽 애니메이션 */}
               {showConfetti && (
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
                   <LottieView
