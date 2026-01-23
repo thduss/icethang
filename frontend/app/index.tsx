@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { ImageBackground, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-// AuthService가 없거나 에러날 수 있으니 일단 주석 처리하거나, 에러 처리를 해야 함
 import { AuthService } from './services/auth'; 
 
 export default function SplashScreen() {

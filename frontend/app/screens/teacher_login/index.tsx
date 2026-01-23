@@ -5,12 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
-import { loginAPI } from '../../api/auth';
 
 const CONFIG = {
   colors: {
-    textTitle: '#2D3748', 
-    textOutline: '#FFFFFF',
+    textTitle: '#E3F2FD', 
     inputBorder: '#D4E4F7',
     inputBorderPw: '#F4D4D4',
     btnBackground: '#8CB6F0',
@@ -24,30 +22,25 @@ export default function TeacherLoginScreen() {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
 
-  // 📐 [크기 설정: 다시 시원시원하게 키움!]
-  // 1. 너비: 화면의 60% -> 75%로 확대
-  // 2. 최대 크기: 450px -> 580px로 확대
+  // 📐 크기 설정 (선생님 화면 비율 1.1 유지)
   const cardWidth = Math.min(screenWidth * 0.75, 580); 
-  
-  // 높이: 세로로 긴 비율 유지 (약간 더 길게)
   const cardHeight = cardWidth * 1.1; 
 
-  // 📏 [내용물 크기: 다시 두툼하게]
-  const inputHeight = Math.min(cardHeight * 0.12, 54); // 48 -> 54
+  const inputHeight = Math.min(cardHeight * 0.12, 54); 
   const buttonHeight = Math.min(cardHeight * 0.12, 54);
   
-  const titleSize = Math.min(cardWidth * 0.09, 36); // 글자 크기 확대
+  // 폰트 및 로봇 크기 설정
+  const titleSize = Math.min(cardWidth * 0.11, 42); 
   const fontSizeInput = Math.min(cardWidth * 0.045, 17);
-  const robotSize = Math.min(cardWidth * 0.5, 230); // 로봇도 확대
+  const robotSize = Math.min(cardWidth * 0.5, 230); 
 
-  // 🎨 [여백 조정]
   const spacing = Math.min(cardHeight * 0.035, 18); 
   const paddingH = cardWidth * 0.16; 
   const paddingV = cardHeight * 0.13; 
 
-  // ⚡️ [초기화] 네이버 로그인 설정
+  // ⚡️ 네이버 로그인 초기화
   useEffect(() => {
     NaverLogin.initialize({
       appName: 'IceTag',
@@ -58,7 +51,7 @@ export default function TeacherLoginScreen() {
     });
   }, []);
 
-  // 🟡 [기능 1] 카카오 로그인
+  // 🟡 카카오 로그인
   const handleKakaoLogin = async () => {
     try {
       const token = await login();
@@ -71,7 +64,7 @@ export default function TeacherLoginScreen() {
     }
   };
 
-  // 🟢 [기능 2] 네이버 로그인
+  // 🟢 네이버 로그인
   const handleNaverLogin = async () => {
     try {
       const { successResponse, failureResponse } = await NaverLogin.login();
@@ -87,16 +80,19 @@ export default function TeacherLoginScreen() {
     }
   };
 
-  // 🔵 [기능 3] 이메일 로그인
+  // 🔵 이메일 로그인
   const handleEmailLogin = async () => {
     if (!email || !password) {
       Alert.alert("알림", "이메일과 비밀번호를 입력해주세요.");
       return;
     }
+ 
+ 
+    // API 연결 시 아래 주석 해제 및 사용
+    /*
     try {
       const isSuccess = await loginAPI(email, password);
       if (isSuccess) {
-        Alert.alert("환영합니다!", "로그인에 성공했습니다.");
         router.replace('/screens/Teacher_MainPage/TeacherMainPage');
       } else {
         Alert.alert("실패", "아이디 또는 비밀번호를 확인해주세요.");
@@ -104,24 +100,14 @@ export default function TeacherLoginScreen() {
     } catch (error) {
       Alert.alert("에러", "서버 연결에 실패했습니다.");
     }
+    */
+ 
+    // 테스트용 강제 이동
+    router.replace('/screens/Teacher_MainPage/TeacherMainPage');
   };
 
-  // // 🔵 [테스트용] 무조건 로그인 성공시키기
-  // const handleEmailLogin = async () => {
-  //   // 1. 입력창 비었는지 체크 (이건 유지)
-  //   if (!email || !password) {
-  //     Alert.alert("알림", "이메일과 비밀번호를 입력해주세요.");
-  //     return;
-  //   }
-
-  //   // 2. 백엔드 무시하고 무조건 성공 처리 (테스트 끝나면 나중에 지우세요!)
-  //   console.log("강제 로그인 성공!");
-  //   Alert.alert("환영합니다!", "테스트 로그인 성공");
-  //   router.replace('/screens/Teacher_MainPage/TeacherMainPage'); 
-  // };
-
   return (
-    <View style={{ flex: 1, backgroundColor: '#FDFCF6' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFFDF5' }}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -143,13 +129,22 @@ export default function TeacherLoginScreen() {
             {/* 내용물 컨테이너 */}
             <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: paddingH, paddingVertical: paddingV, zIndex: 10 }}>
               
+              {/* 타이틀 */}
               <View style={{ marginBottom: spacing * 1.5 }}>
-                <Text style={{ fontSize: titleSize, color: CONFIG.colors.textTitle, fontWeight: '900', textAlign: 'center', textShadowColor: 'white', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4 }}>
+                <Text style={{ 
+                  fontSize: titleSize, 
+                  color: '#E3F2FD', 
+                  fontWeight: '900', 
+                  textAlign: 'center', 
+                  textShadowColor: '#5C7CFA', 
+                  textShadowOffset: { width: 2, height: 2 }, 
+                  textShadowRadius: 1 
+                }}>
                   교사 로그인
                 </Text>
               </View>
 
-              {/* 이메일 */}
+              {/* 이메일 입력창 */}
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderWidth: 3.5, borderRadius: 999, paddingHorizontal: 16, borderColor: CONFIG.colors.inputBorder, height: inputHeight, marginBottom: spacing, width: '100%' }}>
                 <Ionicons name="mail-outline" size={fontSizeInput * 1.3} color="#8DA6C6" />
                 <TextInput
@@ -163,7 +158,7 @@ export default function TeacherLoginScreen() {
                 />
               </View>
 
-              {/* 비밀번호 */}
+              {/* 비밀번호 입력창 */}
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderWidth: 3.5, borderRadius: 999, paddingHorizontal: 16, borderColor: CONFIG.colors.inputBorderPw, height: inputHeight, marginBottom: spacing * 1.2, width: '100%' }}>
                 <Ionicons name="lock-closed-outline" size={fontSizeInput * 1.3} color="#C68D8D" />
                 <TextInput
@@ -185,31 +180,36 @@ export default function TeacherLoginScreen() {
                 onPress={handleEmailLogin}
                 style={{ width: '100%', justifyContent: 'center', alignItems: 'center', borderRadius: 999, borderBottomWidth: 3.5, backgroundColor: CONFIG.colors.btnBackground, borderColor: CONFIG.colors.btnBorder, height: buttonHeight, marginBottom: spacing }}
               >
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: titleSize * 0.6 }}>로그인</Text>
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: titleSize * 0.55 }}>로그인</Text>
               </TouchableOpacity>
 
-              {/* 소셜 버튼 */}
+              {/* 소셜 버튼 구분선 */}
               <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: spacing * 0.5, paddingHorizontal: 5 }}>
                 <View style={{ flex: 1, height: 2, backgroundColor: '#E2E8F0' }} />
                 <Text style={{ marginHorizontal: 8, color: '#A0AEC0', fontWeight: 'bold', fontSize: fontSizeInput * 0.75 }}>또는 소셜 로그인</Text>
                 <View style={{ flex: 1, height: 2, backgroundColor: '#E2E8F0' }} />
               </View>
 
+              {/* 소셜 로그인 버튼들 */}
               <View style={{ flexDirection: 'row', gap: 12, marginBottom: spacing * 0.2 }}>
+                
+                {/* 카카오 */}
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleKakaoLogin}
                   style={{ justifyContent: 'center', alignItems: 'center', width: Math.min(cardWidth * 0.2, 80), height: buttonHeight * 0.8, borderRadius: 15, backgroundColor: '#FEE500' }}
                 >
-                  <Ionicons name="chatbubble-sharp" size={fontSizeInput} color="#371D1E" />
+                   <Ionicons name="chatbubble-sharp" size={fontSizeInput * 1.4} color="#371D1E" />
+                   <Text style={{ position: 'absolute', color: '#FEE500', fontWeight: '900', fontSize: fontSizeInput * 0.7, marginTop: -2 }}>K</Text>
                 </TouchableOpacity>
 
+                {/* 네이버 */}
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleNaverLogin}
                   style={{ justifyContent: 'center', alignItems: 'center', width: Math.min(cardWidth * 0.2, 80), height: buttonHeight * 0.8, borderRadius: 15, backgroundColor: '#03C75A' }}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput }}>N</Text>
+                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>N</Text>
                 </TouchableOpacity>
               </View>
 
@@ -218,7 +218,7 @@ export default function TeacherLoginScreen() {
                 style={{ marginTop: 5 }}
                 onPress={() => router.push('/screens/signup')} 
               >
-                <Text style={{ color: '#718096', textDecorationLine: 'underline', fontWeight: 'bold', fontSize: fontSizeInput * 0.75 }}>
+                <Text style={{ color: '#718096', textDecorationLine: 'underline', fontWeight: 'bold', fontSize: fontSizeInput * 1.0 }}>
                   회원가입
                 </Text>
               </TouchableOpacity>
@@ -239,7 +239,7 @@ export default function TeacherLoginScreen() {
               }}
             >
               <Image
-                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png' }} 
+                source={require('../../../assets/robot.png')}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="contain"
               />
