@@ -1,16 +1,18 @@
 // 일반 수업시간 화면
-import React, { useEffect } from "react"; // useEffect 임포트 추가
-import { Text, View, Alert, Linking, TouchableOpacity, StyleSheet } from "react-native"; // 누락된 컴포넌트 추가
+import React, { useEffect } from "react"; 
+import { Text, View, Alert, Linking, TouchableOpacity, StyleSheet } from "react-native"; 
 import { CameraView, useCameraPermissions } from "expo-camera";
+import ClassProgressBar from '../../components/classprogressbar/'
+import AlertButton from "../../components/alertbutton";
+import TraggicLight from "../../components/trafficlight";
 
 export default function NormalClassScreen() {
-  // 1. 오타 수정: userCameraPermissions -> useCameraPermissions
   const [permission, requestPermission] = useCameraPermissions();
 
   const checkPermissions = async () => {
     if (!permission) return;
 
-    // 권한이 거부되었고, 다시 물어볼 수 없는 상태일 때 설정창 유도
+    // 권한이 거부되었고, 다시 물어볼 수 없는 상태일 때 설정창
     if (permission.status !== "granted") {
       if (!permission.canAskAgain) {
         Alert.alert(
@@ -35,7 +37,7 @@ export default function NormalClassScreen() {
   // permission 상태가 바뀔 때마다 체크 (초기 실행 포함)
   useEffect(() => {
     checkPermissions();
-  }, [permission?.status]); // status를 명시하는 것이 더 정확합니다.
+  }, [permission?.status]); 
 
   // 권한 로딩 중일 때
   if (!permission) {
@@ -61,8 +63,10 @@ export default function NormalClassScreen() {
   // 권한이 부여되었을 때 카메라 화면 표시
   return (
     <View style={styles.container}>
-        <Text className="text-xl font-bold text-blue-500">카메라 화면(테일윈드 돌아가는지 체크좀하자)</Text>
       <CameraView style={styles.camera} facing="back" />
+       <ClassProgressBar targetMinutes={1} />
+       <TraggicLight />
+        <AlertButton />
     </View>
   );
 }
