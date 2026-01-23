@@ -2,7 +2,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-
+import { store } from '../app/store';
+import { Provider } from 'react-redux';
 import { View } from 'react-native';
 SplashScreen.preventAutoHideAsync();
 
@@ -17,6 +18,7 @@ export default function RootLayout() {
   }, []);
 
   return (
+    <Provider store={store}>
     <ThemeProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
@@ -27,5 +29,6 @@ export default function RootLayout() {
 
       </Stack>
     </ThemeProvider>
+    </Provider>
   );
 }
