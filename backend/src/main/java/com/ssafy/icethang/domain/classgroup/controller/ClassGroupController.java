@@ -3,6 +3,7 @@ package com.ssafy.icethang.domain.classgroup.controller;
 import com.ssafy.icethang.domain.classgroup.dto.request.ClassCreateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.request.ClassUpdateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.response.ClassResponse;
+import com.ssafy.icethang.domain.classgroup.dto.response.ClassStudentResponse;
 import com.ssafy.icethang.domain.classgroup.service.ClassGroupService;
 import com.ssafy.icethang.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,14 @@ public class ClassGroupController {
     @GetMapping("/{classId}")
     public ResponseEntity<ClassResponse> getClassDetail(@PathVariable Long classId) {
         return ResponseEntity.ok(classGroupService.getClassDetail(classId));
+    }
+
+    // 반 안에 학생 목록 보기
+    @GetMapping("/{classId}/students")
+    public ResponseEntity<List<ClassStudentResponse>> getClassStudents(
+            @PathVariable Long classId
+    ) {
+        return ResponseEntity.ok(classGroupService.getClassStudents(classId));
     }
 
     // 반 정보 수정
