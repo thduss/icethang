@@ -6,6 +6,8 @@ import com.ssafy.icethang.domain.auth.dto.request.UpdateUserRequest;
 import com.ssafy.icethang.domain.auth.dto.response.TokenResponseDto;
 import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.auth.service.AuthService;
+import com.ssafy.icethang.domain.student.dto.request.StudentLoginRequest;
+import com.ssafy.icethang.domain.student.service.StudentService;
 import com.ssafy.icethang.global.security.UserPrincipal;
 import com.ssafy.icethang.global.utill.CookieUtil;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final AuthService authService;
     private final CookieUtil cookieUtil;
+    private final StudentService studentService;
 
     // 선생님 회원가입
     @PostMapping("/signup")
@@ -44,10 +47,14 @@ public class AuthController {
         return ResponseEntity.ok("회원 정보가 수정되었습니다.");
     }
 
-    // 학생 로그인
+    // 학생 재입장(자동 로그인)
+    @PostMapping("/login/student")
+    public ResponseEntity<?> loginStudent(@RequestBody StudentLoginRequest request) {
+        return ResponseEntity.ok(studentService.autoLogin(request));
+    }
 
     // 선생님 로그인
-    @PostMapping("/login")
+    @PostMapping("/login/teacher")
     public ResponseEntity<?> login(@RequestBody LoginRequest request,
                                    HttpServletResponse response) {
         TokenResponseDto tokenDto = authService.login(request);

@@ -3,8 +3,10 @@ package com.ssafy.icethang.domain.classgroup.service;
 import com.ssafy.icethang.domain.classgroup.dto.request.ClassCreateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.request.ClassUpdateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.response.ClassResponse;
+import com.ssafy.icethang.domain.classgroup.dto.response.ClassStudentResponse;
 import com.ssafy.icethang.domain.classgroup.entity.ClassGroup;
 import com.ssafy.icethang.domain.classgroup.repository.ClassGroupRepository;
+import com.ssafy.icethang.domain.student.repository.StudentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class ClassGroupService {
 
     private final ClassGroupRepository classGroupRepository;
+    private final StudentRepository studentRepository;
 
     // 반 생성
     @Transactional
@@ -55,6 +58,17 @@ public class ClassGroupService {
         ClassGroup classGroup = classGroupRepository.findById(classId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 반이 존재하지 않습니다."));
         return ClassResponse.from(classGroup);
+    }
+
+    // 반 학생 목록 조회
+    public List<ClassStudentResponse> getClassStudents(Long classId) {
+        if (!classGroupRepository.existsById(classId)) {
+            throw new IllegalArgumentException("존재하지 않는 반입니다.");
+        }
+
+        return studentRepository.findAllByClassGroupId(classId).stream()
+                .map(ClassStudentResponse::from)
+                .collect(Collectors.toList());
     }
 
     // 반 수정(반 이름만)

@@ -64,7 +64,7 @@ public class SecurityConfig {
                 // 4. 권한 설정 (누가 어디를 갈 수 있는지)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
-                        .requestMatchers("/auth/signup", "/auth/login", "/auth/refresh","/login/**", "/oauth2/**").permitAll() // 로그인 관련 URL 허용
+                        .requestMatchers("/auth/**", "/auth/refresh","/login/**", "/oauth2/**", "/api/students/join").permitAll() // 로그인 관련 URL 허용
                         .requestMatchers("/auth/**").authenticated() // 로그인 로직 허용
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
                 )
