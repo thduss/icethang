@@ -14,7 +14,11 @@ import java.time.LocalDateTime;
 public class Auth extends BaseEntity {
 
     @Id
-    @Column(length = 100)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "teacher_id")
+    private Long id;
+
+    @Column(length = 100, unique = true, nullable = false)
     private String email;
 
     private Integer schoolId;

@@ -60,9 +60,9 @@ public class AuthService {
         String refreshToken = tokenProvider.createRefreshToken(authentication);
 
         redisService.setValues(
-                request.getEmail(), // Key
-                refreshToken,       // Value
-                Duration.ofDays(7)  // Duration
+                request.getEmail(),
+                refreshToken,
+                Duration.ofDays(7)
         );
 
         return TokenResponseDto.builder()
