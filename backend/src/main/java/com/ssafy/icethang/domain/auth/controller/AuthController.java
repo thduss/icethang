@@ -6,7 +6,9 @@ import com.ssafy.icethang.domain.auth.dto.request.UpdateUserRequest;
 import com.ssafy.icethang.domain.auth.dto.response.TokenResponseDto;
 import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.auth.service.AuthService;
+import com.ssafy.icethang.domain.student.dto.request.StudentJoinRequest;
 import com.ssafy.icethang.domain.student.dto.request.StudentLoginRequest;
+import com.ssafy.icethang.domain.student.dto.response.StudentLoginResponse;
 import com.ssafy.icethang.domain.student.service.StudentService;
 import com.ssafy.icethang.global.security.UserPrincipal;
 import com.ssafy.icethang.global.utill.CookieUtil;
@@ -47,10 +49,24 @@ public class AuthController {
         return ResponseEntity.ok("회원 정보가 수정되었습니다.");
     }
 
+    // 학생 최초 입장(첫 로그인)
+    @PostMapping("/join/student")
+    public ResponseEntity<?> joinStudent(@RequestBody StudentJoinRequest request,
+                                         HttpServletResponse response) { // 쿠키 구우려면 response 필요
+        TokenResponseDto tokenDto = studentService.join(request);
+
+        cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
+        return ResponseEntity.ok(studentService.getStudentInfo(tokenDto.getAccessToken()));
+    }
+
     // 학생 재입장(자동 로그인)
     @PostMapping("/login/student")
-    public ResponseEntity<?> loginStudent(@RequestBody StudentLoginRequest request) {
-        return ResponseEntity.ok(studentService.autoLogin(request));
+    public ResponseEntity<?> loginStudent(@RequestBody StudentLoginRequest request,
+                                          HttpServletResponse response) {
+        TokenResponseDto tokenDto = studentService.autoLogin(request);
+        cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
+
+        return ResponseEntity.ok(studentService.getStudentInfo(tokenDto.getAccessToken()));
     }
 
     // 선생님 로그인

@@ -15,17 +15,15 @@ public class CookieUtil {
 
     private static final String ACCESS_TOKEN_NAME = "accessToken";
     private static final String REFRESH_TOKEN_NAME = "refreshToken";
-
-    // 우리 컨트롤러가 "/auth" 이므로
-    private static final String REFRESH_TOKEN_PATH = "/auth";
+    private static final String REFRESH_TOKEN_PATH = "/";
 
     // 토큰 유효시간
     private static final int ACCESS_TOKEN_AGE = 30 * 60; // 30분
     private static final int REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60; // 7일
 
-    // 1. 쿠키 굽기
+    // 쿠키 굽기
     public void addTokenCookies(HttpServletResponse response, String accessToken, String refreshToken) {
-        // Access Token 쿠키
+        // Access Token
         ResponseCookie accessCookie = ResponseCookie.from(ACCESS_TOKEN_NAME, accessToken)
                 .path("/")
                 .httpOnly(true)
@@ -34,7 +32,7 @@ public class CookieUtil {
                 .sameSite("Lax")
                 .build();
 
-        // Refresh Token 쿠키
+        // Refresh Token
         ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN_NAME, refreshToken)
                 .path(REFRESH_TOKEN_PATH)
                 .httpOnly(true)
@@ -47,7 +45,7 @@ public class CookieUtil {
         response.addHeader("Set-Cookie", refreshCookie.toString());
     }
 
-    // 2. 쿠키 삭제 (로그아웃)
+    // 쿠키 삭제 (로그아웃)
     public void deleteTokenCookies(HttpServletResponse response) {
         // Access Token 삭제 (MaxAge = 0)
         ResponseCookie accessCookie = ResponseCookie.from(ACCESS_TOKEN_NAME, "")
@@ -83,7 +81,7 @@ public class CookieUtil {
         return Optional.empty();
     }
 
-    // 2. 일반 쿠키 저장 (OAuth2 요청 정보 저장용)
+    // 일반 쿠키 저장 (OAuth2 요청 정보 저장용)
     public static void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setPath("/");
@@ -92,7 +90,7 @@ public class CookieUtil {
         response.addCookie(cookie);
     }
 
-    // 3. 일반 쿠키 삭제 (이름으로 삭제)
+    // 일반 쿠키 삭제 (이름으로 삭제)
     public static void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null && cookies.length > 0) {
@@ -108,13 +106,13 @@ public class CookieUtil {
     }
 
     // 직렬화
-    // 4. 객체 -> 문자열
+    // 객체 -> 문자열
     public static String serialize(Object object) {
         return Base64.getUrlEncoder()
                 .encodeToString(SerializationUtils.serialize(object));
     }
 
-    // 5. 문자열 -> 객체 변환
+    // 문자열 -> 객체 변환
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
         return cls.cast(SerializationUtils.deserialize(
                 Base64.getUrlDecoder().decode(cookie.getValue())));

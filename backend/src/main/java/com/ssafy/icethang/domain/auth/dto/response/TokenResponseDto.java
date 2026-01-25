@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// 쿠키에 숨겨서 전달
 public class TokenResponseDto {
     private String accessToken;
     private String refreshToken;
