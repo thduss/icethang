@@ -17,9 +17,10 @@ pipeline {
         // Mattermost Webhook URL
         MATTERMOST_URL = 'https://meeting.ssafy.com/hooks/83x1b6t177b59nxcej5ufsxtja'
         
-        // 기본값 develop
+        // 기본값 설정
         SERVICE_NAME = 'develop-server'
         IMAGE_TAG = 'develop'
+        SPRING_PROFILE = 'develop' // 기본 프로필
     }
 
 stages {
@@ -34,10 +35,12 @@ stages {
                         echo "🚨 [운영 배포] Master 브랜치 감지 -> Release Server 배포 설정"
                         env.SERVICE_NAME = 'release-server'
                         env.IMAGE_TAG = 'release'
+                        env.SPRING_PROFILE = 'release'
                     } else {
                         echo "🚧 [개발 배포] Develop 브랜치 감지 -> Develop Server 배포 설정"
                         env.SERVICE_NAME = 'develop-server'
                         env.IMAGE_TAG = 'develop'
+                        env.SPRING_PROFILE = 'develop'
                     }
 
                     // 3. backend 폴더 변경 사항 감지
@@ -45,7 +48,6 @@ stages {
                         def changes = sh(script: "git diff --name-only HEAD HEAD~1", returnStdout: true).trim()
                         echo "📝 변경된 파일 목록:\n${changes}"
 
-                        // 백엔드 폴더가 변경되었거나, 첫 빌드(비교불가)라면 빌드 진행
                         if (changes.contains("${BACKEND_DIR}")) {
                             echo "🚨 백엔드 코드 변경 감지! 빌드를 진행합니다."
                             env.IS_BACKEND_CHANGED = "true"
@@ -72,7 +74,6 @@ stages {
             }
         }
 
-        // Dockerfile을 이용해 이미지 생성
         stage('Build Docker Image') {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
@@ -86,9 +87,9 @@ stages {
         stage('Deploy') {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
-                echo '🚀 EC2 배포 시작...'
+                echo "🚀 EC2 배포 시작... (Profile: ${env.SPRING_PROFILE})"
                 script {
-                    // 1. 기존 컨테이너 정리 (에러 무시)
+                    // 1. 기존 컨테이너 정리
                     try {
                         sh "docker stop ${CONTAINER_NAME}"
                         sh "docker rm ${CONTAINER_NAME}"
@@ -96,20 +97,20 @@ stages {
                         echo '기존에 실행 중인 컨테이너가 없습니다.'
                     }
 
-                    // 2. 새 컨테이너 실행 (/config/application-prod.yml 읽음)
+                    // 2. 새 컨테이너 실행
                     sh """
                         docker run -d \
                         -p 8081:8080 \
                         --name ${CONTAINER_NAME} \
+                        --network infra_app-network \
                         -v ${HOST_CONF_DIR}:/config \
-                        -e SPRING_PROFILES_ACTIVE=prod \
+                        -e SPRING_PROFILES_ACTIVE=${env.SPRING_PROFILE} \
                         ${IMAGE_NAME}
                     """
                 }
             }
         }
         
-        // 사용하지 않는 이미지 삭제
         stage('Clean Up') {
             steps {
                 sh 'docker image prune -f'
@@ -117,16 +118,14 @@ stages {
         }
     }
 
-    // 매터모스트 알림 설정
     post {
         success {
             script {
                 def Author_ID = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
                 def Commit_Message = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
                 
-                // mattermostSend 플러그인이 깔려있어야 작동합니다.
                  mattermostSend(color: 'good', 
-                    message: "### ✅ E204 백엔드 배포 성공!\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
+                    message: "### ✅ E204 백엔드 배포 성공!\n- **Profile**: ${env.SPRING_PROFILE}\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
                     endpoint: "${MATTERMOST_URL}",
                     channel: '#team-e204'
                 )
