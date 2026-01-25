@@ -6,7 +6,7 @@ import com.ssafy.icethang.domain.auth.repository.AuthRepository;
 import com.ssafy.icethang.global.security.UserPrincipal;
 import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfo;
 import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfoFactory;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
@@ -81,7 +81,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
             auth = registerNewUser(userRequest, userInfo);
         }
 
-        return UserPrincipal.create(auth, oAuth2User.getAttributes());
+        return UserPrincipal.create(auth, attributes);
     }
 
     private Auth registerNewUser(OAuth2UserRequest userRequest, OAuth2UserInfo userInfo) {
