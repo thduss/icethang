@@ -10,12 +10,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,16 +44,25 @@ public class TokenProvider {
 
     // 리프레시 토큰 유효기간: 14일
     private static final long REFRESH_TOKEN_EXPIRE_TIME = 1000 * 60 * 60 * 24 * 14;
+    private static final String AUTHORITIES_KEY = "role";
+    private static final String USER_ID_KEY = "userId";
 
     // 엑세스 토큰 생성
     public String createToken(Authentication authentication) {
-        String email = authentication.getName();
+        // UserPincipal로  id 가져오기
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+
+        String authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + appProperties.getAuth().getTokenExpirationMsec());
 
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(userPrincipal.getEmail())
+                .claim(USER_ID_KEY, userPrincipal.getId())
+                .claim(AUTHORITIES_KEY, authorities)
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -58,13 +71,14 @@ public class TokenProvider {
 
     // 리프레시 토큰 생성
     public String createRefreshToken(Authentication authentication) {
-        String email = authentication.getName();
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRE_TIME);
 
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(userPrincipal.getEmail())
+                .claim(USER_ID_KEY, userPrincipal.getId())
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -76,11 +90,15 @@ public class TokenProvider {
 
         Claims claims = parseClaims(accessToken);
 
-        // 권한 정보가 없으면 기본 권한(USER) 부여 (필요에 따라 로직 수정 가능)
+        Collection<? extends GrantedAuthority> authorities =
+                Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList());
 
-        // UserDetails 객체를 만들어서 Authentication 리턴
-        // 비밀번호는 모르니까 빈 문자열("")
-        User principal = new User(claims.getSubject(), "", Collections.emptyList());
+        Long userId = claims.get(USER_ID_KEY, Long.class);
+        String email = claims.getSubject();
+
+        UserPrincipal principal = new UserPrincipal(userId, email, "", authorities);
 
         return new UsernamePasswordAuthenticationToken(principal, accessToken, Collections.emptyList());
     }
@@ -111,16 +129,7 @@ public class TokenProvider {
         return (expiration.getTime() - now);
     }
 
-    // 토큰에서 Email 추출
-    public String getEmailFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-        return claims.getSubject();
-    }
+    // 웹소켓 연결시 토큰에서 id, email 추출이 필요하면 추가
 
     // 토큰 유효성 검증
     public boolean validateToken(String authToken) {
