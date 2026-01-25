@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         // 프로젝트 설정
-        TARGET_BRANCH = 'master'
         BACKEND_DIR = 'backend'
         IMAGE_NAME = 'icethang-backend-server'
         CONTAINER_NAME = 'icethang-backend-server'
@@ -17,6 +16,10 @@ pipeline {
         
         // Mattermost Webhook URL
         MATTERMOST_URL = 'https://meeting.ssafy.com/hooks/83x1b6t177b59nxcej5ufsxtja'
+        
+        // 기본값 develop
+        SERVICE_NAME = 'develop-server'
+        IMAGE_TAG = 'develop'
     }
 
 stages {
@@ -26,7 +29,18 @@ stages {
                     // 1. 브랜치 감지
                     checkout scm
 
-                    // 2. 변경 사항 감지 (backend 폴더에 변화가 있는지 확인)
+                    // 2. 현재 브랜치 확인 및 변수 설정
+                    if (env.BRANCH_NAME == 'master') {
+                        echo "🚨 [운영 배포] Master 브랜치 감지 -> Release Server 배포 설정"
+                        env.SERVICE_NAME = 'release-server'
+                        env.IMAGE_TAG = 'release'
+                    } else {
+                        echo "🚧 [개발 배포] Develop 브랜치 감지 -> Develop Server 배포 설정"
+                        env.SERVICE_NAME = 'develop-server'
+                        env.IMAGE_TAG = 'develop'
+                    }
+
+                    // 3. backend 폴더 변경 사항 감지
                     try {
                         def changes = sh(script: "git diff --name-only HEAD HEAD~1", returnStdout: true).trim()
                         echo "📝 변경된 파일 목록:\n${changes}"

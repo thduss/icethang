@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # -----------------------------
+  # 1. Nginx
+  # -----------------------------
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/cert:/etc/nginx/cert
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - release-server
+      - develop-server
+    networks:
+      - app-network
+    restart: always
+
+  # -----------------------------
+  # 2. Jenkins
+  # -----------------------------
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"
+    environment:
+          TZ: Asia/Seoul
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+    networks:
+      - app-network
+    restart: always
+  # -----------------------------
+  # 3. MySQL (공용 창고)
+  # -----------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      TZ: Asia/Seoul
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: always
+
+  # -----------------------------
+  # 4. Redis
+  # -----------------------------
+  redis:
+    image: redis:alpine
+    container_name: redis
+    networks:
+      - app-network
+    restart: always
+
+  # -----------------------------
+  # 5. Release Server (운영용)
+  # -----------------------------
+  release-server:
+    image: icethang-backend-server:release
+    container_name: release-server
+    pull_policy: never
+    environment:
+      SPRING_PROFILES_ACTIVE: release
+      DB_HOST: mysql
+      REDIS_HOST: redis
+      TZ: Asia/Seoul
+    volumes:
+      - ./server-conf:/config
+    ports:
+      - "8081:8080" # 외부 8081 -> 내부 8080
+    depends_on:
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+    restart: always
+
+  # -----------------------------
+  # 6. Develop Server (개발용)
+  # -----------------------------
+  develop-server:
+    image: icethang-backend-server:develop
+    container_name: develop-server
+    pull_policy: never
+    environment:
+      SPRING_PROFILES_ACTIVE: develop
+      DB_HOST: mysql
+      REDIS_HOST: redis
+      TZ: Asia/Seoul
+    volumes:
+      - ./server-conf:/config
+    ports:
+      - "8082:8080" # 외부 8082 -> 내부 8080
+    depends_on:
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+    restart: always
+
+# -----------------------------
+# 공용 네트워크 정의
+# -----------------------------
+networks:
+  app-network:
+    driver: bridge

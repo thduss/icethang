@@ -5,7 +5,6 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # 3. 빌드 변수 생성
-ARG PROFILE=prd
 ARG JAR_FILE=build/libs/*.jar
 
 # 4. JAR 파일을 컨테이너 안으로 복사하고 이름을 app.jar로 변경
@@ -13,7 +12,6 @@ COPY ${JAR_FILE} app.jar
 
 # 5. 환경 변수 설정
 ENV TZ=Asia/Seoul
-ENV SPRING_PROFILES_ACTIVE=${PROFILE}
 
 # 6. 실행
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dspring.config.location=/config/", "-jar", "app.jar"]
