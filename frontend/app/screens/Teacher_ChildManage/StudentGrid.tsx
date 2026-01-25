@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native'
+import { router } from 'expo-router'
 import StudentCard from './StudentCard'
 
 // 임시 더미 데이터
@@ -21,6 +22,15 @@ const StudentGrid = () => {
           key={student.id}
           name={student.name}
           number={student.number}
+          onPress={() => {
+            router.push({
+              pathname: '/Teacher_Statistics',
+              params: {
+                name: student.name,
+                number: String(student.number),
+              },
+            }) 
+          }}
         />
       ))}
     </View>
