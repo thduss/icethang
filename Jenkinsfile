@@ -36,11 +36,15 @@ stages {
                         env.SERVICE_NAME = 'release-server'
                         env.IMAGE_TAG = 'release'
                         env.SPRING_PROFILE = 'release'
+                        env.CONTAINER_NAME = 'release-server'
+                        env.HOST_PORT = '8081'
                     } else {
                         echo "🚧 [개발 배포] Develop 브랜치 감지 -> Develop Server 배포 설정"
                         env.SERVICE_NAME = 'develop-server'
                         env.IMAGE_TAG = 'develop'
                         env.SPRING_PROFILE = 'develop'
+                        env.CONTAINER_NAME = 'develop-server'
+                        env.HOST_PORT = '8082'
                     }
 
                     // 3. backend 폴더 변경 사항 감지
@@ -87,7 +91,7 @@ stages {
         stage('Deploy') {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
-                echo "🚀 EC2 배포 시작... (Profile: ${env.SPRING_PROFILE})"
+                echo "🚀 EC2 배포 시작... (Profile: ${env.SPRING_PROFILE}, Port: ${env.HOST_PORT})"
                 script {
                     // 1. 기존 컨테이너 정리
                     try {
@@ -100,8 +104,8 @@ stages {
                     // 2. 새 컨테이너 실행
                     sh """
                         docker run -d \
-                        -p 8081:8080 \
-                        --name ${CONTAINER_NAME} \
+                        -p ${env.HOST_PORT}:8080 \
+                        --name ${env.CONTAINER_NAME} \
                         --network infra_app-network \
                         -v ${HOST_CONF_DIR}:/config \
                         -e SPRING_PROFILES_ACTIVE=${env.SPRING_PROFILE} \
