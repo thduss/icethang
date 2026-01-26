@@ -2,6 +2,7 @@
   "expo": {
     "name": "frontend",
     "slug": "frontend",
+    "scheme": "ice-thang",
     "version": "1.0.0",
     "web": {
       "bundler": "metro",
