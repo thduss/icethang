@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableConfigurationProperties(AppProperties.class)
 public class IcethangApplication {
 	public static void main(String[] args) {
+		
 		SpringApplication.run(IcethangApplication.class, args);
 	}
 }

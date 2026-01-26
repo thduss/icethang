@@ -125,14 +125,16 @@ stages {
     post {
         success {
             script {
-                def Author_ID = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
-                def Commit_Message = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
-                
-                 mattermostSend(color: 'good', 
-                    message: "### ✅ E204 백엔드 배포 성공!\n- **Profile**: ${env.SPRING_PROFILE}\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
-                    endpoint: "${MATTERMOST_URL}",
-                    channel: '#team-e204'
-                )
+                if (env.IS_BACKEND_CHANGED == "true") {
+                    def Author_ID = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
+                    def Commit_Message = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
+                    
+                    mattermostSend(color: 'good', 
+                        message: "### ✅ E204 백엔드 배포 성공!\n- **Profile**: ${env.SPRING_PROFILE}\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
+                        endpoint: "${MATTERMOST_URL}",
+                        channel: '#team-e204'
+                    )
+                }
             }
         }
         failure {
