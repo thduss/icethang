@@ -112,6 +112,7 @@ public class StudentService {
                 .classId(student.getClassGroup().getId())
                 .className(student.getClassGroup().getGroupName())
                 .studentNumber(student.getStudentNumber())
+                .accessToken(accessToken)
                 .build();
     }
 }
