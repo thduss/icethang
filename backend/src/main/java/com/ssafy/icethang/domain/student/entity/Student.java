@@ -49,7 +49,7 @@ public class Student {
 
     // 학생 수정
     public void updateInfo(String name, Integer studentNumber) {
-        if (name != null) this.name = name;
+        if (name != null && !name.isBlank()) this.name = name;
         if (studentNumber != null) this.studentNumber = studentNumber;
     }
 }
