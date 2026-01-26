@@ -15,6 +15,7 @@ import DailyStatistics from './DailyStatistics'
 import MonthlyStatistics from './MonthlyStatistics'
 import WeeklyStatistics from './WeeklyStatistics'
 import WeeklyCalendar from './WeeklyCalendar'
+import SubjectStatistics from './SubjectStatistics'
 
 type StatisticsView = ViewType | 'daily'
 
@@ -130,12 +131,6 @@ const index = () => {
 
           {view === 'weekly' && (
             <>
-              <StatisticsFilter
-                year={year}
-                month={month}
-                onPressYear={() => console.log('연도')}
-                onPressMonth={() => console.log('월')}
-              />
 
               <WeeklyCalendar
                 visible={calendarVisible}
@@ -152,6 +147,8 @@ const index = () => {
               />
             </>
           )}
+
+          {view === 'subject' && <SubjectStatistics />}
         </StatisticsBorder>
       </View>
     </View>
