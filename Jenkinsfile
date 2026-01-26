@@ -46,18 +46,19 @@ stages {
                         env.HOST_PORT = '8082'
                     }
 
-                    // 3. backend 폴더 변경 사항 감지
+                    // 3. backend 폴더 & 인프라 변경 사항 감지
                     try {
                         def changes = sh(script: "git diff --name-only HEAD HEAD~1", returnStdout: true).trim()
                         echo "📝 변경된 파일 목록:\n${changes}"
 
-                        if (changes.contains("${BACKEND_DIR}")) {
-                            echo "🚨 백엔드 코드 변경 감지! 빌드를 진행합니다."
+                        if (changes.contains("${BACKEND_DIR}") || changes.contains("infra") || changes.contains("Jenkinsfile") || changes.contains("docker-compose")) {
+                            echo "🚨 [변경 감지] 백엔드 코드 또는 인프라 설정이 변경되었습니다. 빌드를 진행합니다."
                             env.IS_BACKEND_CHANGED = "true"
                         } else {
-                            echo "💤 백엔드 변경 없음. (빌드 스킵 가능)"
+                            echo "💤 감지 대상(백엔드, 인프라) 변경 없음. (빌드 스킵)"
                             env.IS_BACKEND_CHANGED = "false"
                         }
+
                     } catch (Exception e) {
                         echo "⚠️ 첫 빌드거나 커밋 기록이 부족합니다. 무조건 빌드를 진행합니다."
                         env.IS_BACKEND_CHANGED = "true"
@@ -81,8 +82,8 @@ stages {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
                 dir("${BACKEND_DIR}") {
-                    echo '🐳 도커 이미지 빌드...'
-                    sh "docker build -t ${IMAGE_NAME} ."
+                    echo "🐳 도커 이미지 빌드... (${IMAGE_NAME}:${env.IMAGE_TAG})
+                    sh "docker build -t ${IMAGE_NAME}:${env.IMAGE_TAG} ."
                 }
             }
         }
