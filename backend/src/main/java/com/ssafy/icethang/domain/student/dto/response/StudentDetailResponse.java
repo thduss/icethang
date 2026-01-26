@@ -13,8 +13,8 @@ public class StudentDetailResponse {
     private String name;
     private Integer studentNumber;
     private String deviceUuid;
-    private int currentXp;
-    private int currentLevel;
+    private int exp;
+    private int level;
 
     public static StudentDetailResponse from(Student student){
         return StudentDetailResponse.builder()
@@ -22,8 +22,8 @@ public class StudentDetailResponse {
                 .name(student.getName())
                 .studentNumber(student.getStudentNumber())
                 .deviceUuid(student.getDeviceUuid())
-                .currentXp(student.getCurrentXp())
-                .currentLevel(student.getCurrentLevel())
+                .exp(student.getExp())
+                .level(student.getLevel())
                 .build();
     }
 }
