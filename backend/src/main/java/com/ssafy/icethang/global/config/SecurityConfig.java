@@ -90,6 +90,7 @@ public class SecurityConfig {
                         // 세션 대신 쿠키 쓰기
                         .authorizationEndpoint(authorization -> authorization
                                 .baseUri("/oauth2/authorization")
+                                // redirect_uri 쿠키에 저장
                                 .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
                         )
                 );
