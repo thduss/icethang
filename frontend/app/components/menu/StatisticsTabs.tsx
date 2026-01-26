@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native'
 
-type ViewType = 'monthly' | 'weekly' | 'subject'
+export type ViewType = 'monthly' | 'weekly' | 'subject' | 'daily'
 
 interface StatisticsTabsProps {
   value: ViewType
@@ -17,26 +17,31 @@ const StatisticsTabs = ({ value, onChange }: StatisticsTabsProps) => {
 
   return (
     <View style={styles.container}>
-      {tabs.map((tab) => (
-        <Pressable
-          key={tab.key}
-          style={[
-            styles.tab,
-            value === tab.key && styles.activeTab,
-          ]}
+      {tabs.map((tab) => {
+        const isActive = value === tab.key
 
-          onPress={() => onChange(tab.key)}
-        >
-          <Text
+        return (
+          <Pressable
+            key={tab.key}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
             style={[
-              styles.text,
-              value === tab.key && styles.activeText,
+              styles.tab,
+              isActive && styles.activeTab,
             ]}
+            onPress={() => onChange(tab.key)}
           >
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
+            <Text
+              style={[
+                styles.text,
+                isActive && styles.activeText,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </Pressable>
+        )
+      })}
     </View>
   )
 }
@@ -45,7 +50,7 @@ export default StatisticsTabs
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginTop: 16,
   },
 
@@ -68,7 +73,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#3A2A1A',
   },
-  
+
   activeText: {
     color: '#FFFFFF',
   },
