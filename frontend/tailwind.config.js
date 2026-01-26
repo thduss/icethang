@@ -6,12 +6,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        yeogi: ['YeogiOttaeJalnan'],
-        netmarble: ['NetmarbleM'],
-        susukkang : ['Susukkang'],
-        boardmaker : ['Boardmaker'],
+        dunggeunmiso: ['Hakgyoansim Dunggeunmiso TTF B'],
+        boardmarker: ['Hakgyoansim BoardmarkerR'],
+      },
     },
   },
   plugins: [],
-}
 }

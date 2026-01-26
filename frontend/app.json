@@ -12,7 +12,16 @@
       "tsconfigPaths": true
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/font/Hakgyoansim Dunggeunmiso TTF B.ttf",
+            "./assets/font/Hakgyoansim_BoardmarkerR.ttf"
+          ]
+        }
+      ]
     ],
     "orientation": "landscape",
     "icon": "./assets/icon.png",

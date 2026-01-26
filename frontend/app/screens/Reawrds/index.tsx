@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useAppTheme } from '../../context/ThemeContext';
+import RewardModal from 'app/components/rewardmodal';
 
 export default function ReusableGridScreen() {
   const { theme } = useAppTheme();
@@ -92,55 +93,11 @@ export default function ReusableGridScreen() {
         </Pressable>
       </View>
 
-      <Modal animationType="fade" transparent={true} visible={modalVisible}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-            
-            <Text style={[styles.congratsText, { color: theme.text }]}>
-              {isOpened ? "축하합니다!" : "상자를 여는 중..."}
-            </Text>
-
-            <View style={styles.animationWrapper}>
-              <LottieView
-                ref={chestRef}
-                source={require('../../../assets/animations/treasure-chest.json')}
-                loop={false}
-                autoPlay={false}
-                style={styles.modalLottie}
-                onAnimationFinish={onChestFinish}
-              />
-              {showConfetti && (
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <LottieView
-                    source={require('../../../assets/animations/confetti.json')}
-                    autoPlay
-                    loop={false}
-                    style={styles.confettiLottie}
-                  />
-                </View>
-              )}
-
-              {/* 보상 텍스트 (아이템 이미지 들어갈거임) */}
-              {isOpened && (
-                <Animated.View style={[styles.itemPlaceholder, { opacity: fadeAnim }]}>
-                  <Text style={[styles.rewardInfoText, { color: theme.primary }]}>
-                    🎁 보상 획득 완료!
-                  </Text>
-                </Animated.View>
-              )}
-            </View>
-
-            {isOpened && (
-              <Pressable 
-                style={[styles.closeButton, { backgroundColor: theme.primary }]}
-                onPress={handleCloseModal}
-              >
-                <Text style={styles.closeButtonText}>닫기</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <RewardModal
+        visible={modalVisible}
+        onClose={handleCloseModal}
+        theme={theme}
+      />
     </View>
   );
 }
@@ -152,7 +109,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, marginTop: 8 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   mainBoxContainer: { marginBottom: 40 },
-  mainBoxImage: { width: 150, height: 150 },
   progressSection: { width: '80%', marginBottom: 30 },
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   expText: { fontSize: 14 },
@@ -160,48 +116,4 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%', borderRadius: 6 },
   rewardButton: { width: '40%', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    width: '80%',
-    padding: 25,
-    borderRadius: 25,
-    alignItems: 'center',
-    elevation: 5,
-  },
-  animationWrapper: {
-    width: 300,
-    height: 300,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalLottie: {
-    width: 280,
-    height: 280,
-  },
-  confettiLottie: {
-    flex: 1,
-  },
-  itemPlaceholder: {
-    position: 'absolute',
-    top: '30%',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  rewardInfoText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 10,
-    borderRadius: 10,
-  },
-  congratsText: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  closeButton: { marginTop: 20, paddingHorizontal: 60, paddingVertical: 14, borderRadius: 15},
-  closeButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
