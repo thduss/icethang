@@ -2,7 +2,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { store, persistor } from './store/store';
+import { store, persistor } from './store/stores';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { ActivityIndicator, View } from 'react-native';
