@@ -33,7 +33,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.frontend",
+      "package": "com.my.icethang",
     "permissions": [
         "android.permission.CAMERA",
         "android.permission.SYSTEM_ALERT_WINDOW"

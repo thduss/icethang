@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { initNaverLogin } from '../../utils/naverConfig';
 
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
@@ -13,6 +14,8 @@ const CONFIG = {
     inputBorderPw: '#F4D4D4',
     btnBackground: '#8CB6F0',
     btnBorder: '#6A94D0',
+    textPlaceholder: '#A0B4CC',
+    textInput: '#4A5568',
   },
 };
 
@@ -24,7 +27,7 @@ export default function TeacherLoginScreen() {
   
   const { width: screenWidth } = useWindowDimensions();
 
-  // 📐 크기 설정 (선생님 화면 비율 1.1 유지)
+  // 📐 크기 설정 (선생님 화면 비율 1.1 유지 - 로직 유지)
   const cardWidth = Math.min(screenWidth * 0.75, 580); 
   const cardHeight = cardWidth * 1.1; 
 
@@ -42,14 +45,8 @@ export default function TeacherLoginScreen() {
 
   // ⚡️ 네이버 로그인 초기화
   useEffect(() => {
-    NaverLogin.initialize({
-      appName: 'IceTag',
-      consumerKey: '여기에_Client_ID_붙여넣기',    
-      consumerSecret: '여기에_Client_Secret_붙여넣기', 
-      serviceUrlSchemeIOS: 'icetag',
-      disableNaverAppAuthIOS: true,
-    });
-  }, []);
+      initNaverLogin();
+    }, []);
 
   // 🟡 카카오 로그인
   const handleKakaoLogin = async () => {
@@ -86,71 +83,53 @@ export default function TeacherLoginScreen() {
       Alert.alert("알림", "이메일과 비밀번호를 입력해주세요.");
       return;
     }
- 
- 
-    // API 연결 시 아래 주석 해제 및 사용
-    /*
-    try {
-      const isSuccess = await loginAPI(email, password);
-      if (isSuccess) {
-        router.replace('/screens/Teacher_MainPage');
-      } else {
-        Alert.alert("실패", "아이디 또는 비밀번호를 확인해주세요.");
-      }
-    } catch (error) {
-      Alert.alert("에러", "서버 연결에 실패했습니다.");
-    }
-    */
- 
     // 테스트용 강제 이동
     router.replace('/screens/Teacher_MainPage');
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFDF5' }}>
+    <View style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.flex1}
       >
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* ☁️ 로그인 카드 */}
-          <View style={{ width: cardWidth, height: cardHeight, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
             
             {/* 구름 배경 */}
             <Image
               source={require('../../../assets/login_background.png')} 
-              style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}
+              style={styles.backgroundImage}
               resizeMode="stretch"
             />
 
             {/* 내용물 컨테이너 */}
-            <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: paddingH, paddingVertical: paddingV, zIndex: 10 }}>
+            <View style={[
+              styles.contentWrapper, 
+              { paddingHorizontal: paddingH, paddingVertical: paddingV }
+            ]}>
               
               {/* 타이틀 */}
               <View style={{ marginBottom: spacing * 1.5 }}>
-                <Text style={{ 
-                  fontSize: titleSize, 
-                  color: '#AEC7EC', 
-                  fontWeight: '900', 
-                  textAlign: 'center', 
-                  textShadowColor: '#000000', 
-                  textShadowOffset: { width: 2, height: 2 }, 
-                  textShadowRadius: 1 
-                }}>
+                <Text style={[styles.titleText, { fontSize: titleSize }]}>
                   교사 로그인
                 </Text>
               </View>
 
               {/* 이메일 입력창 */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderWidth: 3.5, borderRadius: 999, paddingHorizontal: 16, borderColor: CONFIG.colors.inputBorder, height: inputHeight, marginBottom: spacing, width: '100%' }}>
+              <View style={[
+                styles.inputContainer, 
+                { height: inputHeight, marginBottom: spacing, borderColor: CONFIG.colors.inputBorder }
+              ]}>
                 <Ionicons name="mail-outline" size={fontSizeInput * 1.3} color="#8DA6C6" />
                 <TextInput
-                  style={{ flex: 1, marginLeft: 10, fontSize: fontSizeInput, color: '#4A5568', paddingTop: 0, fontWeight: '600' }}
+                  style={[styles.textInput, { fontSize: fontSizeInput }]}
                   placeholder="이메일"
-                  placeholderTextColor="#A0B4CC"
+                  placeholderTextColor={CONFIG.colors.textPlaceholder}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -159,10 +138,13 @@ export default function TeacherLoginScreen() {
               </View>
 
               {/* 비밀번호 입력창 */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderWidth: 3.5, borderRadius: 999, paddingHorizontal: 16, borderColor: CONFIG.colors.inputBorderPw, height: inputHeight, marginBottom: spacing * 1.2, width: '100%' }}>
+              <View style={[
+                styles.inputContainer, 
+                { height: inputHeight, marginBottom: spacing * 1.2, borderColor: CONFIG.colors.inputBorderPw }
+              ]}>
                 <Ionicons name="lock-closed-outline" size={fontSizeInput * 1.3} color="#C68D8D" />
                 <TextInput
-                  style={{ flex: 1, marginLeft: 10, fontSize: fontSizeInput, color: '#4A5568', paddingTop: 0, fontWeight: '600' }}
+                  style={[styles.textInput, { fontSize: fontSizeInput }]}
                   placeholder="비밀번호"
                   placeholderTextColor="#CCA0A0"
                   value={password}
@@ -178,36 +160,53 @@ export default function TeacherLoginScreen() {
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleEmailLogin}
-                style={{ width: '100%', justifyContent: 'center', alignItems: 'center', borderRadius: 999, borderBottomWidth: 3.5, backgroundColor: CONFIG.colors.btnBackground, borderColor: CONFIG.colors.btnBorder, height: buttonHeight, marginBottom: spacing }}
+                style={[
+                  styles.loginButton, 
+                  { height: buttonHeight, marginBottom: spacing }
+                ]}
               >
                 <Text style={{ color: 'white', fontWeight: 'bold', fontSize: titleSize * 0.55 }}>로그인</Text>
               </TouchableOpacity>
 
               {/* 소셜 버튼 구분선 */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: spacing * 0.5, paddingHorizontal: 5 }}>
-                <View style={{ flex: 1, height: 2, backgroundColor: '#E2E8F0' }} />
-                <Text style={{ marginHorizontal: 8, color: '#A0AEC0', fontWeight: 'bold', fontSize: fontSizeInput * 0.75 }}>또는 소셜 로그인</Text>
-                <View style={{ flex: 1, height: 2, backgroundColor: '#E2E8F0' }} />
+              <View style={[styles.dividerContainer, { marginBottom: spacing * 0.5 }]}>
+                <View style={styles.dividerLine} />
+                <Text style={[styles.dividerText, { fontSize: fontSizeInput * 0.75 }]}>또는 소셜 로그인</Text>
+                <View style={styles.dividerLine} />
               </View>
 
               {/* 소셜 로그인 버튼들 */}
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: spacing * 0.2 }}>
+              <View style={[styles.socialContainer, { marginBottom: spacing * 0.2 }]}>
                 
-                {/* 카카오 */}
+                {/* 카카오 (K 텍스트 제거됨) */}
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleKakaoLogin}
-                  style={{ justifyContent: 'center', alignItems: 'center', width: Math.min(cardWidth * 0.2, 80), height: buttonHeight * 0.8, borderRadius: 15, backgroundColor: '#FEE500' }}
+                  style={[
+                    styles.socialButton, 
+                    { 
+                      width: Math.min(cardWidth * 0.2, 80), 
+                      height: buttonHeight * 0.8, 
+                      backgroundColor: '#FEE500' 
+                    }
+                  ]}
                 >
                    <Ionicons name="chatbubble-sharp" size={fontSizeInput * 1.4} color="#371D1E" />
-                   <Text style={{ position: 'absolute', color: '#FEE500', fontWeight: '900', fontSize: fontSizeInput * 0.7, marginTop: -2 }}>K</Text>
+                   {/* ❌ 여기에 있던 K 텍스트를 제거했습니다 */}
                 </TouchableOpacity>
 
                 {/* 네이버 */}
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleNaverLogin}
-                  style={{ justifyContent: 'center', alignItems: 'center', width: Math.min(cardWidth * 0.2, 80), height: buttonHeight * 0.8, borderRadius: 15, backgroundColor: '#03C75A' }}
+                  style={[
+                    styles.socialButton, 
+                    { 
+                      width: Math.min(cardWidth * 0.2, 80), 
+                      height: buttonHeight * 0.8, 
+                      backgroundColor: '#03C75A' 
+                    }
+                  ]}
                 >
                   <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>N</Text>
                 </TouchableOpacity>
@@ -240,7 +239,7 @@ export default function TeacherLoginScreen() {
             >
               <Image
                 source={require('../../../assets/common_TeacherLogin.png')}
-                style={{ width: '100%', height: '100%' }}
+                style={styles.fullImage}
                 resizeMode="contain"
               />
             </View>
@@ -251,3 +250,100 @@ export default function TeacherLoginScreen() {
     </View>
   );
 }
+
+// 🎨 스타일 정의 (StyleSheet)
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFDF5',
+  },
+  flex1: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  cardContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    top: 0,
+    left: 0,
+  },
+  contentWrapper: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  titleText: {
+    color: '#AEC7EC',
+    fontWeight: '900',
+    textAlign: 'center',
+    textShadowColor: '#000000',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 1,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 3.5,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    width: '100%',
+  },
+  textInput: {
+    flex: 1,
+    marginLeft: 10,
+    color: CONFIG.colors.textInput,
+    paddingTop: 0,
+    fontWeight: '600',
+  },
+  loginButton: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderBottomWidth: 3.5,
+    backgroundColor: CONFIG.colors.btnBackground,
+    borderColor: CONFIG.colors.btnBorder,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 5,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    marginHorizontal: 8,
+    color: '#A0AEC0',
+    fontWeight: 'bold',
+  },
+  socialContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  socialButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 15,
+  },
+  fullImage: {
+    width: '100%',
+    height: '100%',
+  },
+});
