@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react'
 import { useLocalSearchParams, router } from 'expo-router'
 
 // Components
-import LeftSidebar from '../../components/menu/LeftSidebar'
-import StatisticsHeader from '../../components/menu/StatisticsHeader'
-import StatisticsTabs, { ViewType } from 'app/components/menu/StatisticsTabs'
-import StatisticsFilter from 'app/components/menu/StatisticsFilter'
-import StatisticsSummary from 'app/components/menu/StatisticsSummary'
-import StatisticsBorder from 'app/components/menu/StatisticsBorder'
+import LeftSidebar from '../../components/Menu/LeftSidebar'
+import StatisticsHeader from '../../components/Menu/StatisticsHeader'
+import StatisticsTabs, { ViewType } from 'app/components/Menu/StatisticsTabs'
+import StatisticsFilter from 'app/components/Menu/StatisticsFilter'
+import StatisticsSummary from 'app/components/Menu/StatisticsSummary'
+import StatisticsBorder from 'app/components/Menu/StatisticsBorder'
 
 // Statistics Components
 import DailyStatistics from './DailyStatistics'

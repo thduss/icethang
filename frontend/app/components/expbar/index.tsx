@@ -4,8 +4,9 @@ import { MotiView } from 'moti';
 import { useAppSelector } from '../../store/hooks';
 
 export default function ExperienceBar() {
-  const currentXP = useAppSelector(state => state.auth.studentData?.current_xp || 0);
-  const maxXP = 100; 
+  const currentXP = useAppSelector(state => state.auth.studentData?.current_xp || 0); //서버와 통신 후 받아옴
+  const maxXP = 100; // 나중에 협의 후 수정 필요
+  // 레벨업시 초기화할거면 수정하면 된다
   
   const progress = (currentXP / maxXP) * 100;
 
