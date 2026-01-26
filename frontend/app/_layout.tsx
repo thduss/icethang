@@ -2,9 +2,12 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { store } from '../app/store';
+import { store, persistor } from './store/store';
 import { Provider } from 'react-redux';
-import { View } from 'react-native';
+import { PersistGate } from 'redux-persist/integration/react';
+import { ActivityIndicator, View } from 'react-native';
+
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -19,6 +22,7 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
+    <PersistGate loading={<LoadingScreen />} persistor={persistor}>
     <ThemeProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
@@ -29,6 +33,16 @@ export default function RootLayout() {
 
       </Stack>
     </ThemeProvider>
+    </PersistGate>
     </Provider>
   );
+
+  // 리덕스 로딩용 화면 
+function LoadingScreen() {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#0000ff" />
+    </View>
+  );
+}
 }

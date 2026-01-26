@@ -14,7 +14,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 interface GridItem {
   id: number;
   name: string;
-  themeKey?: 'blue' | 'pink' | 'jungle' | 'universe' | 'city' | 'sea' ; // 테마 키 옵션 추가
+  themeKey?:'jungle' | 'universe' | 'city' | 'sea' ; // 테마 키 옵션 추가
   image?: ImageSourcePropType; // 이미지 속성 추가
 }
 
@@ -64,7 +64,6 @@ export default function ReusableGridScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       
-      {/* 상단 탭 */}
       <View style={styles.tabContainer}>
         <Pressable 
           style={[styles.tab, activeTab === 'theme' && { borderBottomColor: theme.primary }]} 
@@ -81,7 +80,6 @@ export default function ReusableGridScreen() {
       </View>
 
       <View style={styles.gridWrapper}>
-        {/* 왼쪽 화살표 */}
         <Pressable 
           onPress={() => setCurrentPage(p => Math.max(0, p - 1))}
           disabled={currentPage === 0}
@@ -90,7 +88,6 @@ export default function ReusableGridScreen() {
           <Text style={[styles.arrowText, { color: theme.primary }]}>◀</Text>
         </Pressable>
 
-        {/* 그리드 아이템 */}
         <View className='pt-8' style={styles.itemsContainer}>
           {displayedItems.map((item) => (
             <Pressable 
@@ -98,7 +95,7 @@ export default function ReusableGridScreen() {
               style={[styles.gridButton, { backgroundColor: theme.card }]}
               onPress={() => handleSelect(item)}
             >
-              {/* 이미지가 있으면 이미지 표시, 없으면 플레이스홀더 표시 */}
+  
               {item.image ? (
                 <Image 
                   source={item.image} 
@@ -114,7 +111,6 @@ export default function ReusableGridScreen() {
             </Pressable>
           ))}
           
-          {/* 빈 공간 채우기 (정렬 유지용) */}
           {displayedItems.length < ITEMS_PER_PAGE && 
             Array.from({ length: ITEMS_PER_PAGE - displayedItems.length }).map((_, i) => (
               <View key={`empty-${i}`} style={[styles.gridButton, { backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />
@@ -122,7 +118,6 @@ export default function ReusableGridScreen() {
           }
         </View>
 
-        {/* 오른쪽 화살표 */}
         <Pressable 
           onPress={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
           disabled={currentPage >= totalPages - 1}
@@ -149,12 +144,12 @@ const styles = StyleSheet.create({
   arrowText: { fontSize: 30, fontWeight: 'bold', padding: 10 },
   gridButton: {
     width: ITEM_WIDTH,
-    height: ITEM_WIDTH + 25, // 텍스트 공간 확보를 위해 높이 증가
+    height: ITEM_WIDTH + 25, 
     marginHorizontal: 5,
     borderRadius: 12,
-    justifyContent: 'flex-start', // 위에서부터 정렬
+    justifyContent: 'flex-start', 
     alignItems: 'center',
-    overflow: 'hidden', // 이미지가 튀어나가지 않게 함
+    overflow: 'hidden',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -162,7 +157,7 @@ const styles = StyleSheet.create({
   },
   imageThumbnail: {
     width: '100%',
-    height: '75%', // 이미지 영역 비율
+    height: '75%', 
     marginBottom: 4,
   },
   iconPlaceholder: { 

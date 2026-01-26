@@ -109,13 +109,13 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 0,
     paddingHorizontal: 20,
   },
   imageGroup: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginBottom: -12,
+    marginBottom: -30,
     zIndex: 10,
     paddingHorizontal: 20,
   },
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   subImage: { width: 25, height: 25, marginLeft: -5 },
   progressBarContainer: {
     width: '100%',
-    height: 25,
+    height: 30,
     justifyContent: 'center',
     paddingHorizontal: 20,
     overflow: 'hidden',
