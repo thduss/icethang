@@ -46,4 +46,10 @@ public class Student {
         this.currentXp = 0;
         this.currentLevel = 1;
     }
+
+    // 학생 수정
+    public void updateInfo(String name, Integer studentNumber) {
+        if (name != null && !name.isBlank()) this.name = name;
+        if (studentNumber != null) this.studentNumber = studentNumber;
+    }
 }
