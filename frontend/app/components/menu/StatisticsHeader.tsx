@@ -6,15 +6,18 @@ import BackButton from './BackButton'
 interface StatisticsHeaderProps {
   name: string
   number: number
+  onBack: () => void
 }
 
 
-const StatisticsHeader = ({ number, name }: StatisticsHeaderProps) => {
+const StatisticsHeader = ({ number, name, onBack }: StatisticsHeaderProps) => {
   return (
     <View style={styles.container}>
-      <BackButton />
+      <View style={{ zIndex: 10 }}>
+        <BackButton onPress={onBack} />
+      </View>
 
-      <View style={styles.center}>
+      <View style={styles.center} pointerEvents='box-none'>
         <Text style={styles.title}>
           학생: {number}번 {name} | 집중도 통계 대시보드
         </Text>
