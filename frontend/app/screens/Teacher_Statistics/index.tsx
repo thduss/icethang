@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, router } from 'expo-router'
 import LeftSidebar from '../../components/menu/LeftSidebar'
 import BackButton from 'app/components/menu/BackButton'
 import StatisticsHeader from '../../components/menu/StatisticsHeader'
@@ -9,9 +9,9 @@ import StatisticsFilter from 'app/components/menu/StatisticsFilter'
 import StatisticsSummary from 'app/components/menu/StatisticsSummary'
 import MonthlyStatistics from './MonthlyStatistics'
 import StatisticsBorder from 'app/components/menu/StatisticsBorder'
+import DailyStatistics from './DailyStatistics'
 
-type ViewType = 'monthly' | 'weekly' | 'subject'
-
+type ViewType = 'monthly' | 'weekly' | 'subject' | 'daily'
 const index = () => {
 
   const { name, number } = useLocalSearchParams<{
@@ -22,6 +22,19 @@ const index = () => {
   const [view, setView] = useState<ViewType>('monthly')
   const [year, setYear] = useState(2025)
   const [month, setMonth] = useState(11)
+  const [selectedDate, setSelectedDate] = useState<string>('')
+
+  const handleBack = () => {
+    if (view === 'daily') {
+      setView('monthly')
+    } else {
+      router.back()
+    }
+  }
+
+  const handleTagChange = (newView: ViewType) => {
+    setView(newView)
+  }
 
   return (
     <View style={styles.container}>
@@ -31,50 +44,50 @@ const index = () => {
         <StatisticsHeader
           name={name}
           number={Number(number)}
+          onBack={handleBack}
         />
 
         <StatisticsTabs
-          value={view}
-          onChange={setView}
+          value={view === 'daily' ? 'monthly' : view}
+          onChange={handleTagChange}
         />
 
-        {view === 'monthly' && (
-          <StatisticsBorder>
-
-            <StatisticsFilter
-              year={year}
-              month={month}
-              onPressYear={() => {
-                // 나중에 연도 선택 드롭바
-                console.log('연도 선택')
-              }}
-              onPressMonth={() => {
-                // 나중에 월 선택 드롭바
-                console.log('월 선택')
-              }}
-              onPressExp={() => {
-                // 나중에 경험치 관리 모달 추가
-                console.log('경험치 관리 선택')
-              }}
-            />
-
-            {view === 'monthly' && (
+        <StatisticsBorder>
+          {/* 1. 월별 보기 (monthly) */}
+          {view === 'monthly' && (
+            <>
+              <StatisticsFilter
+                year={year}
+                month={month}
+                onPressYear={() => console.log('연도')}
+                onPressMonth={() => console.log('월')}
+                onPressExp={() => console.log('경험치')}
+              />
               <MonthlyStatistics
                 year={year}
                 month={month}
                 onSelectDate={(date) => {
-                  console.log('선택한 날짜:', date)
-                  // 여기서 나중에 daily 화면으로 전환함
+                  setSelectedDate(date)
+                  setView('daily') // 날짜 선택 시 Daily 뷰로 전환
                 }}
               />
-            )}
+              <StatisticsSummary
+                left={{ label: '월간 평균', value: '80%' }}
+                right={{ label: '가장 집중한 주', value: '3주차' }}
+              />
+            </>
+          )}
 
-            <StatisticsSummary
-              left={{ label: '월간 평균', value: '80%' }}
-              right={{ label: '가장 집중한 주', value: '3주차' }}
+          {/* 2. 일별 상세 보기 (daily) - 여기에 구현! */}
+          {view === 'daily' && (
+            <DailyStatistics
+              date={selectedDate}
+              onBack={() => setView('monthly')}
             />
-          </StatisticsBorder>
-        )}
+          )}
+
+          {/* 주별, 과목별 보기는 추후 구현 */}
+        </StatisticsBorder>
       </View>
     </View>
   )
@@ -83,13 +96,11 @@ const index = () => {
 export default index
 
 const styles = StyleSheet.create({
-
   container: {
-    flexDirection: "row",
-    backgroundColor: "#F3EED4",
+    flexDirection: 'row',
+    backgroundColor: '#F3EED4',
     flex: 1,
   },
-
   content: {
     flex: 1,
     padding: 16,
