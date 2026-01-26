@@ -20,7 +20,6 @@ export const loginAPI = async (email, password) => {
     });
 
     // 2. 백엔드가 토큰을 Body로 줬다고 가정 (백엔드 수정 필수!)
-    // 만약 백엔드가 수정을 거부하면, 쿠키를 뜯어오는 복잡한 방법을 써야 합니다.
     const { accessToken, refreshToken } = response.data;
 
     if (accessToken) {
