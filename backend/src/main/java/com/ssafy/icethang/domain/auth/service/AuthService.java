@@ -44,7 +44,6 @@ public class AuthService {
         auth.setPassword(encodedPassword);
         auth.setTeacherName(request.getTeacherName());
         auth.setProvider(AuthProvider.LOCAL);
-        auth.setSchoolId(0);
 
         authRepository.save(auth);
         return auth.getEmail();
