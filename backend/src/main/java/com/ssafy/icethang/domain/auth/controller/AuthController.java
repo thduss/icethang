@@ -33,13 +33,13 @@ public class AuthController {
         authService.signup(request);
         return ResponseEntity.ok("회원가입 성공");
     }
-    // 회원정보 조회
+    // 선생님 회원정보 조회
     @GetMapping("/me")
     public ResponseEntity<Auth> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
         Auth auth = authService.getUser(userDetails.getUsername());
         return ResponseEntity.ok(auth);
     }
-    // 회원정보 수정
+    // 선생님 회원정보 수정
     @PatchMapping("/me")
     public ResponseEntity<String> updateMyInfo(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
@@ -55,8 +55,9 @@ public class AuthController {
                                          HttpServletResponse response) { // 쿠키 구우려면 response 필요
         TokenResponseDto tokenDto = studentService.join(request);
 
-        cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
-        return ResponseEntity.ok(studentService.getStudentInfo(tokenDto.getAccessToken()));
+        StudentLoginResponse studentInfo = studentService.getStudentInfo(tokenDto.getAccessToken());
+        //cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
+        return ResponseEntity.ok(studentInfo);
     }
 
     // 학생 재입장(자동 로그인)
@@ -78,7 +79,7 @@ public class AuthController {
         // 쿠키 유틸 불러서 굽기
         cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
 
-        return ResponseEntity.ok("로그인 성공");
+        return ResponseEntity.ok(tokenDto);
     }
 
     // 토큰 재발급
@@ -89,7 +90,7 @@ public class AuthController {
 
         // 새 토큰으로 쿠키 갱신
         cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
-        return ResponseEntity.ok("토큰 재발급 성공");
+        return ResponseEntity.ok(tokenDto);
     }
 
     // 로그아웃

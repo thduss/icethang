@@ -14,4 +14,5 @@ public class StudentLoginResponse {
     private Long classId; // 반 id
     private String className; // 3-2
     private Integer studentNumber; // 2번
+    private String accessToken;
 }
