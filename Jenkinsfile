@@ -5,7 +5,6 @@ pipeline {
         // 프로젝트 설정
         BACKEND_DIR = 'backend'
         IMAGE_NAME = 'icethang-backend-server'
-        CONTAINER_NAME = 'icethang-backend-server'
 
         // java 17 버전 설정
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
@@ -95,8 +94,8 @@ stages {
                 script {
                     // 1. 기존 컨테이너 정리
                     try {
-                        sh "docker stop ${CONTAINER_NAME}"
-                        sh "docker rm ${CONTAINER_NAME}"
+                        sh "docker stop ${env.CONTAINER_NAME}"
+                        sh "docker rm ${env.CONTAINER_NAME}"
                     } catch (Exception e) {
                         echo '기존에 실행 중인 컨테이너가 없습니다.'
                     }
@@ -109,7 +108,7 @@ stages {
                         --network infra_app-network \
                         -v ${HOST_CONF_DIR}:/config \
                         -e SPRING_PROFILES_ACTIVE=${env.SPRING_PROFILE} \
-                        ${IMAGE_NAME}
+                        ${env.IMAGE_NAME}
                     """
                 }
             }
@@ -125,14 +124,16 @@ stages {
     post {
         success {
             script {
-                def Author_ID = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
-                def Commit_Message = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
-                
-                 mattermostSend(color: 'good', 
-                    message: "### ✅ E204 백엔드 배포 성공!\n- **Profile**: ${env.SPRING_PROFILE}\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
-                    endpoint: "${MATTERMOST_URL}",
-                    channel: '#team-e204'
-                )
+                if (env.IS_BACKEND_CHANGED == "true") {
+                    def Author_ID = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
+                    def Commit_Message = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
+                    
+                    mattermostSend(color: 'good', 
+                        message: "### ✅ E204 백엔드 배포 성공!\n- **Profile**: ${env.SPRING_PROFILE}\n- **작성자**: ${Author_ID}\n- **메시지**: ${Commit_Message}",
+                        endpoint: "${MATTERMOST_URL}",
+                        channel: '#team-e204'
+                    )
+                }
             }
         }
         failure {
