@@ -55,7 +55,7 @@ public class Student {
 
     // 선생님이 경험치 수정
     public void updateXp(int amount) {
-        this.exp = amount;
+        this.exp += amount;
     }
 
     // 레벨 업데이트 메서드
