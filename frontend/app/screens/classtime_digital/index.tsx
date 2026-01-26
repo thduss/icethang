@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Text } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import ClassProgressBar from '../../components/classprogressbar/'
-import TrafficLight from "../../components/trafficlight";
-import AlertButton from "../../components/alertbutton";
+import ClassProgressBar from '../../components/ClassProgressbar'
+import TrafficLight from "../../components/TrafficLight";
+import AlertButton from "../../components/AlertButton";
 
 export default function DigitalClassScreen() {
   const [permission, requestPermission] = useCameraPermissions();

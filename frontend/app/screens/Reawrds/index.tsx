@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useAppTheme } from '../../context/ThemeContext';
-import RewardModal from 'app/components/rewardmodal';
+import RewardModal from 'app/components/RewardModal';
 
 export default function ReusableGridScreen() {
   const { theme } = useAppTheme();
