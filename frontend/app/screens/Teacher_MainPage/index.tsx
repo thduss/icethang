@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
-import LeftSidebar from '../../components/Menu/LeftSidebar'
+import LeftSidebar from '../../components/menu/LeftSidebar'
 import MainArea from './MainArea'
 import Header from './Header'
 

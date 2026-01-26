@@ -2,9 +2,9 @@
 import React, { useEffect } from "react"; 
 import { Text, View, Alert, Linking, TouchableOpacity, StyleSheet } from "react-native"; 
 import { CameraView, useCameraPermissions } from "expo-camera";
-import ClassProgressBar from '../../components/ClassProgressbar'
-import AlertButton from "../../components/AlertButton";
-import TraggicLight from "../../components/TrafficLight";
+import ClassProgressBar from '../../components/classprogressbar'
+import AlertButton from "../../components/alertbutton";
+import TraggicLight from "../../components/trafficlight";
 
 export default function NormalClassScreen() {
   const [permission, requestPermission] = useCameraPermissions();

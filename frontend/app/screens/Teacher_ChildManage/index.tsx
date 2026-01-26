@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
-import LeftSidebar from 'app/components/Menu/LeftSidebar'
+import LeftSidebar from 'app/components/menu/LeftSidebar'
 import StudentGrid from './StudentGrid'
-import BackButton from 'app/components/Menu/BackButton'
+import BackButton from 'app/components/menu/BackButton'
 
 const index = () => {
   return (
