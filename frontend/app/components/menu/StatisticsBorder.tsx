@@ -20,9 +20,11 @@ export default StatisticsCard
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: '#E3DDB5',
+    flex: 1,
   },
 
   content: {
+    flex: 1,
     borderWidth: 2,
     borderColor: '#3A2E1F',
     backgroundColor: '#E3DDB5',
