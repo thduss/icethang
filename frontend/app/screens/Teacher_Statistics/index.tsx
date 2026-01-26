@@ -16,29 +16,29 @@ import MonthlyStatistics from './MonthlyStatistics'
 import WeeklyStatistics from './WeeklyStatistics'
 import WeeklyCalendar from './WeeklyCalendar'
 
+type StatisticsView = ViewType | 'daily'
+
 const index = () => {
   const { name, number } = useLocalSearchParams<{
     name: string
     number: string
   }>()
 
-  // --- State ---
-  // ViewType에 'daily'가 포함되어 있지 않다면 StatisticsTabs 타입 정의를 확인해야 합니다.
-  // 여기서는 로직상 any로 우회하거나 타입을 확장했다고 가정합니다.
-  const [view, setView] = useState<any>('monthly')
+
+  const [view, setView] = useState<ViewType | 'daily'>('monthly')
   const [year, setYear] = useState(2025)
   const [month, setMonth] = useState(11)
 
-  // Daily View State
+  const [calendarVisible, setCalendarVisible] = useState(false)
+
   const [selectedDate, setSelectedDate] = useState<string>('')
 
-  // Weekly View State
   const [selectedWeek, setSelectedWeek] = useState<{
     start: Date
     end: Date
   } | null>(null)
 
-  // --- Handlers ---
+
   const handleBack = () => {
     if (view === 'daily') {
       setView('monthly')
@@ -47,13 +47,13 @@ const index = () => {
     }
   }
 
-  const handleTabChange = (newView: string) => {
+  const handleTabChange = (newView: ViewType) => {
     setView(newView)
   }
 
-  // --- Weekly Logic ---
+
   const getWeekFromDate = (date: Date) => {
-    const day = date.getDay() // 0(일) ~ 6(토)
+    const day = date.getDay() 
     const mondayOffset = day === 0 ? -6 : 1 - day
 
     const start = new Date(date)
@@ -67,10 +67,9 @@ const index = () => {
 
   useEffect(() => {
     if (view === 'weekly' && !selectedWeek) {
-      const today = new Date()
-      setSelectedWeek(getWeekFromDate(today))
+      setSelectedWeek(getWeekFromDate(new Date()))
     }
-  }, [view])
+  }, [view, selectedWeek])
 
   useEffect(() => {
     if (!selectedWeek) return
@@ -89,7 +88,6 @@ const index = () => {
           onBack={handleBack}
         />
 
-        {/* 탭: daily일 때는 monthly 탭이 활성화된 것처럼 보임 */}
         <StatisticsTabs
           value={view === 'daily' ? 'monthly' : view}
           onChange={handleTabChange}
@@ -112,7 +110,7 @@ const index = () => {
                 onSelectDate={(date) => {
                   console.log('선택한 날짜:', date)
                   setSelectedDate(date)
-                  setView('daily') // 화면 전환
+                  setView('daily') 
                 }}
               />
               <StatisticsSummary
@@ -130,7 +128,6 @@ const index = () => {
             />
           )}
 
-          {/* 3. 주간 보기 (Weekly) */}
           {view === 'weekly' && (
             <>
               <StatisticsFilter
@@ -140,16 +137,15 @@ const index = () => {
                 onPressMonth={() => console.log('월')}
               />
 
-              {/* 여기에 필요한 props가 있다면 넣어주세요 (예: selectedWeek 등) */}
               <WeeklyCalendar
                 visible={calendarVisible}
                 onClose={() => setCalendarVisible(false)}
                 onSelectDate={(date) => {
-                  setSelectedDate(date)
                   setSelectedWeek(getWeekFromDate(date))
                   setCalendarVisible(false)
                 }}
               />
+
               <WeeklyStatistics
                 weekRange={selectedWeek}
                 onPressCalendar={() => setCalendarVisible(true)}
@@ -170,6 +166,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3EED4',
     flex: 1,
   },
+  
   content: {
     flex: 1,
     padding: 16,
