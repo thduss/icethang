@@ -23,10 +23,10 @@ public class StudentXpController {
     // 학생 경험치를 선생님이 임의로 수정
     @PatchMapping("/{student_id}/xp/give")
     // 시큐리티 설정 확인
-    public ResponseEntity<String> giveXp(
+    public ResponseEntity<StudentXpResponse> giveXp(
             @PathVariable("student_id") Long studentId,
             @RequestBody StudentXpUpdateRequest request) {
-        studentXpService.updateStudentExp(studentId, request.getAmount());
-        return ResponseEntity.ok("경험치가 성공적으로 수정되었습니다.");
+        StudentXpResponse response = studentXpService.updateStudentExp(studentId, request.getAmount());
+        return ResponseEntity.ok(response);
     }
 }

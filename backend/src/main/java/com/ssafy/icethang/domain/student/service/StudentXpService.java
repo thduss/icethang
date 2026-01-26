@@ -21,17 +21,12 @@ public class StudentXpService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("학생을 찾을 수 없습니다."));
 
-        // 다음 레벨 정보 조회
-        Integer nextLevelExp = levelRulesRepository.findById(student.getLevel() + 1)
-                .map(LevelRules::getRequiredXp)
-                .orElse(null); // 만렙인 경우 null
-
-        return new StudentXpResponse(student.getId(), student.getLevel(), student.getExp(), nextLevelExp);
+        return convertToResponse(student);
     }
 
     // 선생님이 경험치 임의 수정
     @Transactional
-    public void updateStudentExp(Long studentId, Integer amount) {
+    public StudentXpResponse updateStudentExp(Long studentId, Integer amount) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("학생을 찾을 수 없습니다."));
 
@@ -41,7 +36,23 @@ public class StudentXpService {
         Integer newLevel = levelRulesRepository.findTopByRequiredXpLessThanEqualOrderByLevelDesc(student.getExp())
                 .map(LevelRules::getLevel)
                 .orElse(1);
-
         student.updateLevel(newLevel);
+
+        return convertToResponse(student);
+    }
+
+
+    private StudentXpResponse convertToResponse(Student student) {
+        Integer nextLevelExp = levelRulesRepository.findById(student.getLevel() + 1)
+                .map(LevelRules::getRequiredXp)
+                .orElse(null);
+
+        return StudentXpResponse.builder()
+                .studentId(student.getId())
+                .studentName(student.getName())
+                .currentLevel(student.getLevel())
+                .currentXp(student.getExp())
+                .requiredExpNextLevel(nextLevelExp)
+                .build();
     }
 }
