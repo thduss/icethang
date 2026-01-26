@@ -30,7 +30,7 @@ export default function SelectRoleScreen() {
           />
           <View style={styles.characterArea}>
             <Image
-              source={require('../../../assets/teacher_character.png')}
+              source={require('../../../assets/common_IsTeacher.png')}
               style={styles.characterImage}
               resizeMode="contain"
             />
@@ -57,7 +57,7 @@ export default function SelectRoleScreen() {
           />
           <View style={styles.characterArea}>
             <Image
-              source={require('../../../assets/student_character.png')}
+              source={require('../../../assets/common_IsStudent.png')}
               style={styles.characterImage}
               resizeMode="contain"
             />

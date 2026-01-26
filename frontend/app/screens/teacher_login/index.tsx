@@ -57,7 +57,7 @@ export default function TeacherLoginScreen() {
       const token = await login();
       console.log('카카오 토큰:', token);
       Alert.alert("성공", "카카오 로그인이 완료되었습니다!");
-      router.replace('/screens/Teacher_MainPage/TeacherMainPage');
+      router.replace('/screens/Teacher_MainPage');
     } catch (err) {
       console.error("카카오 로그인 에러:", err);
       Alert.alert("실패", "카카오 로그인 중 오류가 발생했습니다.");
@@ -71,7 +71,7 @@ export default function TeacherLoginScreen() {
       if (successResponse) {
         console.log("네이버 토큰:", successResponse.accessToken);
         Alert.alert("성공", "네이버 로그인 성공!");
-        router.replace('/screens/Teacher_MainPage/TeacherMainPage');
+        router.replace('/screens/Teacher_MainPage');
       } else {
         console.log("네이버 로그인 실패", failureResponse);
       }
@@ -93,7 +93,7 @@ export default function TeacherLoginScreen() {
     try {
       const isSuccess = await loginAPI(email, password);
       if (isSuccess) {
-        router.replace('/screens/Teacher_MainPage/TeacherMainPage');
+        router.replace('/screens/Teacher_MainPage');
       } else {
         Alert.alert("실패", "아이디 또는 비밀번호를 확인해주세요.");
       }
@@ -103,7 +103,7 @@ export default function TeacherLoginScreen() {
     */
  
     // 테스트용 강제 이동
-    router.replace('/screens/Teacher_MainPage/TeacherMainPage');
+    router.replace('/screens/Teacher_MainPage');
   };
 
   return (
@@ -133,10 +133,10 @@ export default function TeacherLoginScreen() {
               <View style={{ marginBottom: spacing * 1.5 }}>
                 <Text style={{ 
                   fontSize: titleSize, 
-                  color: '#E3F2FD', 
+                  color: '#AEC7EC', 
                   fontWeight: '900', 
                   textAlign: 'center', 
-                  textShadowColor: '#5C7CFA', 
+                  textShadowColor: '#000000', 
                   textShadowOffset: { width: 2, height: 2 }, 
                   textShadowRadius: 1 
                 }}>
@@ -239,7 +239,7 @@ export default function TeacherLoginScreen() {
               }}
             >
               <Image
-                source={require('../../../assets/robot.png')}
+                source={require('../../../assets/common_TeacherLogin.png')}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="contain"
               />

@@ -6,6 +6,9 @@ import com.ssafy.icethang.domain.classgroup.dto.response.ClassResponse;
 import com.ssafy.icethang.domain.classgroup.dto.response.ClassStudentResponse;
 import com.ssafy.icethang.domain.classgroup.entity.ClassGroup;
 import com.ssafy.icethang.domain.classgroup.repository.ClassGroupRepository;
+import com.ssafy.icethang.domain.student.dto.request.StudentUpdateRequest;
+import com.ssafy.icethang.domain.student.dto.response.StudentDetailResponse;
+import com.ssafy.icethang.domain.student.entity.Student;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +31,10 @@ public class ClassGroupService {
     public Long createClass(ClassCreateRequest request, Long teacherId) {
         String inviteCode;
 
-        // 초대코드 중복 안 나올 때까지 돌리기 (보통 한 번에 통과됨)
+        // 초대코드 중복 안 나올 때까지 돌리기
         do {
-            inviteCode = UUID.randomUUID().toString().substring(0, 8); // 8자리 랜덤 코드
+            // 8자리 랜덤 코드
+            inviteCode = UUID.randomUUID().toString().substring(0, 8);
         } while (classGroupRepository.existsByInviteCode(inviteCode));
 
         // 저장
@@ -38,7 +42,7 @@ public class ClassGroupService {
                 .teacherId(teacherId)
                 .groupName(request.getGroupName())
                 .inviteCode(inviteCode)
-                .allowDigitalMode(true) // 기본값 설정
+                .allowDigitalMode(true)
                 .allowNormalMode(true)
                 .allowThemeChange(false)
                 .build();
@@ -95,4 +99,46 @@ public class ClassGroupService {
         }
         classGroupRepository.deleteById(classId);
     }
+
+    //---------------------------------------------------------------------------
+    // 특정 반 속 학생 관리
+
+    // 학생 상세 조회
+    public StudentDetailResponse getStudentDetail(Long classId, Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 학생이 존재하지 않습니다."));
+
+        if (!student.getClassGroup().getId().equals(classId)) {
+            throw new IllegalArgumentException("해당 반의 학생이 x");
+        }
+
+        return StudentDetailResponse.from(student);
+    }
+
+    // 학생 정보 수정
+    @Transactional
+    public void updateStudent(Long classId, Long studentId, StudentUpdateRequest request) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 학생이 존재하지 않습니다."));
+
+        if (!student.getClassGroup().getId().equals(classId)) {
+            throw new IllegalArgumentException("해당 반의 학생이 아닙니다.");
+        }
+
+        student.updateInfo(request.getName(), request.getStudentNumber());
+    }
+
+    // 학생 삭제
+    @Transactional
+    public void deleteStudent(Long classId, Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 학생이 존재하지 않습니다."));
+
+        if (!student.getClassGroup().getId().equals(classId)) {
+            throw new IllegalArgumentException("해당 반의 학생이 아닙니다.");
+        }
+
+        studentRepository.delete(student);
+    }
+
 }
