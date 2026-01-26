@@ -5,6 +5,8 @@ import com.ssafy.icethang.domain.classgroup.dto.request.ClassUpdateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.response.ClassResponse;
 import com.ssafy.icethang.domain.classgroup.dto.response.ClassStudentResponse;
 import com.ssafy.icethang.domain.classgroup.service.ClassGroupService;
+import com.ssafy.icethang.domain.student.dto.request.StudentUpdateRequest;
+import com.ssafy.icethang.domain.student.dto.response.StudentDetailResponse;
 import com.ssafy.icethang.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/classes")
+@RequestMapping("/classes")
 public class ClassGroupController {
     private final ClassGroupService classGroupService;
 
@@ -39,7 +41,8 @@ public class ClassGroupController {
 
     // 반 상세 조회
     @GetMapping("/{classId}")
-    public ResponseEntity<ClassResponse> getClassDetail(@PathVariable Long classId) {
+    public ResponseEntity<ClassResponse> getClassDetail(
+            @PathVariable Long classId) {
         return ResponseEntity.ok(classGroupService.getClassDetail(classId));
     }
 
@@ -64,8 +67,42 @@ public class ClassGroupController {
 
     // 반 삭제
     @DeleteMapping("/{classId}")
-    public ResponseEntity<Void> deleteClass(@PathVariable Long classId, @AuthenticationPrincipal UserPrincipal principal) {
+    public ResponseEntity<Void> deleteClass(
+            @PathVariable Long classId,
+            @AuthenticationPrincipal UserPrincipal principal) {
         classGroupService.deleteClass(classId, principal.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    //-----------------------------------------------------
+
+    // 학생 상세 조회
+    @GetMapping("/{classId}/students/{studentId}")
+    public ResponseEntity<StudentDetailResponse> getStudentDetail(
+            @PathVariable Long classId,
+            @PathVariable Long studentId
+    ) {
+        return ResponseEntity.ok(classGroupService.getStudentDetail(classId, studentId));
+    }
+
+    // 학생 정보 수정
+    @PatchMapping("/{classId}/students/{studentId}")
+    public ResponseEntity<Void> updateStudent(
+            @PathVariable Long classId,
+            @PathVariable Long studentId,
+            @RequestBody StudentUpdateRequest request
+    ) {
+        classGroupService.updateStudent(classId, studentId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    // 학생 삭제
+    @DeleteMapping("/{classId}/students/{studentId}")
+    public ResponseEntity<Void> deleteStudent(
+            @PathVariable Long classId,
+            @PathVariable Long studentId
+    ) {
+        classGroupService.deleteStudent(classId, studentId);
         return ResponseEntity.ok().build();
     }
 }

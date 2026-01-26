@@ -29,7 +29,7 @@ export default function RootLayout() {
         <Stack.Screen name="screens/select/index" />
         <Stack.Screen name="screens/teacher_login/index" />
         <Stack.Screen name="screens/student_login/index" />
-        <Stack.Screen name="screens/Teacher_MainPage/" />
+        <Stack.Screen name="screens/Teacher_MainPage" />
 
       </Stack>
     </ThemeProvider>

@@ -143,13 +143,12 @@ export default function SignupScreen() {
               alignItems: 'center', 
               justifyContent: 'center', 
               paddingHorizontal: paddingH, 
-              // 👇 [수정됨] 상단 여백을 줄여서(0.4) 내용물을 위로 올림
               paddingTop: paddingV * 0.4, 
               paddingBottom: paddingV * 1.6, 
               zIndex: 10 
             }}>
               
-              <Text style={{ fontSize: titleSize, color: CONFIG.colors.textTitle, fontWeight: '900', marginBottom: spacing, textShadowColor: '#5C7CFA', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 1 }}>
+              <Text style={{ fontSize: titleSize, color: CONFIG.colors.textTitle, fontWeight: '900', marginBottom: spacing, textShadowColor: '#000000', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 1 }}>
                 교사 회원가입
               </Text>
 
@@ -240,7 +239,7 @@ export default function SignupScreen() {
               }}
             >
               <Image
-                source={require('../../../assets/robot.png')}
+                source={require('../../../assets/common_TeacherSignUp.png')}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="contain"
               />
