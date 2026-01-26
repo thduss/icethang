@@ -16,6 +16,7 @@ import MonthlyStatistics from './MonthlyStatistics'
 import WeeklyStatistics from './WeeklyStatistics'
 import WeeklyCalendar from './WeeklyCalendar'
 import ExpModal from './ExpModal'
+import SubjectStatistics from './SubjectStatistics'
 
 type StatisticsView = ViewType | 'daily'
 
@@ -131,12 +132,6 @@ const index = () => {
           {/* 3. 주간 보기 (Weekly) */}
           {view === 'weekly' && (
             <>
-              <StatisticsFilter
-                year={year}
-                month={month}
-                onPressYear={() => console.log('연도')}
-                onPressMonth={() => console.log('월')}
-              />
 
               <WeeklyCalendar
                 visible={calendarVisible}
@@ -153,6 +148,8 @@ const index = () => {
               />
             </>
           )}
+
+          {view === 'subject' && <SubjectStatistics />}
         </StatisticsBorder>
 
         {/* [추가] 경험치 관리 모달 배치 */}

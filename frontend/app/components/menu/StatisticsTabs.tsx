@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native'
 
-export type ViewType = 'monthly' | 'weekly' | 'subject' | 'daily'
+export type ViewType = 'monthly' | 'weekly' | 'subject'
 
 interface StatisticsTabsProps {
   value: ViewType
