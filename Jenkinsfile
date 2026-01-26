@@ -82,7 +82,7 @@ stages {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
                 dir("${BACKEND_DIR}") {
-                    echo "🐳 도커 이미지 빌드... (${IMAGE_NAME}:${env.IMAGE_TAG})
+                    echo "🐳 도커 이미지 빌드... (${IMAGE_NAME}:${env.IMAGE_TAG})"
                     sh "docker build -t ${IMAGE_NAME}:${env.IMAGE_TAG} ."
                 }
             }
