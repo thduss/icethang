@@ -2,7 +2,6 @@ import { StyleSheet, Text, View } from 'react-native'
 import { useState, useEffect } from 'react'
 import { useLocalSearchParams, router } from 'expo-router'
 
-// Components
 import LeftSidebar from '../../components/menu/LeftSidebar'
 import StatisticsHeader from '../../components/menu/StatisticsHeader'
 import StatisticsTabs, { ViewType } from 'app/components/menu/StatisticsTabs'
@@ -10,7 +9,6 @@ import StatisticsFilter from 'app/components/menu/StatisticsFilter'
 import StatisticsSummary from 'app/components/menu/StatisticsSummary'
 import StatisticsBorder from 'app/components/menu/StatisticsBorder'
 
-// Statistics Components
 import DailyStatistics from './DailyStatistics'
 import MonthlyStatistics from './MonthlyStatistics'
 import WeeklyStatistics from './WeeklyStatistics'
@@ -30,7 +28,6 @@ const index = () => {
   const [year, setYear] = useState(2025)
   const [month, setMonth] = useState(11)
 
-  // [추가] 모달 표시 여부 상태 관리
   const [isExpModalVisible, setExpModalVisible] = useState(false)
 
   const [calendarVisible, setCalendarVisible] = useState(false)
@@ -94,7 +91,7 @@ const index = () => {
         />
 
         <StatisticsBorder>
-          {/* 1. 월간 보기 (Monthly) */}
+          {/* 월간 보기 */}
           {view === 'monthly' && (
             <>
               <StatisticsFilter
@@ -102,7 +99,6 @@ const index = () => {
                 month={month}
                 onPressYear={() => console.log('연도 선택')}
                 onPressMonth={() => console.log('월 선택')}
-                // [수정] 경험치 버튼 클릭 시 모달 열기
                 onPressExp={() => setExpModalVisible(true)}
               />
               <MonthlyStatistics
@@ -121,7 +117,7 @@ const index = () => {
             </>
           )}
 
-          {/* 2. 일간 상세 보기 (Daily) */}
+          {/* 일간 상세 보기 */}
           {view === 'daily' && (
             <DailyStatistics
               date={selectedDate}
@@ -129,7 +125,7 @@ const index = () => {
             />
           )}
 
-          {/* 3. 주간 보기 (Weekly) */}
+          {/* 주간 보기 */}
           {view === 'weekly' && (
             <>
 
@@ -152,7 +148,6 @@ const index = () => {
           {view === 'subject' && <SubjectStatistics />}
         </StatisticsBorder>
 
-        {/* [추가] 경험치 관리 모달 배치 */}
         <ExpModal
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
