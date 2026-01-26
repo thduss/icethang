@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
+import { initNaverLogin } from '../../utils/naverConfig';
 
+// 🎨 색상 설정
 const CONFIG = {
   colors: {
     textTitle: '#AEC7EC', 
@@ -38,7 +40,7 @@ export default function SignupScreen() {
   const [school, setSchool] = useState('');
   const [agreed, setAgreed] = useState(false);
 
-  // 📐 [크기 설정]
+  // 📐 동적 크기 계산
   const CARD_RATIO = 1.35;
   let finalWidth = Math.min(screenWidth * 0.75, 600);
   let finalHeight = finalWidth * CARD_RATIO;
@@ -55,19 +57,12 @@ export default function SignupScreen() {
   const fontSizeInput = Math.min(cardWidth * 0.04, 16);
   const titleSize = Math.min(cardWidth * 0.1, 40);
   const robotSize = Math.min(cardWidth * 0.4, 180); 
-  
   const spacing = Math.min(cardHeight * 0.015, 10); 
   const paddingH = cardWidth * 0.14; 
   const paddingV = cardHeight * 0.08; 
 
   useEffect(() => {
-    NaverLogin.initialize({
-      appName: 'IceTag',
-      consumerKey: '여기에_Client_ID_붙여넣기',     
-      consumerSecret: '여기에_Client_Secret_붙여넣기', 
-      serviceUrlSchemeIOS: 'icetag',
-      disableNaverAppAuthIOS: true,
-    });
+    initNaverLogin();
   }, []);
 
   const handleKakaoSignup = async () => {
@@ -118,37 +113,36 @@ export default function SignupScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFDF5' }}>
+    <View style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.flex1}
       >
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           bounces={false}
           overScrollMode="never"
         >
-          <View style={{ width: cardWidth, height: cardHeight, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
             
+            {/* ☁️ 배경 이미지 (수치 수정됨: left -75, height 95%) */}
             <Image
               source={require('../../../assets/login_background.png')} 
-              style={{ position: 'absolute', width: '130%', height: '95%', top: 0, left: -75 }}
+              style={styles.backgroundImage}
               resizeMode="stretch"
             />
 
-            <View style={{ 
-              width: '100%', 
-              height: '100%', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              paddingHorizontal: paddingH, 
-              paddingTop: paddingV * 0.4, 
-              paddingBottom: paddingV * 1.6, 
-              zIndex: 10 
-            }}>
+            <View style={[
+              styles.contentWrapper, 
+              { 
+                paddingHorizontal: paddingH, 
+                paddingTop: paddingV * 0.4, 
+                paddingBottom: paddingV * 1.6 
+              }
+            ]}>
               
-              <Text style={{ fontSize: titleSize, color: CONFIG.colors.textTitle, fontWeight: '900', marginBottom: spacing, textShadowColor: '#000000', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 1 }}>
+              <Text style={[styles.titleText, { fontSize: titleSize, marginBottom: spacing }]}>
                 교사 회원가입
               </Text>
 
@@ -163,69 +157,51 @@ export default function SignupScreen() {
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={() => setAgreed(!agreed)}
-                style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing, marginBottom: spacing }}
+                style={[styles.checkboxContainer, { marginTop: spacing, marginBottom: spacing }]}
               >
                 <Ionicons name={agreed ? "checkbox" : "square-outline"} size={22} color={agreed ? "#7CB3F5" : "#A0AEC0"} />
-                <Text style={{ marginLeft: 8, color: '#718096', fontWeight: 'bold', fontSize: fontSizeInput * 0.9 }}>이용약관 동의</Text>
+                <Text style={[styles.checkboxText, { fontSize: fontSizeInput * 0.9 }]}>이용약관 동의</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleSignup}
-                style={{ width: '100%', justifyContent: 'center', alignItems: 'center', borderRadius: 999, backgroundColor: CONFIG.colors.btnBackground, height: inputHeight, borderBottomWidth: 4, borderColor: CONFIG.colors.btnBorder, marginBottom: spacing }}
+                style={[
+                  styles.mainButton, 
+                  { height: inputHeight, marginBottom: spacing, backgroundColor: CONFIG.colors.btnBackground, borderColor: CONFIG.colors.btnBorder }
+                ]}
               >
                 <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>가입하기</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: spacing }}>
-                <Text style={{ color: '#A0AEC0', textDecorationLine: 'underline', fontSize: fontSizeInput * 0.8 }}>뒤로가기</Text>
+                <Text style={[styles.linkText, { fontSize: fontSizeInput * 0.8 }]}>뒤로가기</Text>
               </TouchableOpacity>
 
-              <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
+              <View style={styles.socialContainer}>
                 
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleKakaoSignup} 
-                  style={{ 
-                    flex: 1, 
-                    flexDirection: 'row',
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: inputHeight,
-                    borderRadius: 15, 
-                    backgroundColor: '#FEE500', 
-                    gap: 6
-                  }}
+                  style={[styles.socialButton, { height: inputHeight, backgroundColor: '#FEE500' }]}
                 >
                   <Ionicons name="chatbubble-sharp" size={fontSizeInput * 1.2} color="#371D1E" />
-                  <Text style={{ color: '#371D1E', fontWeight: 'bold', fontSize: fontSizeInput }}>
-                    카카오톡
-                  </Text>
+                  <Text style={[styles.socialText, { fontSize: fontSizeInput, color: '#371D1E' }]}>카카오톡</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleNaverSignup} 
-                  style={{ 
-                    flex: 1, 
-                    flexDirection: 'row',
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: inputHeight, 
-                    borderRadius: 15, 
-                    backgroundColor: '#03C75A', 
-                    gap: 6
-                  }}
+                  style={[styles.socialButton, { height: inputHeight, backgroundColor: '#03C75A' }]}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>N</Text>
-                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput }}>
-                    네이버
-                  </Text>
+                  <Text style={[styles.socialText, { fontSize: fontSizeInput * 1.2, color: 'white' }]}>N</Text>
+                  <Text style={[styles.socialText, { fontSize: fontSizeInput, color: 'white' }]}>네이버</Text>
                 </TouchableOpacity>
+
               </View>
             </View>
 
-            {/* 🤖 로봇 */}
+            {/* 🤖 로봇 이미지 (수치 수정됨: left -18%) */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -240,7 +216,7 @@ export default function SignupScreen() {
             >
               <Image
                 source={require('../../../assets/common_TeacherSignUp.png')}
-                style={{ width: '100%', height: '100%' }}
+                style={styles.fullImage}
                 resizeMode="contain"
               />
             </View>
@@ -252,11 +228,12 @@ export default function SignupScreen() {
   );
 }
 
+// 📦 InputBox 컴포넌트
 const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: InputBoxProps) => (
-  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderWidth: 3, borderRadius: 999, paddingHorizontal: 14, borderColor: color, height: height, width: '100%' }}>
+  <View style={[styles.inputContainer, { height, borderColor: color }]}>
     <Ionicons name={icon} size={fontSize * 1.3} color={color === '#F4D4D4' ? '#C68D8D' : '#8DA6C6'} />
     <TextInput
-      style={{ flex: 1, marginLeft: 8, fontSize: fontSize, color: '#4A5568', fontWeight: '600' }}
+      style={[styles.textInput, { fontSize }]}
       placeholder={placeholder}
       placeholderTextColor="#A0B4CC"
       value={value}
@@ -266,3 +243,100 @@ const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, font
     />
   </View>
 );
+
+// 🎨 스타일 정의 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFDF5',
+  },
+  flex1: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width: '130%',
+    height: '95%', 
+    top: 0,
+    left: -75,   
+  },
+  contentWrapper: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  titleText: {
+    color: CONFIG.colors.textTitle,
+    fontWeight: '900',
+    textShadowColor: '#5C7CFA',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 1,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxText: {
+    marginLeft: 8,
+    color: '#718096',
+    fontWeight: 'bold',
+  },
+  mainButton: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderBottomWidth: 4,
+  },
+  linkText: {
+    color: '#A0AEC0',
+    textDecorationLine: 'underline',
+  },
+  socialContainer: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 10,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 15,
+    gap: 6,
+  },
+  socialText: {
+    fontWeight: 'bold',
+  },
+  fullImage: {
+    width: '100%',
+    height: '100%',
+  },
+  // InputBox 스타일
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 3,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    width: '100%',
+  },
+  textInput: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#4A5568',
+    fontWeight: '600',
+  },
+});

@@ -48,33 +48,7 @@ export default function StudentLoginScreen() {
       return; 
     }
 
-//     //백앤드 연결후 테스트 해볼것 //
-//   const handleEnter = async () => {
-//   if (!grade || !number || !name || !authCode) {
-//     Alert.alert("알림", "모든 정보를 입력해주세요.");
-//     return;
-//   }
-
-//   try {
-//     // ⚠️ '내 아이피 주소'는 터미널에서 ipconfig(윈도우) 등으로 확인한 실제 IP여야 합니다. (localhost X)
-//     const response = await fetch('http://내-컴퓨터-IP-주소:8080/api/auth/verify', {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({ grade, number, name, authCode }),
-//     });
-
-//     if (response.ok) {
-//       const result = await response.json();
-//       Alert.alert("환영합니다!", `${name} 학생 입장!`, [
-//         { text: "확인", onPress: () => router.push('/screens/student_home') }
-//       ]);
-//     } else {
-//       Alert.alert("입장 실패", "인증코드가 올바르지 않습니다.");
-//     }
-//   } catch (error) {
-//     Alert.alert("연결 오류", "서버와 통신할 수 없습니다.");
-//   }
-// };
+// 하드코딩 없애고 인증코드 관련 입력//
 
     // 3. 성공 시 입장
     Alert.alert("환영합니다!", `${name} 학생 입장!`, [

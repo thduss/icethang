@@ -12,7 +12,6 @@ export default function SplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // 캐릭터 둥둥 애니메이션 (부드러운 속도)
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
@@ -20,32 +19,30 @@ export default function SplashScreen() {
       ])
     ).start();
 
-    // 전체 화면 페이드 인
     Animated.timing(fadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }).start();
 
     const initializeApp = async () => {
-      try {
         await new Promise(resolve => setTimeout(resolve, 3500));
-        let session = null;
-        try {
-          session = await AuthService.checkSession();
-        } catch (e) {
-          console.log("세션 체크 실패:", e);
-        }
+        const session = await AuthService.checkSession().catch(err => {
+          console.log("세션 체크 실패 (로그인 화면으로 이동):", err);
+          return null; 
+        });
 
-        if (session && session.isLoggedIn) {
-          if (session.role === 'teacher') router.replace('/screens/Teacher_MainPage');
-          else router.replace('/screens/student_home');
+        // 3. 결과에 따른 라우팅 (단일 분기)
+        // session이 null이거나(에러 포함), isLoggedIn이 false면 else로 넘어갑니다.
+        if (session?.isLoggedIn) {
+          const targetRoute = session.role === 'teacher' 
+            ? '/screens/Teacher_MainPage' 
+            : '/screens/student_home';
+          router.replace(targetRoute);
         } else {
-          router.replace('/screens/select'); 
+          // 세션 없음, 에러 발생, 로그인 안 됨 -> 모두 선택 화면으로
+          router.replace('/screens/select');
         }
-      } catch (error) {
-        router.replace('/screens/select');
-      }
-    };
+      };
 
-    initializeApp();
-  }, []);
+      initializeApp();
+    }, []);
 
   const translateY = floatAnim.interpolate({
     inputRange: [0, 1],
@@ -61,7 +58,6 @@ export default function SplashScreen() {
       >
         <Animated.View style={[styles.innerContainer, { opacity: fadeAnim }]}>
           
-          {/* 1. 로고: 화면 가로를 거의 꽉 채우도록 크기 최대화 */}
           <View style={styles.logoContainer}>
             <Image 
               source={require('../assets/logo.png')} 
@@ -70,7 +66,6 @@ export default function SplashScreen() {
             />
           </View>
 
-          {/* 2. 캐릭터: 크기를 더 줄이고 하단 풀밭 깊숙이 배치 */}
           <View style={styles.characterWrapper}>
             <Animated.Image 
               source={require('../assets/common_Enter.png')} 
@@ -89,7 +84,6 @@ export default function SplashScreen() {
             />
           </View>
 
-          {/* 3. 로딩바: 캐릭터 방해 안 되게 최하단으로 이동 */}
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#FF8A65" />
             <Text style={styles.loadingText}>즐거운 얼음땡 준비 중...</Text>
