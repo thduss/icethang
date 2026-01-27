@@ -6,16 +6,23 @@ const Header = () => {
     <View style={styles.container}>
       {/* 상단 줄 */}
       <View style={styles.topRow}>
-        
+
         <View style={styles.codeBox}>
-          <Text style={styles.codeText}>인증 코드 : 1359</Text>
+          <Text style={styles.codeLabel}>인증 코드</Text>
+          <Text style={styles.codeValue}>1359</Text>
         </View>
 
-        <Pressable style={styles.timetable}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.timetable,
+            pressed && styles.timetablePressed,
+          ]}
+        >
           <Text style={styles.timetableText}>시간표</Text>
         </Pressable>
+
       </View>
-      
+
       <View style={styles.titleArea}>
         <Text style={styles.title}>스마트 교실 도우미</Text>
         <Text style={styles.subTitle}>김코치 선생님</Text>
@@ -29,61 +36,85 @@ export default Header
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 40,   // 아래쪽 여백 (다음 영역과 간격 벌리기 위해)
+    marginBottom: 40,
   },
 
-  // 상단 가로 줄 (인증코드 + 시간표 버튼)
   topRow: {
-    flexDirection: "row",   // 지식 요소를 가로 방향으로 배치
-    justifyContent: "space-between",   // 양쪽 끝으로 배치
-    alignItems: "center",   // 세로 중앙 정렬
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  // 인증 코드 버튼
   codeBox: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C9B68E',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F6F1E3',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#D8C9A3',
+    elevation: 0,
+  },
+
+  codeLabel: {
+    fontSize: 15,
+    color: '#6B5A3C',
+    fontWeight: '600',
+  },
+
+  codeValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    color: '#2F2A1F',
   },
 
 
   codeText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '600',
   },
 
-  // 시간표 버튼
   timetable: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 40,
-    paddingVertical: 8,
+    paddingHorizontal: 50,
+    paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#C9B68E',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+
+  timetablePressed: {
+    transform: [{ translateY: 3 }], 
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    elevation: 2,
   },
 
   timetableText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '600',
   },
 
-  // 제목 영역 (가운데 정렬함)
   titleArea: {
-    alignItems: "center",   // 가로 가운데 정렬
-    marginTop: 16,    // 위쪽 여백
+    alignItems: "center",
+    marginTop: 16,
   },
   title: {
-    fontSize: 50, // 글자 크기
-    fontWeight: "800", // 굵은 글씨
+    fontSize: 50,
+    fontWeight: "800",
     marginBottom: 6,
   },
 
   subTitle: {
     fontSize: 30,
     color: "#555",
-
   },
 })
