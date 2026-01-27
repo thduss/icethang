@@ -1,63 +1,178 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Image,
+  ImageBackground,
+  SafeAreaView,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 
 export default function StudentTitleScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>수업에 집중하면 레벨이 올라가요!</Text>
-      
-      {/* 버튼들을 가로로 배치하기 위한 컨테이너 */}
-      <View style={styles.buttonContainer}>
-        <Pressable 
-          style={styles.button} 
+    <SafeAreaView style={styles.container}>
+      <ImageBackground
+        source={require('../../../assets/Student_Home5.png')}
+        style={styles.titleBanner}
+        imageStyle={styles.titleBannerImage}
+        resizeMode="stretch"
+      >
+        <Text style={styles.title}>
+          수업에 집중하면 레벨이 올라가요!
+        </Text>
+      </ImageBackground>
+
+      <View style={styles.cardRow}>
+        <Pressable
+          style={styles.card}
           onPress={() => router.push('/screens/Login')}
         >
-          <Text style={styles.buttonText}>수업 시작하기</Text>
+          <ImageBackground
+            source={require('../../../assets/Student_Home3.png')}
+            style={styles.cardBackground}
+            imageStyle={styles.cardBackgroundImage}
+            resizeMode="stretch"
+          >
+            <Image
+              source={require('../../../assets/Student_Home1.png')}
+              style={styles.cardCharacter_1}
+              resizeMode="contain"
+            />
+            <View style={[styles.cardButton, styles.cardButtonBlue]}>
+              <Text style={styles.cardButtonText}>수업 시작하기</Text>
+            </View>
+          </ImageBackground>
         </Pressable>
 
-        <Pressable 
-          style={styles.button} 
-          onPress={() => router.push('/screens/Change_Theme')} // 필요시 경로 수정
+        <Pressable
+          style={styles.card}
+          onPress={() => router.push('/screens/Change_Theme')}
         >
-          <Text style={styles.buttonText}>테마 변경</Text>
+          <ImageBackground
+            source={require('../../../assets/Student_Home4.png')}
+            style={styles.cardBackground}
+            imageStyle={styles.cardBackgroundImage}
+            resizeMode="stretch"
+          >
+            <Image
+              source={require('../../../assets/Student_Home2.png')}
+              style={styles.cardCharacter_2}
+              resizeMode="contain"
+            />
+            <View style={[styles.cardButton, styles.cardButtonGold]}>
+              <Text style={styles.cardButtonText}>테마 변경</Text>
+            </View>
+          </ImageBackground>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: '#000' 
+  container: {
+    flex: 1,
+    backgroundColor: '#f6f2ef',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
-  title: { 
-    fontSize: 40, 
-    color: '#fff', 
-    fontWeight: 'bold', 
-    marginBottom: 50,
-    textAlign: 'center' // 텍스트 중앙 정렬 추가
-  },
-  buttonContainer: {
-    flexDirection: 'row', // 가로 정렬
-    gap: 40,              // 버튼 사이 간격 (최신 RN 버전 지원)
-  },
-  button: { 
-    backgroundColor: '#4A90E2', 
-    paddingHorizontal: 60, // 가로 배치에 맞춰 패딩 조정
-    paddingVertical: 30, 
-    borderRadius: 10,
-    minWidth: 250,         // 두 버튼의 크기를 똑같이 맞추기 위해 최소 너비 지정
+
+  titleBanner: {
+    width: '100%',
+    maxWidth: 680,
+    height: 90,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginBottom: 28,
   },
-  buttonText: { 
-    color: '#fff', 
-    fontSize: 18, 
-    fontWeight: 'bold' 
-  }
+
+  titleBannerImage: {
+    borderRadius: 28,
+  },
+
+  title: {
+    fontSize: 22,
+    color: '#6b5b4b',
+    fontWeight: '800',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+
+  cardRow: {
+    width: '100%',
+    maxWidth: 760,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    columnGap: 28,
+    rowGap: 24,
+  },
+
+  card: {
+    width: 340,
+    maxWidth: 360,
+  },
+
+  cardBackground: {
+    width: '100%',
+    height: 300,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+
+  cardBackgroundImage: {
+    borderRadius: 26,
+  },
+
+  cardCharacter_1: {
+    width: '70%',
+    height: 180,
+    marginTop: 10,
+  },
+
+  cardCharacter_2: {
+    width: '70%',
+    height: 170,
+    marginLeft: 18,
+    marginTop: 7
+  },
+
+  cardButton: {
+    minWidth: '75%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  cardButtonBlue: {
+    backgroundColor: '#a7c9df',
+    marginBottom: 10,
+  },
+
+  cardButtonGold: {
+    backgroundColor: '#e5c27a',
+    marginBottom: 10,
+  },
+
+  cardButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
 });
