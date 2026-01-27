@@ -100,7 +100,8 @@ public class TokenProvider {
 
         UserPrincipal principal = new UserPrincipal(userId, email, "", authorities);
 
-        return new UsernamePasswordAuthenticationToken(principal, accessToken, Collections.emptyList());
+        // 권한체크 추가
+        return new UsernamePasswordAuthenticationToken(principal, accessToken, authorities);
     }
 
     // 헬퍼 메서드

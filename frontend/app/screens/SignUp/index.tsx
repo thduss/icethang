@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -76,7 +76,7 @@ export default function SignupScreen() {
       const token = await login();
       console.log('카카오 가입 토큰:', token);
       Alert.alert("성공", "카카오 계정으로 가입되었습니다!\n로그인 해주세요.", [
-        { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
+        { text: "확인", onPress: () => router.replace('/screens/Teacher_Login') }
       ]);
     } catch (err) {
       console.error("카카오 가입 에러:", err);
@@ -90,7 +90,7 @@ export default function SignupScreen() {
       if (successResponse) {
         console.log("네이버 가입 토큰:", successResponse.accessToken);
         Alert.alert("성공", "네이버 계정으로 가입되었습니다!\n로그인 해주세요.", [
-          { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
+          { text: "확인", onPress: () => router.replace('/screens/Teacher_Login') }
         ]);
       } else {
         console.log("네이버 가입 실패", failureResponse);
@@ -161,7 +161,7 @@ const handleSignup = () => {
         >
           <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
             
-            {/* ☁️ 배경 이미지 (수치 수정됨: left -75, height 95%) */}
+            {/* 배경 이미지 */}
             <Image
               source={require('../../../assets/login_background.png')} 
               style={styles.backgroundImage}
@@ -182,6 +182,7 @@ const handleSignup = () => {
               </Text>
 
               <View style={{ width: '100%', gap: spacing }}>
+                {/* 💡 InputBox 컴포넌트에 icon, placeholder, value 등을 전달 */}
                 <InputBox icon="person" placeholder="이름" value={name} onChange={setName} height={inputHeight} fontSize={fontSizeInput} color="#D4E4F7" />
                 <InputBox icon="mail" placeholder="이메일" value={email} onChange={setEmail} height={inputHeight} fontSize={fontSizeInput} color="#F4D4D4" />
                 <InputBox icon="lock-closed" placeholder="비밀번호" value={password} onChange={setPassword} isPassword height={inputHeight} fontSize={fontSizeInput} color="#D4E4F7" />
@@ -198,15 +199,20 @@ const handleSignup = () => {
                 <Text style={[styles.checkboxText, { fontSize: fontSizeInput * 0.9 }]}>이용약관 동의</Text>
               </TouchableOpacity>
 
+              {/* 가입하기 버튼 (로딩 상태 적용) */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleSignup}
                 style={[
                   styles.mainButton, 
-                  { height: inputHeight, marginBottom: spacing, backgroundColor: CONFIG.colors.btnBackground, borderColor: CONFIG.colors.btnBorder }
+                  { 
+                    height: inputHeight, 
+                    marginBottom: spacing, 
+                    backgroundColor: CONFIG.colors.btnBackground, 
+                    borderColor: CONFIG.colors.btnBorder,
+                  }
                 ]}
               >
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>가입하기</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: spacing }}>
@@ -236,7 +242,7 @@ const handleSignup = () => {
               </View>
             </View>
 
-            {/* 🤖 로봇 이미지 (수치 수정됨: left -18%) */}
+            {/* 로봇 이미지 */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -263,7 +269,7 @@ const handleSignup = () => {
   );
 }
 
-// 📦 InputBox 컴포넌트
+//  InputBox 컴포넌트 (props 타입 적용)
 const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: InputBoxProps) => (
   <View style={[styles.inputContainer, { height, borderColor: color }]}>
     <Ionicons name={icon} size={fontSize * 1.3} color={color === '#F4D4D4' ? '#C68D8D' : '#8DA6C6'} />
@@ -279,7 +285,7 @@ const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, font
   </View>
 );
 
-// 🎨 스타일 정의 
+//  스타일 정의 
 const styles = StyleSheet.create({
   container: {
     flex: 1,

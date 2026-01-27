@@ -37,7 +37,7 @@ export default function SplashScreen() {
           router.replace(targetRoute);
         } else {
           // 세션 없음, 에러 발생, 로그인 안 됨 -> 모두 선택 화면으로
-          router.replace('/screens/select');
+          router.replace('/screens/Select');
         }
       };
 

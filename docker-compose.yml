@@ -76,6 +76,7 @@ services:
       SPRING_PROFILES_ACTIVE: develop
       DB_HOST: mysql
       REDIS_HOST: redis
+      SPRING_DATA_REDIS_DATABASE: 1
       TZ: Asia/Seoul
     volumes:
       - ./server-conf:/config

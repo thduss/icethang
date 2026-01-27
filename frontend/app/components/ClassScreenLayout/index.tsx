@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react'; 
-import ClassProgressBar from '../ClassProgressbar';
+import ClassProgressBar from '../ClassProgressBar';
 import TrafficLight from "../TrafficLight";
 import AlertButton from "../AlertButton";
 import { View, StyleSheet } from "react-native";

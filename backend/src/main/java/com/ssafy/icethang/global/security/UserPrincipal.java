@@ -33,7 +33,7 @@ public class UserPrincipal implements OAuth2User, UserDetails {
     public static UserPrincipal create(Auth auth) {
         // 권한 설정 (일단 모두 USER로 통일)
         List<GrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_USER")
+                new SimpleGrantedAuthority("ROLE_TEACHER")
         );
 
         return new UserPrincipal(
@@ -50,6 +50,7 @@ public class UserPrincipal implements OAuth2User, UserDetails {
         userPrincipal.setAttributes(attributes);
         return userPrincipal;
     }
+
     // -------------------------------------
     @Override
     public String getUsername() {

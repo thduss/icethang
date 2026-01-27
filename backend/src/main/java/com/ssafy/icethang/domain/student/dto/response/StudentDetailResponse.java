@@ -22,8 +22,8 @@ public class StudentDetailResponse {
                 .name(student.getName())
                 .studentNumber(student.getStudentNumber())
                 .deviceUuid(student.getDeviceUuid())
-                .exp(student.getExp())
-                .level(student.getLevel())
+                .exp(student.getCurrentXp())
+                .level(student.getCurrentLevel())
                 .build();
     }
 }

@@ -2,7 +2,7 @@
 import React, { useEffect } from "react"; 
 import { Text, View, Alert, Linking, TouchableOpacity, StyleSheet } from "react-native"; 
 import { CameraView, useCameraPermissions } from "expo-camera";
-import ClassProgressBar from '../../components/ClassProgressbar'
+import ClassProgressBar from '../../components/ClassProgressBar'
 import AlertButton from "../../components/AlertButton";
 import TraggicLight from "../../components/TrafficLight";
 

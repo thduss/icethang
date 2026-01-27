@@ -21,7 +21,7 @@ export default function SelectRoleScreen() {
     <View style={styles.container}>
       <View style={styles.row}>
         
-        {/* 🐿️ 선생님 카드 */}
+        {/* 선생님 카드 */}
         <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
           <Image
             source={require('../../../assets/card_background.png')}
@@ -41,14 +41,14 @@ export default function SelectRoleScreen() {
           </View>
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
-            onPress={() => router.push('/screens/teacher_login')}
+            onPress={() => router.push('/screens/Teacher_Login')}
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { fontSize: 15 * scale }]}>선생님으로 시작하기</Text>
           </TouchableOpacity>
         </View>
 
-        {/* 🌱 학생 카드 */}
+        {/* 학생 카드 */}
         <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
           <Image
             source={require('../../../assets/card_background.png')}
@@ -68,7 +68,7 @@ export default function SelectRoleScreen() {
           </View>
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
-            onPress={() => router.push('/screens/student_login')}
+            onPress={() => router.push('/screens/Student_Login')}
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { fontSize: 15 * scale }]}>학생으로 시작하기</Text>
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     left: '-25%', 
     borderRadius: 30,
   },
-  // 🐿️ 캐릭터 영역 (아래로 내림)
+  // 캐릭터 영역 (아래로 내림)
   characterArea: {
     position: 'absolute',
     top: '18%', 
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     width: '90%',
     height: '90%',
   },
-  // 📝 텍스트 영역 
+  // 텍스트 영역 
   textArea: {
     position: 'absolute',
     bottom: '30%',
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1.5, height: 1.5 },
     textShadowRadius: 3,
   },
-  // 🔘 버튼 영역 
+  // 버튼 영역 
   button: {
     position: 'absolute',
     bottom: '18%', 

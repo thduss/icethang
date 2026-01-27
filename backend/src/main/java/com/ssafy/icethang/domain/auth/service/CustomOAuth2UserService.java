@@ -70,7 +70,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
             // 2-2. 탈퇴한 유저 복구 로직 (소프트 딜리트 해제)
             if (auth.getDeletedAt() != null) {
                 log.info("Restoring deleted user: {}", auth.getEmail());
-                auth.setDeletedAt(null); // 복구!
+                auth.setDeletedAt(null);
             }
 
             // 2-3. 정보 업데이트
