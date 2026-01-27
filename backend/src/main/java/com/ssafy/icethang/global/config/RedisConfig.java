@@ -3,6 +3,7 @@ package com.ssafy.icethang.global.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,12 +20,15 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
-    @Value("${spring.data.redis.database:0}")
+    @Value("${spring.data.redis.database}")
     private int database; // redis 방번호 적어주기
 
     // redis 연결용
     @Bean
+    @Primary
     public RedisConnectionFactory redisConnectionFactory() {
+        System.out.println("########## REDIS DATABASE NUMBER: " + database);
+
         org.springframework.data.redis.connection.RedisStandaloneConfiguration config =
                 new org.springframework.data.redis.connection.RedisStandaloneConfiguration();
 
@@ -37,8 +41,9 @@ public class RedisConfig {
 
     // redis에 데이터 쓰고 읽을때 필요한 도구 모음
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+    @Primary
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
 
         // key, value 를 문자열로 저장 위해서 직렬화
