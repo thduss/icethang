@@ -17,23 +17,21 @@ public class StudentXpService {
 
     // 학생 경험치 및 레벨 조회
     @Transactional(readOnly = true)
-    public StudentXpResponse getStudentXp(Long studentId) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("학생을 찾을 수 없습니다."));
+    public StudentXpResponse getStudentXp(Long classId, Long studentId) {
+        Student student = validateStudentInClass(classId, studentId);
 
         return convertToResponse(student);
     }
 
     // 선생님이 경험치 임의 수정
     @Transactional
-    public StudentXpResponse updateStudentExp(Long studentId, Integer amount) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("학생을 찾을 수 없습니다."));
+    public StudentXpResponse updateStudentExp(Long classId, Long studentId, Integer amount) {
+        Student student = validateStudentInClass(classId, studentId);
 
         student.updateXp(amount);
 
         // 새로운 경험치에 맞는 레벨 계산
-        Integer newLevel = levelRulesRepository.findTopByRequiredXpLessThanEqualOrderByLevelDesc(student.getExp())
+        Integer newLevel = levelRulesRepository.findTopByRequiredXpLessThanEqualOrderByLevelDesc(student.getCurrentXp())
                 .map(LevelRules::getLevel)
                 .orElse(1);
         student.updateLevel(newLevel);
@@ -41,17 +39,28 @@ public class StudentXpService {
         return convertToResponse(student);
     }
 
+    // 학생이 classId에 맞는 학생인지 검증
+    private Student validateStudentInClass(Long classId, Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("학생을 찾을 수 없습니다. ID: " + studentId));
+
+        if (student.getClassGroup() == null || !student.getClassGroup().getId().equals(classId)) {
+            throw new RuntimeException("해당 반(ID: " + classId + ") 소속 학생이 아닙니다.");
+        }
+        return student;
+    }
+
 
     private StudentXpResponse convertToResponse(Student student) {
-        Integer nextLevelExp = levelRulesRepository.findById(student.getLevel() + 1)
+        Integer nextLevelExp = levelRulesRepository.findById(student.getCurrentLevel() + 1)
                 .map(LevelRules::getRequiredXp)
                 .orElse(null);
 
         return StudentXpResponse.builder()
                 .studentId(student.getId())
                 .studentName(student.getName())
-                .currentLevel(student.getLevel())
-                .currentXp(student.getExp())
+                .currentLevel(student.getCurrentLevel())
+                .currentXp(student.getCurrentXp())
                 .requiredExpNextLevel(nextLevelExp)
                 .build();
     }
