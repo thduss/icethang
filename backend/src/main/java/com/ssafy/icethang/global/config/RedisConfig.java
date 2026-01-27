@@ -19,12 +19,14 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
-    @Value("${spring.data.redis.database:0}")
+    @Value("${spring.data.redis.database}")
     private int database; // redis 방번호 적어주기
 
     // redis 연결용
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
+        System.out.println("########## REDIS DATABASE NUMBER: " + database);
+
         org.springframework.data.redis.connection.RedisStandaloneConfiguration config =
                 new org.springframework.data.redis.connection.RedisStandaloneConfiguration();
 
