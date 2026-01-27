@@ -73,11 +73,12 @@ public class SecurityConfig {
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
                         .requestMatchers("/error").permitAll()
                         // 로그인 관련
-                        .requestMatchers("/auth/**", "/oauth2/**", "/students/**").permitAll()
+                        .requestMatchers("/auth/**", "/oauth2/**").permitAll()
                         // [경험치 조회 API] 학생과 선생님 모두 접근 가능하도록 설정
                         .requestMatchers("/classes/*/students/*/xp").hasAnyRole("STUDENT", "TEACHER")
                         // [수정 API] 오직 선생님만 접근 가능하도록 설정
                         .requestMatchers("/classes/*/students/*/xp/give").hasRole("TEACHER")
+                        .requestMatchers("/students/**", "/classes/**").authenticated()
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
                 )
 
