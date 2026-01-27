@@ -19,7 +19,7 @@ public class ClassGroup {
     @Column(name = "teacher_id", nullable = false)
     private Long teacherId;
 
-    @Column(name = "group_name", nullable = false)
+    @Column(name = "groups_name", nullable = false)
     private String groupName;
 
     @Column(name = "invite_code", unique = true)
