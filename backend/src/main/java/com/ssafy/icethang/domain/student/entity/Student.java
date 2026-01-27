@@ -54,7 +54,7 @@ public class Student {
     }
 
     // 선생님이 경험치 수정
-    public void updateXp(int amount) {
+    public void addXp(int amount) {
         this.currentXp += amount;
     }
 
