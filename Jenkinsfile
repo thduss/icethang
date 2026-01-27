@@ -109,6 +109,7 @@ stages {
                         --network infra_app-network \
                         -v ${HOST_CONF_DIR}:/config \
                         -e SPRING_PROFILES_ACTIVE=${env.SPRING_PROFILE} \
+                        -e SPRING_DATA_REDIS_DATABASE=${env.SPRING_PROFILE == 'develop' ? '1' : '0'} \
                         ${env.IMAGE_NAME}
                     """
                 }
