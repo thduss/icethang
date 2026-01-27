@@ -32,10 +32,10 @@ public class Student {
     private Integer studentNumber; // 학생 번호
 
     @Column(name = "current_xp")
-    private int exp;
+    private int currentXp;
 
     @Column(name = "current_level")
-    private int level;
+    private int currentLevel;
 
     @Builder
     public Student(String name, String deviceUuid, ClassGroup classGroup, Integer studentNumber) {
@@ -43,8 +43,8 @@ public class Student {
         this.deviceUuid = deviceUuid;
         this.classGroup = classGroup;
         this.studentNumber = studentNumber;
-        this.exp = 0;
-        this.level = 1;
+        this.currentXp = 0;
+        this.currentLevel = 1;
     }
 
     // 학생 수정
@@ -55,13 +55,13 @@ public class Student {
 
     // 선생님이 경험치 수정
     public void updateXp(int amount) {
-        this.exp += amount;
+        this.currentXp += amount;
     }
 
     // 레벨 업데이트 메서드
     public void updateLevel(int newLevel) {
         if (newLevel > 0) {
-            this.level = newLevel;
+            this.currentLevel = newLevel;
         }
     }
 }
