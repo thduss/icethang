@@ -47,8 +47,8 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(customUserDetailsService); // 넌 이 서비스 써!
-        authProvider.setPasswordEncoder(passwordEncoderr()); // 넌 이 암호화 방식 써!
+        authProvider.setUserDetailsService(customUserDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoderr());
         return authProvider;
     }
 
@@ -73,7 +73,11 @@ public class SecurityConfig {
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
                         .requestMatchers("/error").permitAll()
                         // 로그인 관련
-                        .requestMatchers("/auth/**", "/oauth2/**", "/students/**","/classes/**").permitAll() // 로그인 관련 URL 허용
+                        .requestMatchers("/auth/**", "/oauth2/**", "/students/**").permitAll()
+                        // [경험치 조회 API] 학생과 선생님 모두 접근 가능하도록 설정
+                        .requestMatchers("/classes/*/students/*/xp").hasAnyRole("STUDENT", "TEACHER")
+                        // [수정 API] 오직 선생님만 접근 가능하도록 설정
+                        .requestMatchers("/classes/*/students/*/xp/give").hasRole("TEACHER")
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
                 )
 
