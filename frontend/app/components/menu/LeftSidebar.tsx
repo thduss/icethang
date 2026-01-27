@@ -24,6 +24,44 @@ const LeftSidebar = () => {
   const [grade, setGrade] = useState('')
   const [classNum, setClassNum] = useState('')
 
+  // 학급 추가
+  const handleAddClass = () => {
+    if (!grade || !classNum) return
+
+    const newClass: ClassItem = {
+      id: Date.now(),
+      grade: Number(grade),
+      classNum: Number(classNum),
+      isActive: true,
+    }
+
+    setClasses(prev => [...prev, newClass])
+    setGrade('')
+    setClassNum('')
+    setModalVisible(false)
+  }
+
+  // 학급 삭제
+  const handleDeleteClass = () => {
+    if (!selectedClassId) return
+
+    setClasses(prev => prev.filter(c => c.id !== selectedClassId))
+    setSelectedClassId(null)
+    setModalVisible(false)
+  }
+
+  // 학급 비활성화
+  const handleDeactivateClass = () => {
+    if (!selectedClassId) return
+
+    setClasses(prev =>
+      prev.map(c =>
+        c.id === selectedClassId ? { ...c, isActive: false } : c
+      )
+    )
+    setModalVisible(false)
+  }
+
 
   const renderItem = ({ item, drag, isActive }: any) => {
     const label = `${item.grade}-${item.classNum}`
@@ -74,11 +112,10 @@ const LeftSidebar = () => {
       {/* 학급 관리 모달 */}
       <Modal
         transparent
-        animationType='fade'
+        animationType="fade"
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.titleWrapper}>
@@ -90,24 +127,26 @@ const LeftSidebar = () => {
               value={grade}
               onChangeText={setGrade}
               style={styles.input}
+              keyboardType="number-pad"
             />
 
             <TextInput
               placeholder="반을 입력하세요."
               value={classNum}
-              onChangeText={setClassNum} 
+              onChangeText={setClassNum}
               style={styles.input}
+              keyboardType="number-pad"
             />
 
-            <Pressable style={styles.modalButton}>
+            <Pressable style={styles.modalButton} onPress={handleAddClass}>
               <Text style={styles.classButtonText}>학급 추가</Text>
             </Pressable>
 
-            <Pressable style={styles.modalButton}>
+            <Pressable style={styles.modalButton} onPress={handleDeleteClass}>
               <Text style={styles.classButtonText}>학급 삭제</Text>
             </Pressable>
 
-            <Pressable style={styles.modalButton}>
+            <Pressable style={styles.modalButton} onPress={handleDeactivateClass}>
               <Text style={styles.classButtonText}>학급 비활성화</Text>
             </Pressable>
 
@@ -225,6 +264,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3CA92',
     alignItems: 'center',
     marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: '#b4aa94',
   },
 
   closeButton: {
