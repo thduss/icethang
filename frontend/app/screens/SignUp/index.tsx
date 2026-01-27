@@ -6,11 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
 import { initNaverLogin } from '../../utils/naverConfig';
+import { useDispatch, useSelector } from 'react-redux';
+import { signupTeacher, resetSignupState } from '../../store/slices/signupSlice';
 
-// [추가] 아까 만든 AuthService 가져오기
-import { AuthService } from '../../services/auth'; 
 
-//  색상 설정
 const CONFIG = {
   colors: {
     textTitle: '#AEC7EC', 
@@ -34,6 +33,11 @@ interface InputBoxProps {
 
 export default function SignupScreen() {
   const router = useRouter();
+  const dispatch = useDispatch<any>();
+
+  const { teacherLoading, teacherSuccess, error } = useSelector(
+    (state: any) => state.signup
+  );
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [name, setName] = useState('');
@@ -43,10 +47,6 @@ export default function SignupScreen() {
   const [school, setSchool] = useState('');
   const [agreed, setAgreed] = useState(false);
 
-  // [추가] 로딩 상태 관리
-  const [loading, setLoading] = useState(false);
-
-  // 동적 크기 계산
   const CARD_RATIO = 1.35;
   let finalWidth = Math.min(screenWidth * 0.75, 600);
   let finalHeight = finalWidth * CARD_RATIO;
@@ -100,45 +100,52 @@ export default function SignupScreen() {
     }
   };
 
-  // [수정됨] 실제 서버 회원가입 로직
-  const handleSignup = async () => {
-    // 1. 입력값 검증
+const handleSignup = () => {
     if (!name || !email || !password || !school) {
-      Alert.alert("알림", "모든 정보를 입력해주세요.");
+      Alert.alert('알림', '모든 정보를 입력해주세요.');
       return;
     }
+
     if (password !== passwordConfirm) {
-      Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+      Alert.alert('알림', '비밀번호가 일치하지 않습니다.');
       return;
     }
+
     if (!agreed) {
-      Alert.alert("알림", "이용약관에 동의해주세요.");
+      Alert.alert('알림', '이용약관에 동의해주세요.');
       return;
     }
 
-    // 2. 로딩 시작
-    setLoading(true);
-
-    try {
-      // 3. AuthService를 통해 서버로 전송
-      // (registerTeacher 함수: email, pw, name, school 순서)
-      const isSuccess = await AuthService.registerTeacher(email, password, name, school);
-
-      if (isSuccess) {
-        Alert.alert("가입 성공", "회원가입이 완료되었습니다!\n로그인 해주세요.", [
-          { text: "확인", onPress: () => router.replace('/screens/Teacher_Login') }
-        ]);
-      } else {
-        Alert.alert("가입 실패", "이미 가입된 이메일이거나 서버 오류입니다.");
-      }
-    } catch (error) {
-      console.error("회원가입 에러:", error);
-      Alert.alert("오류", "서버와 통신 중 오류가 발생했습니다.");
-    } finally {
-      // 4. 로딩 종료
-      setLoading(false);
-    }
+    dispatch(
+      signupTeacher({
+        email,
+        password,
+        teacherName: name,
+      })
+    );
   };
+
+  useEffect(() => {
+    if (teacherSuccess) {
+      Alert.alert('성공', '회원가입이 완료되었습니다!\n로그인 해주세요.', [
+        {
+          text: '확인',
+          onPress: () => {
+            dispatch(resetSignupState());
+            
+            router.replace('/screens/teacher_login');
+          },
+        },
+      ]);
+    }
+  }, [teacherSuccess]);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('회원가입 실패', error);
+    }
+  }, [error]);
+
 
   return (
     <View style={styles.container}>
@@ -196,7 +203,6 @@ export default function SignupScreen() {
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleSignup}
-                disabled={loading} // 로딩 중 클릭 방지
                 style={[
                   styles.mainButton, 
                   { 
@@ -204,15 +210,9 @@ export default function SignupScreen() {
                     marginBottom: spacing, 
                     backgroundColor: CONFIG.colors.btnBackground, 
                     borderColor: CONFIG.colors.btnBorder,
-                    opacity: loading ? 0.7 : 1 
                   }
                 ]}
               >
-                {loading ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>가입하기</Text>
-                )}
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: spacing }}>

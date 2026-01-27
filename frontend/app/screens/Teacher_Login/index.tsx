@@ -6,8 +6,9 @@ import { initNaverLogin } from '../../utils/naverConfig';
 
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
-
-import { AuthService } from '../../services/auth'; 
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store/stores';
+import { loginTeacher } from '../../store/slices/authSlice';
 
 const CONFIG = {
   colors: {
@@ -26,9 +27,9 @@ export default function TeacherLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  
-  //  로딩 상태 추가 (서버 응답 대기 중일 때 버튼 비활성화)
-  const [loading, setLoading] = useState(false);
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, isLoggedIn, error } = useSelector((state: RootState) => state.auth);
   
   const { width: screenWidth } = useWindowDimensions();
 
@@ -50,10 +51,22 @@ export default function TeacherLoginScreen() {
 
   // 네이버 로그인 초기화
   useEffect(() => {
-      initNaverLogin();
+      try {
+        initNaverLogin();
+      } catch (e) {
+        console.log("네이버 로그인 초기화 실패 (Expo Go 등):", e);
+      }
     }, []);
 
-  // 카카오 로그인
+  // 🔄 로그인 상태 감지 (성공 시 페이지 이동)
+  useEffect(() => {
+    if (isLoggedIn) {
+      Alert.alert("환영합니다", "로그인에 성공했습니다!");
+      router.replace('/screens/Teacher_MainPage');
+    }
+  }, [isLoggedIn]);
+
+  //  카카오 로그인
   const handleKakaoLogin = async () => {
     try {
       const token = await login();
@@ -89,25 +102,12 @@ export default function TeacherLoginScreen() {
       return;
     }
 
-    // 2. 로딩 시작 (버튼 뱅글뱅글)
-    setLoading(true);
-
     try {
-      // 3. AuthService를 통해 스프링 부트 서버로 요청 전송
-      const result = await AuthService.teacherLogin(email, password);
-
-      // 4. 결과 처리
-      if (result.success) {
-        console.log("로그인 성공!");
-        router.replace('/screens/Teacher_MainPage');
-      } else {
-        Alert.alert("로그인 실패", result.msg || "아이디 또는 비밀번호를 확인해주세요.");
-      }
-    } catch (error) {
-      console.error("로그인 중 시스템 에러:", error);
-      Alert.alert("오류", "시스템 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
+      await dispatch(loginTeacher({ email, pw: password })).unwrap();
+      console.log("로그인 성공");
+    } catch (err: any) {
+      console.error("로그인 실패:", err);
+      Alert.alert("로그인 실패", typeof err === 'string' ? err : "이메일 또는 비밀번호를 확인해주세요.");
     }
   };
 
@@ -195,10 +195,8 @@ export default function TeacherLoginScreen() {
                 ]}
               >
                 {loading ? (
-                  // 로딩 중이면 뺑글이 표시
                   <ActivityIndicator color="white" />
                 ) : (
-                  // 평소에는 텍스트 표시
                   <Text style={{ color: 'white', fontWeight: 'bold', fontSize: titleSize * 0.55 }}>로그인</Text>
                 )}
               </TouchableOpacity>
