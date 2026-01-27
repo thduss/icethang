@@ -73,7 +73,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll() // 정적 리소스 허용
                         .requestMatchers("/error").permitAll()
                         // 로그인 관련
-                        .requestMatchers("/auth/**", "/oauth2/**", "/students/**").permitAll() // 로그인 관련 URL 허용
+                        .requestMatchers("/auth/**", "/oauth2/**", "/students/**","/classes/**").permitAll() // 로그인 관련 URL 허용
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
                 )
 
