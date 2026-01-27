@@ -10,9 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 public class StudentXpResponse {
-    private Long studentId;
-    private String studentName;
     private int currentLevel;
     private int currentXp;
-    private Integer requiredExpNextLevel;
+    private String reason;
 }

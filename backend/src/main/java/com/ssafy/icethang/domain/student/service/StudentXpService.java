@@ -30,12 +30,17 @@ public class StudentXpService {
         return convertToResponse(student);
     }
 
-    // 선생님이 경험치 임의 수정
+    // 선생님이 경험치 추가 부여
     @Transactional
     public StudentXpResponse updateStudentExp(Long classId, Long studentId, StudentXpUpdateRequest request) {
         Student student = validateStudentInClass(classId, studentId);
 
-        student.updateXp(request.getAmount());
+        // 학습로그
+        String finalReason = StringUtils.hasText(request.getReason())
+                ? request.getReason()
+                : DEFAULT_TEACHER_REASON;
+
+        student.addXp(request.getAmount());
 
         // 새로운 경험치에 맞는 레벨 계산
         Integer newLevel = levelRulesRepository.findTopByRequiredXpLessThanEqualOrderByLevelDesc(student.getCurrentXp())
@@ -43,18 +48,12 @@ public class StudentXpService {
                 .orElse(1);
         student.updateLevel(newLevel);
 
-        // 학습 로그
-        String finalReason = StringUtils.hasText(request.getReason())
-                ? request.getReason()
-                : DEFAULT_TEACHER_REASON;
-
         StudyLog log = StudyLog.builder()
                 .student(student)
                 .subject(null)      // timetable 만들면 연결시키기
                 .earnedXp(request.getAmount())
                 .classNo(0)         // 수정 필요
                 .reason(finalReason)
-                .timetableId(null)
                 .build();
 
         studyLogRepository.save(log);
@@ -75,16 +74,15 @@ public class StudentXpService {
 
 
     private StudentXpResponse convertToResponse(Student student) {
-        Integer nextLevelExp = levelRulesRepository.findById(student.getCurrentLevel() + 1)
-                .map(LevelRules::getRequiredXp)
-                .orElse(null);
+
+        String lastReason = studyLogRepository.findTopByStudentOrderByCreatedAtDesc(student)
+                .map(StudyLog::getReason)
+                .orElse("기록된 사유가 없습니다.");
 
         return StudentXpResponse.builder()
-                .studentId(student.getId())
-                .studentName(student.getName())
                 .currentLevel(student.getCurrentLevel())
                 .currentXp(student.getCurrentXp())
-                .requiredExpNextLevel(nextLevelExp)
+                .reason(lastReason)
                 .build();
     }
 }
