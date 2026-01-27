@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { initNaverLogin } from '../../utils/naverConfig';
 
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
+
+import { AuthService } from '../../services/auth'; 
 
 const CONFIG = {
   colors: {
@@ -25,9 +27,12 @@ export default function TeacherLoginScreen() {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   
+  //  로딩 상태 추가 (서버 응답 대기 중일 때 버튼 비활성화)
+  const [loading, setLoading] = useState(false);
+  
   const { width: screenWidth } = useWindowDimensions();
 
-  // 📐 크기 설정 (선생님 화면 비율 1.1 유지 - 로직 유지)
+  // 크기 설정 
   const cardWidth = Math.min(screenWidth * 0.75, 580); 
   const cardHeight = cardWidth * 1.1; 
 
@@ -43,12 +48,12 @@ export default function TeacherLoginScreen() {
   const paddingH = cardWidth * 0.16; 
   const paddingV = cardHeight * 0.13; 
 
-  // ⚡️ 네이버 로그인 초기화
+  // 네이버 로그인 초기화
   useEffect(() => {
       initNaverLogin();
     }, []);
 
-  // 🟡 카카오 로그인
+  // 카카오 로그인
   const handleKakaoLogin = async () => {
     try {
       const token = await login();
@@ -61,7 +66,7 @@ export default function TeacherLoginScreen() {
     }
   };
 
-  // 🟢 네이버 로그인
+  // 네이버 로그인
   const handleNaverLogin = async () => {
     try {
       const { successResponse, failureResponse } = await NaverLogin.login();
@@ -77,14 +82,33 @@ export default function TeacherLoginScreen() {
     }
   };
 
-  // 🔵 이메일 로그인
   const handleEmailLogin = async () => {
+    // 1. 유효성 검사
     if (!email || !password) {
-      Alert.alert("알림", "이메일과 비밀번호를 입력해주세요.");
+      Alert.alert("알림", "이메일과 비밀번호를 모두 입력해주세요.");
       return;
     }
-    // 테스트용 강제 이동
-    router.replace('/screens/Teacher_MainPage');
+
+    // 2. 로딩 시작 (버튼 뱅글뱅글)
+    setLoading(true);
+
+    try {
+      // 3. AuthService를 통해 스프링 부트 서버로 요청 전송
+      const result = await AuthService.teacherLogin(email, password);
+
+      // 4. 결과 처리
+      if (result.success) {
+        console.log("로그인 성공!");
+        router.replace('/screens/Teacher_MainPage');
+      } else {
+        Alert.alert("로그인 실패", result.msg || "아이디 또는 비밀번호를 확인해주세요.");
+      }
+    } catch (error) {
+      console.error("로그인 중 시스템 에러:", error);
+      Alert.alert("오류", "시스템 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,7 +121,7 @@ export default function TeacherLoginScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* ☁️ 로그인 카드 */}
+          {/* 로그인 카드 */}
           <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
             
             {/* 구름 배경 */}
@@ -156,16 +180,27 @@ export default function TeacherLoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* 로그인 버튼 */}
+              {/* 로그인 버튼 (로딩 상태 적용) */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleEmailLogin}
+                disabled={loading} 
                 style={[
                   styles.loginButton, 
-                  { height: buttonHeight, marginBottom: spacing }
+                  { 
+                    height: buttonHeight, 
+                    marginBottom: spacing,
+                    opacity: loading ? 0.7 : 1 
+                  }
                 ]}
               >
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: titleSize * 0.55 }}>로그인</Text>
+                {loading ? (
+                  // 로딩 중이면 뺑글이 표시
+                  <ActivityIndicator color="white" />
+                ) : (
+                  // 평소에는 텍스트 표시
+                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: titleSize * 0.55 }}>로그인</Text>
+                )}
               </TouchableOpacity>
 
               {/* 소셜 버튼 구분선 */}
@@ -178,7 +213,7 @@ export default function TeacherLoginScreen() {
               {/* 소셜 로그인 버튼들 */}
               <View style={[styles.socialContainer, { marginBottom: spacing * 0.2 }]}>
                 
-                {/* 카카오 (K 텍스트 제거됨) */}
+                {/* 카카오 */}
                 <TouchableOpacity 
                   activeOpacity={0.7}
                   onPress={handleKakaoLogin}
@@ -191,8 +226,7 @@ export default function TeacherLoginScreen() {
                     }
                   ]}
                 >
-                   <Ionicons name="chatbubble-sharp" size={fontSizeInput * 1.4} color="#371D1E" />
-                   {/* ❌ 여기에 있던 K 텍스트를 제거했습니다 */}
+                    <Ionicons name="chatbubble-sharp" size={fontSizeInput * 1.4} color="#371D1E" />
                 </TouchableOpacity>
 
                 {/* 네이버 */}
@@ -215,7 +249,7 @@ export default function TeacherLoginScreen() {
               {/* 회원가입 버튼 */}
               <TouchableOpacity 
                 style={{ marginTop: 5 }}
-                onPress={() => router.push('/screens/signup')} 
+                onPress={() => router.push('/screens/Signup')} 
               >
                 <Text style={{ color: '#718096', textDecorationLine: 'underline', fontWeight: 'bold', fontSize: fontSizeInput * 1.0 }}>
                   회원가입
@@ -224,7 +258,7 @@ export default function TeacherLoginScreen() {
 
             </View> 
 
-            {/* 🤖 로봇 */}
+            {/* 로봇 */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -251,7 +285,7 @@ export default function TeacherLoginScreen() {
   );
 }
 
-// 🎨 스타일 정의 (StyleSheet)
+// 스타일 정의 (StyleSheet)
 const styles = StyleSheet.create({
   container: {
     flex: 1,

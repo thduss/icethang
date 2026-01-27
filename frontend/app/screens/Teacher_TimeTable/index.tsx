@@ -3,8 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import LeftSidebar from "../../components/menu/LeftSidebar";
-import BackButton from "app/components/menu/BackButton";
+import LeftSidebar from "../../components/Menu/LeftSidebar";
+import BackButton from "app/components/Menu/BackButton";
 import WeeklyGrid from "./WeeklyGrid";
 import TodayList from "./TodayList";
 import { timeTableData, getTodaySchedule, TimeTableItem } from "./dummyData";

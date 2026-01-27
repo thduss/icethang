@@ -1,31 +1,31 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Animated, Easing, useWindowDimensions, ImageBackground } from 'react-native';
 
-// 🎨 폰트 색상 설정 (배경이 바뀌었으니 글자가 잘 보이게 색상 조정이 필요할 수 있습니다)
+// 폰트 색상 설정 
 const CONFIG = {
   colors: {
-    textTitle: '#5D4037',  // 진한 갈색
-    textSubtitle: '#7986CB', // 연한 파란색
+    textTitle: '#5D4037',  
+    textSubtitle: '#7986CB', 
   },
 };
 
 export default function StudentWaitingScreen() {
   const { width } = useWindowDimensions();
   
-  // 🎈 둥실둥실 애니메이션 값
+  // 둥실둥실 애니메이션 값
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
-          toValue: -15, // 위로 둥실
+          toValue: -15,
           duration: 1500,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(bounceAnim, {
-          toValue: 0, // 아래로 둥실
+          toValue: 0, 
           duration: 1500,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
@@ -37,12 +37,9 @@ export default function StudentWaitingScreen() {
   const imageSize = Math.min(width * 0.5, 250);
 
   return (
-    // 🖼️ [핵심 변경] View 대신 ImageBackground 사용
-    // 배경 이미지를 전체 화면에 꽉 채웁니다.
     <ImageBackground
-      source={require('../../../assets/loading_background.png')} // 👈 배경으로 쓸 이미지 경로를 넣어주세요!
-      style={styles.backgroundImage}
-      resizeMode="cover" // 화면을 꽉 채우도록 설정 (비율 유지하며 잘림)
+      source={require('../../../assets/loading_background.png')}
+      resizeMode="cover" 
     >
       
       {/* 1. 텍스트 영역 */}
@@ -62,14 +59,12 @@ export default function StudentWaitingScreen() {
           { transform: [{ translateY: bounceAnim }] } 
         ]}
       >
-        {/* 문 이미지나 로봇 이미지를 여기에 넣으세요 */}
         <Image
           source={require('../../../assets/door.png')} 
           style={{ width: imageSize, height: imageSize }}
           resizeMode="contain"
         />
         
-        {/* 바닥 그림자 */}
       </Animated.View>
 
     </ImageBackground>
@@ -79,10 +74,10 @@ export default function StudentWaitingScreen() {
 const styles = StyleSheet.create({
   // 배경 이미지 스타일
   backgroundImage: {
-    flex: 1, // 화면 전체 채우기
+    flex: 1,
     width: '100%',
     height: '100%',
-    alignItems: 'center', // 내용물 중앙 정렬
+    alignItems: 'center', 
     justifyContent: 'center',
   },
   textContainer: {
@@ -95,7 +90,6 @@ const styles = StyleSheet.create({
     color: CONFIG.colors.textTitle,
     marginBottom: 10,
     textAlign: 'center',
-    // 배경이 있어서 글자가 잘 안 보일까봐 그림자 추가 (선택사항)
     textShadowColor: 'rgba(255, 255, 255, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,

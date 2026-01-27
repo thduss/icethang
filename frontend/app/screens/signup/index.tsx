@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,7 +7,10 @@ import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
 import { initNaverLogin } from '../../utils/naverConfig';
 
-// 🎨 색상 설정
+// [추가] 아까 만든 AuthService 가져오기
+import { AuthService } from '../../services/auth'; 
+
+//  색상 설정
 const CONFIG = {
   colors: {
     textTitle: '#AEC7EC', 
@@ -40,7 +43,10 @@ export default function SignupScreen() {
   const [school, setSchool] = useState('');
   const [agreed, setAgreed] = useState(false);
 
-  // 📐 동적 크기 계산
+  // [추가] 로딩 상태 관리
+  const [loading, setLoading] = useState(false);
+
+  // 동적 크기 계산
   const CARD_RATIO = 1.35;
   let finalWidth = Math.min(screenWidth * 0.75, 600);
   let finalHeight = finalWidth * CARD_RATIO;
@@ -70,7 +76,7 @@ export default function SignupScreen() {
       const token = await login();
       console.log('카카오 가입 토큰:', token);
       Alert.alert("성공", "카카오 계정으로 가입되었습니다!\n로그인 해주세요.", [
-        { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
+        { text: "확인", onPress: () => router.replace('/screens/Teacher_Login') }
       ]);
     } catch (err) {
       console.error("카카오 가입 에러:", err);
@@ -84,7 +90,7 @@ export default function SignupScreen() {
       if (successResponse) {
         console.log("네이버 가입 토큰:", successResponse.accessToken);
         Alert.alert("성공", "네이버 계정으로 가입되었습니다!\n로그인 해주세요.", [
-          { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
+          { text: "확인", onPress: () => router.replace('/screens/Teacher_Login') }
         ]);
       } else {
         console.log("네이버 가입 실패", failureResponse);
@@ -94,7 +100,9 @@ export default function SignupScreen() {
     }
   };
 
-  const handleSignup = () => {
+  // [수정됨] 실제 서버 회원가입 로직
+  const handleSignup = async () => {
+    // 1. 입력값 검증
     if (!name || !email || !password || !school) {
       Alert.alert("알림", "모든 정보를 입력해주세요.");
       return;
@@ -107,9 +115,29 @@ export default function SignupScreen() {
       Alert.alert("알림", "이용약관에 동의해주세요.");
       return;
     }
-    Alert.alert("성공", "회원가입이 완료되었습니다!\n로그인 해주세요.", [
-      { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
-    ]);
+
+    // 2. 로딩 시작
+    setLoading(true);
+
+    try {
+      // 3. AuthService를 통해 서버로 전송
+      // (registerTeacher 함수: email, pw, name, school 순서)
+      const isSuccess = await AuthService.registerTeacher(email, password, name, school);
+
+      if (isSuccess) {
+        Alert.alert("가입 성공", "회원가입이 완료되었습니다!\n로그인 해주세요.", [
+          { text: "확인", onPress: () => router.replace('/screens/Teacher_Login') }
+        ]);
+      } else {
+        Alert.alert("가입 실패", "이미 가입된 이메일이거나 서버 오류입니다.");
+      }
+    } catch (error) {
+      console.error("회원가입 에러:", error);
+      Alert.alert("오류", "서버와 통신 중 오류가 발생했습니다.");
+    } finally {
+      // 4. 로딩 종료
+      setLoading(false);
+    }
   };
 
   return (
@@ -126,7 +154,7 @@ export default function SignupScreen() {
         >
           <View style={[styles.cardContainer, { width: cardWidth, height: cardHeight }]}>
             
-            {/* ☁️ 배경 이미지 (수치 수정됨: left -75, height 95%) */}
+            {/* 배경 이미지 */}
             <Image
               source={require('../../../assets/login_background.png')} 
               style={styles.backgroundImage}
@@ -147,6 +175,7 @@ export default function SignupScreen() {
               </Text>
 
               <View style={{ width: '100%', gap: spacing }}>
+                {/* 💡 InputBox 컴포넌트에 icon, placeholder, value 등을 전달 */}
                 <InputBox icon="person" placeholder="이름" value={name} onChange={setName} height={inputHeight} fontSize={fontSizeInput} color="#D4E4F7" />
                 <InputBox icon="mail" placeholder="이메일" value={email} onChange={setEmail} height={inputHeight} fontSize={fontSizeInput} color="#F4D4D4" />
                 <InputBox icon="lock-closed" placeholder="비밀번호" value={password} onChange={setPassword} isPassword height={inputHeight} fontSize={fontSizeInput} color="#D4E4F7" />
@@ -163,15 +192,27 @@ export default function SignupScreen() {
                 <Text style={[styles.checkboxText, { fontSize: fontSizeInput * 0.9 }]}>이용약관 동의</Text>
               </TouchableOpacity>
 
+              {/* 가입하기 버튼 (로딩 상태 적용) */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleSignup}
+                disabled={loading} // 로딩 중 클릭 방지
                 style={[
                   styles.mainButton, 
-                  { height: inputHeight, marginBottom: spacing, backgroundColor: CONFIG.colors.btnBackground, borderColor: CONFIG.colors.btnBorder }
+                  { 
+                    height: inputHeight, 
+                    marginBottom: spacing, 
+                    backgroundColor: CONFIG.colors.btnBackground, 
+                    borderColor: CONFIG.colors.btnBorder,
+                    opacity: loading ? 0.7 : 1 
+                  }
                 ]}
               >
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>가입하기</Text>
+                {loading ? (
+                    <ActivityIndicator color="white" />
+                ) : (
+                    <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>가입하기</Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: spacing }}>
@@ -201,7 +242,7 @@ export default function SignupScreen() {
               </View>
             </View>
 
-            {/* 🤖 로봇 이미지 (수치 수정됨: left -18%) */}
+            {/* 로봇 이미지 */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -228,7 +269,7 @@ export default function SignupScreen() {
   );
 }
 
-// 📦 InputBox 컴포넌트
+//  InputBox 컴포넌트 (props 타입 적용)
 const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: InputBoxProps) => (
   <View style={[styles.inputContainer, { height, borderColor: color }]}>
     <Ionicons name={icon} size={fontSize * 1.3} color={color === '#F4D4D4' ? '#C68D8D' : '#8DA6C6'} />
@@ -244,7 +285,7 @@ const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, font
   </View>
 );
 
-// 🎨 스타일 정의 
+//  스타일 정의 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
