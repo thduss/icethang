@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+import { AuthService } from '../../services/auth';
 
 export default function StudentLoginScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
 
-  // 📝 입력 상태 관리
-  const [grade, setGrade] = useState('');
+  // 입력 상태 관리
+  // (주의: 디자인상 '반'을 입력받지만 변수명이 grade로 되어 있어 헷갈릴 수 있습니다.
+  //  API 전송 시에는 이 값을 classNum으로 보냅니다.)
+  const [classNumInput, setClassNumInput] = useState(''); // 변수명 명확하게 수정 (기존 grade)
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
   const [authCode, setAuthCode] = useState('');
 
-  // 📐 [크기 설정]
+  // 로딩 상태
+  const [loading, setLoading] = useState(false);
+
+  // [크기 설정]
   const cardWidth = Math.min(screenWidth * 0.75, 580); 
   const cardHeight = cardWidth * 1.1; 
 
@@ -27,33 +34,52 @@ export default function StudentLoginScreen() {
   const paddingH = cardWidth * 0.14; 
   const paddingV = cardHeight * 0.12; 
 
-  // 🚀 입장 기능(하드코딩 상태)
-  const handleEnter = () => {
+  // 실제 서버 로그인 함수
+  const handleEnter = async () => {
     // 1. 빈칸 체크
-    if (!grade || !number || !name || !authCode) {
+    if (!classNumInput || !number || !name || !authCode) {
       Alert.alert("알림", "모든 정보를 입력해주세요.");
       return;
     }
 
-    // 2. 🔐 인증코드 확인 (정답: 1234)
-    const CORRECT_CODE = "1234"; 
+    // 2. 로딩 시작
+    setLoading(true);
 
-    if (authCode !== CORRECT_CODE) {
-      Alert.alert("입장 실패", "인증코드가 올바르지 않습니다.\n선생님께 코드를 다시 확인해주세요.", [
-        { 
+    try {
+      // 3. 서버로 데이터 전송
+      // AuthService.studentLogin(학년, 반, 번호, 이름, 인증코드)
+      //  현재 UI에 '학년' 입력창이 없으므로, 일단 "1"(1학년)로 고정해서 보냅니다.
+      const fixedGrade = "1"; 
+      
+      const result = await AuthService.studentLogin(
+        fixedGrade,   // 학년 (API의 grade)
+        classNumInput,// 반 (API의 classNum)
+        number,       // 번호 (API의 studentNumber)
+        name,         // 이름
+        authCode      // 인증코드
+      );
+
+      // 4. 결과 처리
+      if (result.success) {
+        Alert.alert("환영합니다!", `${name} 학생 입장!`, [
+          { text: "확인", onPress: () => router.replace('/screens/student_home') }
+        ]);
+      } else {
+        // 실패 시 (인증코드 틀림 등)
+        Alert.alert("입장 실패", result.msg || "정보를 다시 확인해주세요.", [
+          { 
             text: "다시 입력", 
-            onPress: () => setAuthCode('') 
-        }
-      ]);
-      return; 
+            onPress: () => setAuthCode('') // 인증코드 초기화
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error("학생 로그인 에러:", error);
+      Alert.alert("오류", "서버와 연결할 수 없습니다.");
+    } finally {
+      // 5. 로딩 종료
+      setLoading(false);
     }
-
-// 하드코딩 없애고 인증코드 관련 입력//
-
-    // 3. 성공 시 입장
-    Alert.alert("환영합니다!", `${name} 학생 입장!`, [
-      { text: "확인", onPress: () => router.push('/screens/student_home') }
-    ]);
   };
 
   return (
@@ -66,7 +92,7 @@ export default function StudentLoginScreen() {
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* ☁️ 구름 카드 컨테이너 */}
+          {/* 구름 카드 컨테이너 */}
           <View style={{ width: cardWidth, height: cardHeight, justifyContent: 'center', alignItems: 'center' }}>
             
             {/* 구름 배경 */}
@@ -76,7 +102,7 @@ export default function StudentLoginScreen() {
               resizeMode="stretch"
             />
 
-            {/* 📝 내부 콘텐츠 */}
+            {/* 내부 콘텐츠 */}
             <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: paddingH, paddingVertical: paddingV, zIndex: 10 }}>
               
               {/* 타이틀 */}
@@ -93,18 +119,18 @@ export default function StudentLoginScreen() {
                 </Text>
               </View>
 
-              {/* 1️⃣ [반] [번호] */}
+              {/* [반] [번호] */}
               <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginBottom: spacing }}>
                 
-                {/* 반 */}
+                {/* 반 (변수명 grade -> classNumInput으로 변경하여 사용) */}
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F6F8', borderRadius: 20, paddingHorizontal: 12, height: inputHeight }}>
                    <Text style={{ fontSize: fontSizeInput, fontWeight: 'bold', color: '#78909C', marginRight: 5 }}>반</Text>
                    <Ionicons name="school" size={18} color="#D4A373" style={{ marginRight: 5 }} /> 
                    <TextInput
                     style={{ flex: 1, fontSize: fontSizeInput, color: '#455A64', fontWeight: 'bold', textAlign: 'center' }}
                     keyboardType="number-pad"
-                    value={grade}
-                    onChangeText={setGrade}
+                    value={classNumInput}
+                    onChangeText={setClassNumInput}
                   />
                 </View>
 
@@ -125,7 +151,7 @@ export default function StudentLoginScreen() {
                 </View>
               </View>
 
-              {/* 2️⃣ 이름 (왼쪽 정렬) */}
+              {/* 이름 (왼쪽 정렬) */}
               <View style={{ width: '100%', height: inputHeight, backgroundColor: '#F2D7D5', borderRadius: 20, justifyContent: 'center', paddingHorizontal: 16, marginBottom: spacing }}>
                 <TextInput
                   style={{ 
@@ -142,7 +168,7 @@ export default function StudentLoginScreen() {
                 />
               </View>
 
-              {/* 3️⃣ 인증코드 */}
+              {/* 인증코드 */}
               <View style={{ 
                 width: '100%', 
                 height: inputHeight, 
@@ -170,10 +196,11 @@ export default function StudentLoginScreen() {
                    </View>
               </View>
 
-              {/* 🚀 입장 버튼 */}
+              {/* 입장 버튼 (로딩 적용) */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleEnter}
+                disabled={loading} // 로딩 중 클릭 방지
                 style={{ 
                   width: '100%', 
                   height: buttonHeight, 
@@ -185,15 +212,20 @@ export default function StudentLoginScreen() {
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
                   shadowRadius: 4,
-                  elevation: 4
+                  elevation: 4,
+                  opacity: loading ? 0.7 : 1 // 로딩 시 흐리게
                 }}
               >
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.3 }}>입장</Text>
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.3 }}>입장</Text>
+                )}
               </TouchableOpacity>
 
             </View> 
 
-            {/* 🤖 로봇 */}
+            {/* 로봇 & 장식 */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -213,7 +245,6 @@ export default function StudentLoginScreen() {
               />
             </View>
             
-            {/* ✨ 장식 아이콘 */}
             <Ionicons name="sparkles" size={24} color="#FFF59D" style={{ position: 'absolute', top: '10%', right: '15%' }} />
             <Ionicons name="star" size={18} color="#FFCC80" style={{ position: 'absolute', bottom: '20%', left: '8%' }} />
 
