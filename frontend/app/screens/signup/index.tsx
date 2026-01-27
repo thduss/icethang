@@ -6,8 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
 import { initNaverLogin } from '../../utils/naverConfig';
+import { useDispatch, useSelector } from 'react-redux';
+import { signupTeacher, resetSignupState } from '../../store/slices/signupSlice';
 
-// 🎨 색상 설정
+
 const CONFIG = {
   colors: {
     textTitle: '#AEC7EC', 
@@ -31,6 +33,11 @@ interface InputBoxProps {
 
 export default function SignupScreen() {
   const router = useRouter();
+  const dispatch = useDispatch<any>();
+
+  const { teacherLoading, teacherSuccess, error } = useSelector(
+    (state: any) => state.signup
+  );
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [name, setName] = useState('');
@@ -40,7 +47,6 @@ export default function SignupScreen() {
   const [school, setSchool] = useState('');
   const [agreed, setAgreed] = useState(false);
 
-  // 📐 동적 크기 계산
   const CARD_RATIO = 1.35;
   let finalWidth = Math.min(screenWidth * 0.75, 600);
   let finalHeight = finalWidth * CARD_RATIO;
@@ -94,23 +100,52 @@ export default function SignupScreen() {
     }
   };
 
-  const handleSignup = () => {
+const handleSignup = () => {
     if (!name || !email || !password || !school) {
-      Alert.alert("알림", "모든 정보를 입력해주세요.");
+      Alert.alert('알림', '모든 정보를 입력해주세요.');
       return;
     }
+
     if (password !== passwordConfirm) {
-      Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+      Alert.alert('알림', '비밀번호가 일치하지 않습니다.');
       return;
     }
+
     if (!agreed) {
-      Alert.alert("알림", "이용약관에 동의해주세요.");
+      Alert.alert('알림', '이용약관에 동의해주세요.');
       return;
     }
-    Alert.alert("성공", "회원가입이 완료되었습니다!\n로그인 해주세요.", [
-      { text: "확인", onPress: () => router.replace('/screens/teacher_login') }
-    ]);
+
+    dispatch(
+      signupTeacher({
+        email,
+        password,
+        teacherName: name,
+      })
+    );
   };
+
+  useEffect(() => {
+    if (teacherSuccess) {
+      Alert.alert('성공', '회원가입이 완료되었습니다!\n로그인 해주세요.', [
+        {
+          text: '확인',
+          onPress: () => {
+            dispatch(resetSignupState());
+            
+            router.replace('/screens/teacher_login');
+          },
+        },
+      ]);
+    }
+  }, [teacherSuccess]);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('회원가입 실패', error);
+    }
+  }, [error]);
+
 
   return (
     <View style={styles.container}>

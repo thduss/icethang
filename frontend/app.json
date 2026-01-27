@@ -13,13 +13,28 @@
     },
     "plugins": [
       "expo-router",
+      "./kakao-repo-plugin.js",
       [
         "expo-font",
         {
           "fonts": [
-            "./assets/font/Hakgyoansim Dunggeunmiso TTF B.ttf",
             "./assets/font/Hakgyoansim_BoardmarkerR.ttf"
           ]
+        }
+      ],
+      [
+        "@react-native-seoul/kakao-login",
+        {
+          "kakaoAppKey": "YOUR_KAKAO_APP_KEY"
+        }
+      ],
+      [
+        "@react-native-seoul/naver-login",
+        {
+          "consumerKey": "YOUR_NAVER_CONSUMER_KEY",
+          "consumerSecret": "YOUR_NAVER_CONSUMER_SECRET",
+          "serviceName": "YOUR_SERVICE_NAME",
+          "urlScheme": "YOUR_URL_SCHEME"
         }
       ]
     ],

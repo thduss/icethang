@@ -5,17 +5,21 @@ import {
   FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER 
 } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { login } from '@react-native-seoul/kakao-login';
 
 // 아래부터 리듀서
 import authReducer from './slices/authSlice'; 
 import themeReducer from './slices/themeSlice';
 import memberReducer from './slices/memberSlice';
+import signupReducer from './slices/signupSlice';
+
 
 
 const rootReducer = combineReducers({
   auth: authReducer,   
   theme: themeReducer,
   member: memberReducer,
+  signup: signupReducer,
 });
 
 
