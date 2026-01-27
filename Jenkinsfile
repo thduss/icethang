@@ -19,7 +19,7 @@ pipeline {
         // 기본값 설정
         SERVICE_NAME = 'develop-server'
         IMAGE_TAG = 'develop'
-        SPRING_PROFILE = 'develop' // 기본 프로필
+        SPRING_PROFILE = 'develop'
     }
 
 stages {
