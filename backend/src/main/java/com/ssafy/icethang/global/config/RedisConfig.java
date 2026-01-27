@@ -19,10 +19,20 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
+    @Value("${spring.data.redis.database:0}")
+    private int database; // redis 방번호 적어주기
+
     // redis 연결용
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(host, port);
+        org.springframework.data.redis.connection.RedisStandaloneConfiguration config =
+                new org.springframework.data.redis.connection.RedisStandaloneConfiguration();
+
+        config.setHostName(host);
+        config.setPort(port);
+        config.setDatabase(database); // redis 방번호 적어주기
+
+        return new LettuceConnectionFactory(config);
     }
 
     // redis에 데이터 쓰고 읽을때 필요한 도구 모음
