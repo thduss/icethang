@@ -29,7 +29,7 @@ public class StudentXpController {
             @PathVariable("classId") Long classId,
             @PathVariable("studentId") Long studentId,
             @RequestBody StudentXpUpdateRequest request) {
-        StudentXpResponse response = studentXpService.updateStudentExp(classId, studentId, request.getAmount());
+        StudentXpResponse response = studentXpService.updateStudentExp(classId, studentId, request);
         return ResponseEntity.ok(response);
     }
 }

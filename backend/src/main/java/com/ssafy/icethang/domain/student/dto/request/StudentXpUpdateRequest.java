@@ -8,4 +8,5 @@ import lombok.NoArgsConstructor;
 // 경험치 수정 dto
 public class StudentXpUpdateRequest {
     private Integer amount;
+    private String reason;
 }
