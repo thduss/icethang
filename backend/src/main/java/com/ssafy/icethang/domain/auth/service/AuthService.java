@@ -6,7 +6,9 @@ import com.ssafy.icethang.domain.auth.dto.request.UpdateUserRequest;
 import com.ssafy.icethang.domain.auth.dto.response.TokenResponseDto;
 import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.auth.entity.AuthProvider;
+import com.ssafy.icethang.domain.auth.entity.Schools;
 import com.ssafy.icethang.domain.auth.repository.AuthRepository;
+import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import jakarta.transaction.Transactional;
@@ -27,13 +29,21 @@ public class AuthService {
     private final TokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
     private final RedisService redisService;
+    private final NiceApiService niceApiService;
+    private final SchoolsRepository schoolsRepository;
 
     @Transactional
     public String signup(SignupRequest request){
-        // 이메일 중복 검사
+        // 1. 이메일 중복 검사
         if(authRepository.findByEmail(request.getEmail()).isPresent()){
             throw new RuntimeException("이미 가입된 이메일입니다.");
         }
+
+        // 2. 학교 정보 처리 (DB -> 없으면 nice API 호출)
+        Schools school = schoolsRepository.findBySchoolName(request.getSchoolName())
+                .orElseGet(() -> {
+                    return niceApiService.searchAndSaveSchool(request.getSchoolName());
+                });
 
         // 비밀번호 암호화
         String encodedPassword = passwordEncoder.encode(request.getPassword());
@@ -43,6 +53,7 @@ public class AuthService {
         auth.setEmail(request.getEmail());
         auth.setPassword(encodedPassword);
         auth.setTeacherName(request.getTeacherName());
+        auth.setSchool(school);
         auth.setProvider(AuthProvider.LOCAL);
 
         authRepository.save(auth);
