@@ -79,4 +79,14 @@ public class Student extends BaseEntity {
             this.currentLevel = newLevel;
         }
     }
+
+    // 캐릭터 장착
+    public void equipCharacter(Theme character) {
+        this.equippedCharacter = character;
+    }
+
+    // 테마(배경) 장착
+    public void equipBackground(Theme background) {
+        this.equippedBackground = background;
+    }
 }
