@@ -71,13 +71,15 @@ const LeftSidebar = () => {
         onLongPress={item.isActive ? drag : undefined}
         disabled={!item.isActive}
         onPress={() => setSelectedClassId(item.id)}
-        style={[
+        style={({ pressed }) => [
           styles.classButton,
           selectedClassId === item.id && styles.selected,
           !item.isActive && styles.disabledClass,
           isActive && styles.dragging,
+          pressed && { transform: [{ scale: 0.95 }] },
         ]}
       >
+
         <Text style={styles.classText}>{label}</Text>
       </Pressable>
     )
@@ -101,10 +103,15 @@ const LeftSidebar = () => {
 
         {/* 학급 관리 버튼 */}
         <Pressable
-          style={styles.manageButton}
+          style={({ pressed }) => [
+            styles.manageButton,
+            pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+          ]}
           onPress={() => setModalVisible(true)}
         >
-          <Text>학급 관리</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#270800' }}>
+            학급 관리
+          </Text>
         </Pressable>
       </View>
 
@@ -195,26 +202,41 @@ const styles = StyleSheet.create({
   classButton: {
     width: 70,
     height: 70,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#270800",
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#FCFDEB",
-    marginBottom: 16,
+    marginBottom: 18,
+    shadowColor: "#6B4E2E",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
   },
 
   selected: {
-    backgroundColor: "#E3CA92"
+    backgroundColor: "#E3CA92",
+    shadowColor: "#503b16",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 10,
+
+    transform: [{ translateY: 2 }],
   },
 
   manageButton: {
     alignSelf: "center",
-    padding: 15,
-    borderWidth: 2,
-    borderColor: "#270800",
-    borderRadius: 25,
-    backgroundColor: "#E3CA92"
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    backgroundColor: "#ddba6d",
+    borderWidth: 0,
+    shadowColor: "#271c10",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
   },
 
   modalOverlay: {
