@@ -100,7 +100,7 @@ export default function SignupScreen() {
     }
   };
 
-const handleSignup = () => {
+  const handleSignup = () => {
     if (!name || !email || !password || !school) {
       Alert.alert('알림', '모든 정보를 입력해주세요.');
       return;
@@ -132,8 +132,7 @@ const handleSignup = () => {
           text: '확인',
           onPress: () => {
             dispatch(resetSignupState());
-            
-            router.replace('/screens/teacher_login');
+            router.replace('/screens/Teacher_Login');
           },
         },
       ]);
@@ -182,7 +181,6 @@ const handleSignup = () => {
               </Text>
 
               <View style={{ width: '100%', gap: spacing }}>
-                {/* 💡 InputBox 컴포넌트에 icon, placeholder, value 등을 전달 */}
                 <InputBox icon="person" placeholder="이름" value={name} onChange={setName} height={inputHeight} fontSize={fontSizeInput} color="#D4E4F7" />
                 <InputBox icon="mail" placeholder="이메일" value={email} onChange={setEmail} height={inputHeight} fontSize={fontSizeInput} color="#F4D4D4" />
                 <InputBox icon="lock-closed" placeholder="비밀번호" value={password} onChange={setPassword} isPassword height={inputHeight} fontSize={fontSizeInput} color="#D4E4F7" />
@@ -199,7 +197,7 @@ const handleSignup = () => {
                 <Text style={[styles.checkboxText, { fontSize: fontSizeInput * 0.9 }]}>이용약관 동의</Text>
               </TouchableOpacity>
 
-              {/* 가입하기 버튼 (로딩 상태 적용) */}
+              {/* ✅ [수정완료] 가입하기 버튼 내부에 Text 컴포넌트 추가 */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleSignup}
@@ -213,6 +211,7 @@ const handleSignup = () => {
                   }
                 ]}
               >
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.2 }}>가입하기</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: spacing }}>
@@ -269,7 +268,7 @@ const handleSignup = () => {
   );
 }
 
-//  InputBox 컴포넌트 (props 타입 적용)
+// InputBox 컴포넌트
 const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: InputBoxProps) => (
   <View style={[styles.inputContainer, { height, borderColor: color }]}>
     <Ionicons name={icon} size={fontSize * 1.3} color={color === '#F4D4D4' ? '#C68D8D' : '#8DA6C6'} />
@@ -285,7 +284,7 @@ const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, font
   </View>
 );
 
-//  스타일 정의 
+// 스타일 정의 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
