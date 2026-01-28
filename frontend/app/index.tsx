@@ -33,7 +33,7 @@ export default function SplashScreen() {
         if (session?.isLoggedIn) {
           const targetRoute = session.role === 'teacher' 
             ? '/screens/Teacher_MainPage' 
-            : '/screens/student_home';
+            : '/screens/Student_Home';
           router.replace(targetRoute);
         } else {
           // 세션 없음, 에러 발생, 로그인 안 됨 -> 모두 선택 화면으로
