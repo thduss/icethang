@@ -247,7 +247,7 @@ export default function TeacherLoginScreen() {
               {/* 회원가입 버튼 */}
               <TouchableOpacity 
                 style={{ marginTop: 5 }}
-                onPress={() => router.push('/screens/Signup')} 
+                onPress={() => router.push('/screens/SignUp')} 
               >
                 <Text style={{ color: '#718096', textDecorationLine: 'underline', fontWeight: 'bold', fontSize: fontSizeInput * 1.0 }}>
                   회원가입
