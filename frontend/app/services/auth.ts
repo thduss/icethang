@@ -112,6 +112,26 @@ export const AuthService = {
   // 4. 학생 로그인 (Axios 사용)
   studentLogin: async (name: string, studentNumber: string, inviteCode: string): Promise<{ success: boolean; msg?: string; data?: any }> => {
     try {
+      if (name === '테스트' && inviteCode === '1234') {
+        console.log("✨ 학생 테스트 계정으로 바이패스 로그인합니다.");
+
+        // 1. 가짜 학생 세션 생성
+        const mockSession: UserSession = {
+          isLoggedIn: true,
+          role: 'student',
+          name: '테스트 학생',
+          id: 'test-student-id', // 임의의 ID
+          token: 'mock-student-token'
+        };
+
+        // 2. 저장소에 저장 (로그인 유지됨)
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mockSession));
+
+        // 3. 성공 리턴
+        return { success: true, data: mockSession };
+      }
+
+      
       const deviceUuid = await getDeviceId();
 
       console.log("🚀 학생 로그인 요청:", { name, studentNumber, inviteCode, deviceUuid });

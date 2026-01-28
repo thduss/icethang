@@ -54,7 +54,7 @@ export default function StudentLoginScreen() {
       // 3. 결과 처리
       if (result.success) {
         Alert.alert("환영합니다!", `${name} 학생 입장 성공!`, [
-          { text: "확인", onPress: () => router.replace('/screens/student_home') }
+          { text: "확인", onPress: () => router.replace('/screens/Student_Home') }
         ]);
       } else {
         // 실패 시
