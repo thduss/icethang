@@ -60,6 +60,7 @@ const MainArea = () => {
         imageSize={290}
         imageMarginTop={-10}
         titleMarginTop={-10}
+        onPress={() => router.push('/screens/Teacher_Lesson')}
       />
     </View>
   )

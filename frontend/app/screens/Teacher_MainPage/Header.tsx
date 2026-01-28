@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native'
-
+import { router } from 'expo-router'
 
 const Header = () => {
   return (
@@ -18,7 +18,11 @@ const Header = () => {
             pressed && styles.timetablePressed,
           ]}
         >
-          <Text style={styles.timetableText}>시간표</Text>
+          <Text
+            style={styles.timetableText}
+            onPress={() => router.push('/screens/Teacher_TimeTable')}
+          >
+            시간표</Text>
         </Pressable>
 
       </View>
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
   },
 
   timetablePressed: {
-    transform: [{ translateY: 3 }], 
+    transform: [{ translateY: 3 }],
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     elevation: 2,
