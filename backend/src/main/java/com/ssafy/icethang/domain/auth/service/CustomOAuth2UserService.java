@@ -93,7 +93,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
         auth.setProviderId(userInfo.getId());
         auth.setTeacherName(userInfo.getName());
         auth.setEmail(userInfo.getEmail());
-        auth.setSchoolId(0); // 기본값
 
         return authRepository.save(auth);
     }
