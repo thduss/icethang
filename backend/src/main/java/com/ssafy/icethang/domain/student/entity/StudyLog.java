@@ -1,10 +1,13 @@
 package com.ssafy.icethang.domain.student.entity;
 
+import com.ssafy.icethang.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -14,9 +17,10 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class) // 자동생성
+@SQLDelete(sql = "UPDATE study_logs SET deleted_at = CURRENT_TIMESTAMP WHERE log_id = ?")
+@Where(clause = "deleted_at IS NULL")
 @Table(name = "study_logs")
-public class StudyLog {
+public class StudyLog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,7 +43,6 @@ public class StudyLog {
     @Column(length = 50)
     private String subject; // 과목명
 
-    // 컬럼 추가
     // erd 수정 필요
     @Column(length = 50)
     private String reason;
@@ -58,10 +61,6 @@ public class StudyLog {
 
     @Column(name = "bad_posture_time")
     private Integer badpostureTime;
-
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
 
     // builder에 포함 안시키면 null
     @Builder

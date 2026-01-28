@@ -1,17 +1,23 @@
 package com.ssafy.icethang.domain.student.entity;
 
 import com.ssafy.icethang.domain.classgroup.entity.ClassGroup;
+import com.ssafy.icethang.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE students SET deleted_at = CURRENT_TIMESTAMP WHERE student_id = ?")
+@Where(clause = "deleted_at IS NULL")
 @Table(name = "students")
-public class Student {
+public class Student extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
