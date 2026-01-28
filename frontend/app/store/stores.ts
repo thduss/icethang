@@ -12,7 +12,7 @@ import authReducer from './slices/authSlice';
 import themeReducer from './slices/themeSlice';
 import memberReducer from './slices/memberSlice';
 import signupReducer from './slices/signupSlice';
-
+import timeReducer from './slices/timeSlice';
 
 
 const rootReducer = combineReducers({
@@ -20,6 +20,7 @@ const rootReducer = combineReducers({
   theme: themeReducer,
   member: memberReducer,
   signup: signupReducer,
+  time: timeReducer,
 });
 
 
