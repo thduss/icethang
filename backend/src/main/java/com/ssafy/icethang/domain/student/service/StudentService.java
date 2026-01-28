@@ -115,4 +115,10 @@ public class StudentService {
                 .accessToken(accessToken)
                 .build();
     }
+
+    //--------------------------------------------
+    // 소켓
+    // monitoring controller에서 받은거 studylog 엔티티로 변환해서 저장 로직 필요
+
+    // 속도 -> 비동기 처리 고민
 }
