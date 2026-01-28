@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>IceThang WebSocket Tester</title>
+    <!-- SockJS & Stomp 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { display: flex; gap: 20px; }
+        .box { border: 1px solid #ccc; padding: 20px; width: 45%; border-radius: 8px; }
+        h3 { margin-top: 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { margin-bottom: 10px; width: 100%; padding: 5px; box-sizing: border-box;}
+        button { cursor: pointer; padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px;}
+        button:disabled { background-color: #ccc; }
+        #messages { height: 300px; overflow-y: scroll; background: #f0f0f0; border: 1px solid #999; padding: 10px; margin-top: 10px;}
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
+        .server-config { background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ced4da; }
+    </style>
+</head>
+<body>
+<h2>🥶 IceThang 실시간 알람 테스트</h2>
+
+<div class="server-config">
+    <label>🔌 서버 주소 (포트 확인 필수!)</label>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="serverUrl" value="http://localhost:8080/ws" style="width: 70%;">
+        <button id="connectBtn" onclick="connect()" style="width: 15%;">연결 (Connect)</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled style="width: 15%; background-color: #6c757d;">해제</button>
+    </div>
+    <div id="status" style="margin-top: 5px; font-weight: bold; color: red;">● 연결 끊김</div>
+</div>
+
+<div class="container">
+    <!-- 선생님 영역 (수신) -->
+    <div class="box">
+        <h3>👨‍🏫 선생님 (수신)</h3>
+        <label>구독할 반 ID (Class ID)</label>
+        <input type="number" id="subClassId" value="1" placeholder="예: 1">
+        <button onclick="subscribe()">2. 알람 구독하기 (Subscribe)</button>
+
+        <h4>📥 수신된 알람 로그</h4>
+        <div id="messages"></div>
+    </div>
+
+    <!-- 학생 영역 (발신) -->
+    <div class="box">
+        <h3>👶 학생 (발신)</h3>
+        <label>보낼 반 ID (Class ID)</label>
+        <input type="number" id="pubClassId" value="1" placeholder="선생님이랑 같은 ID여야 함">
+
+        <label>학생 ID</label>
+        <input type="number" id="studentId" value="101">
+
+        <label>학생 이름</label>
+        <input type="text" id="studentName" value="김싸피">
+
+        <label>알람 종류 (Alert Type)</label>
+        <select id="alertType">
+            <option value="OUT_OF_SEAT">자리 이탈 (OUT_OF_SEAT)</option>
+            <option value="COMPLETELY_OUT">완전 이탈 (COMPLETELY_OUT)</option>
+            <option value="SLEEPING">졸음 (SLEEPING)</option>
+        </select>
+
+        <button onclick="sendAlert()" style="background-color: #dc3545;">3. 알람 보내기 (Send)</button>
+    </div>
+</div>
+
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var url = document.getElementById('serverUrl').value;
+        console.log("Connecting to: " + url);
+
+        // [UI 업데이트] 버튼 누르자마자 반응 보여주기
+        document.getElementById('connectBtn').disabled = true;
+        document.getElementById('status').innerHTML = "⏳ 연결 시도 중...";
+        document.getElementById('status').style.color = "orange";
+        appendLog("⏳ 시스템: " + url + " 로 연결을 시도합니다...");
+
+        var socket = new SockJS(url);
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            setConnected(true);
+            console.log('Connected: ' + frame);
+            appendLog("✅ 시스템: 서버에 연결되었습니다!");
+        }, function (error) {
+            console.log(error);
+            setConnected(false); // 실패 시 버튼 다시 활성화
+            appendLog("❌ 시스템: 연결 실패! 서버 포트(8081/8082)와 SecurityConfig 설정을 확인하세요. (" + error + ")");
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        setConnected(false);
+        appendLog("🛑 시스템: 연결이 종료되었습니다.");
+    }
+
+    function setConnected(connected) {
+        document.getElementById('connectBtn').disabled = connected;
+        document.getElementById('disconnectBtn').disabled = !connected;
+        document.getElementById('serverUrl').disabled = connected; // 연결되면 주소 수정 불가
+
+        var statusSpan = document.getElementById('status');
+        if(connected) {
+            statusSpan.innerHTML = "● 연결됨 (Online)";
+            statusSpan.style.color = "green";
+        } else {
+            statusSpan.innerHTML = "● 연결 끊김 (Offline)";
+            statusSpan.style.color = "red";
+        }
+    }
+
+    function subscribe() {
+        if(!stompClient || !stompClient.connected) {
+            alert("먼저 소켓 연결을 해주세요!");
+            return;
+        }
+
+        var classId = document.getElementById('subClassId').value;
+        stompClient.subscribe('/topic/class/' + classId, function (message) {
+            showAlert(JSON.parse(message.body));
+        });
+
+        appendLog("📡 시스템: [" + classId + "반] 알람을 구독합니다.");
+    }
+
+    function sendAlert() {
+        if(!stompClient || !stompClient.connected) {
+            alert("먼저 소켓 연결을 해주세요!");
+            return;
+        }
+
+        var classId = document.getElementById('pubClassId').value;
+        var studentId = document.getElementById('studentId').value;
+        var name = document.getElementById('studentName').value;
+        var type = document.getElementById('alertType').value;
+
+        var payload = {
+            classId: classId,
+            studentId: studentId,
+            studentName: name,
+            type: type
+        };
+
+        stompClient.send("/app/alert", {}, JSON.stringify(payload));
+        console.log("보냄: ", payload);
+        // appendLog("📤 발신: " + name + " (" + type + ")"); // 내가 보낸 건 로그에 안 찍어도 됨 (수신 확인이 중요하니까)
+    }
+
+    function showAlert(alertData) {
+        var color = alertData.type === 'COMPLETELY_OUT' ? 'red' : 'orange';
+        var message = `[반: ${alertData.classId}] <b>${alertData.studentName}</b>: <span style="color:${color}; font-weight:bold;">${alertData.type}</span>`;
+        appendLog(message);
+    }
+
+    function appendLog(messageHTML) {
+        var messagesDiv = document.getElementById('messages');
+        var msgElement = document.createElement('div');
+        msgElement.className = 'log-entry';
+        msgElement.innerHTML = `<small style="color:#666;">[${new Date().toLocaleTimeString()}]</small> ${messageHTML}`;
+        messagesDiv.appendChild(msgElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+</script>
+</body>
+</html>
