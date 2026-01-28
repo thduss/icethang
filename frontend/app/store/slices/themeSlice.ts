@@ -11,12 +11,15 @@ interface Theme {
 interface ThemeState {
   allThemes: Theme[];
   unlockedThemeIds: number[]; // 내가 갖고있는거
+  equippedCharacterId: number | null; 
+  equippedBackgroundId: number | null;
 }
 
 const initialState: ThemeState = {
   allThemes: [],
-  unlockedThemeIds: [],
-};
+  unlockedThemeIds: [1,2], 
+  equippedBackgroundId: 1,
+  equippedCharacterId: 10,           };
 
 const themeSlice = createSlice({
   name: 'theme',
@@ -30,9 +33,15 @@ const themeSlice = createSlice({
     },
     unlockNewTheme: (state, action: PayloadAction<number>) => {
       state.unlockedThemeIds.push(action.payload);
-    }
+    },
+    setEquippedCharacter: (state, action: PayloadAction<number>) => {
+      state.equippedCharacterId = action.payload;
+    },
+    setEquippedBackground: (state, action: PayloadAction<number>) => {
+      state.equippedBackgroundId = action.payload;
+    },
   }
 });
 
-export const { setAllThemes, setUnlockedThemes, unlockNewTheme } = themeSlice.actions;
+export const { setAllThemes, setUnlockedThemes, unlockNewTheme, setEquippedCharacter, setEquippedBackground } = themeSlice.actions;
 export default themeSlice.reducer;
