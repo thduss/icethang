@@ -14,9 +14,7 @@ import java.util.List;
 public class ThemeController {
     private final ThemeService themeService;
 
-    // 전체 테마 조회
-
-    // 내가 보유한 테마 목록 조회
+    // 내가 보유한 캐릭터 목록 조회
     @GetMapping("/characters/my")
     public ResponseEntity<List<ThemeResponse>> getMyCharacters(
             @RequestParam Long studentId
@@ -25,16 +23,22 @@ public class ThemeController {
         return ResponseEntity.ok(response);
     }
 
-    // 전체 배경(테마) 목록 조회
-    @GetMapping("/backgrounds")
-    public ResponseEntity<List<ThemeResponse>> getAllBackgrounds(
+    // 전체 캐릭터 목록 조회
+    @GetMapping("/characters")
+    public ResponseEntity<List<ThemeResponse>> getAllCharacters(
             @RequestParam Long studentId
     ) {
-        List<ThemeResponse> response = themeService.getAllBackgrounds(studentId);
+        List<ThemeResponse> response = themeService.getAllCharacters(studentId);
         return ResponseEntity.ok(response);
     }
 
-    // 테마 unlock처리
+    // 전체 배경(테마) 목록 조회
+    @GetMapping("/backgrounds")
+    public ResponseEntity<List<ThemeResponse>> getAllBackgrounds(
+    ) {
+        List<ThemeResponse> response = themeService.getAllBackgrounds();
+        return ResponseEntity.ok(response);
+    }
 
     // 캐릭터 장착
     @PatchMapping("/characters/{themeId}/equip")
@@ -53,6 +57,16 @@ public class ThemeController {
             @RequestParam Long studentId
     ) {
         themeService.equipBackground(studentId, themeId);
+        return ResponseEntity.ok().build();
+    }
+
+    // 캐릭터 정해서 unlock 하기
+    @PostMapping("/characters/{themeId}/unlock")
+    public ResponseEntity<Void> unlockCharacter(
+            @PathVariable Long themeId,
+            @RequestParam Long studentId
+    ) {
+        themeService.unlockCharacter(studentId, themeId);
         return ResponseEntity.ok().build();
     }
 }
