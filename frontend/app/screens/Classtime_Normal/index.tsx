@@ -1,16 +1,17 @@
-// 일반 수업시간 화면
-import React, { useEffect } from "react"; 
-import { Text, View, Alert, Linking, TouchableOpacity, StyleSheet } from "react-native"; 
-import { CameraView, useCameraPermissions } from "expo-camera";
-import ClassProgressBar from '../../components/ClassProgressBar'
-import AlertButton from "../../components/AlertButton";
-import TraggicLight from "../../components/TrafficLight";
+import React, { useEffect, useState } from "react"
+import { Text, View, Alert, Linking, TouchableOpacity, StyleSheet } from "react-native"
+import { CameraView, useCameraPermissions } from "expo-camera"
+import ClassProgressBar from "../../components/ClassProgressBar"
+import AlertButton from "../../components/AlertButton"
+import TraggicLight from "../../components/TrafficLight"
+import CalibrationModal from "../../components/Calibration"
 
 export default function NormalClassScreen() {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission] = useCameraPermissions()
+  const [showCalibration, setShowCalibration] = useState(false)
 
   const checkPermissions = async () => {
-    if (!permission) return;
+    if (!permission) return
     if (permission.status !== "granted") {
       if (!permission.canAskAgain) {
         Alert.alert(
@@ -18,57 +19,67 @@ export default function NormalClassScreen() {
           "앱 설정에서 카메라 권한을 변경해주세요.",
           [
             { text: "취소", style: "cancel" },
-            {
-              text: "설정 열기",
-              onPress: () => Linking.openSettings(),
-            },
+            { text: "설정 열기", onPress: () => Linking.openSettings() },
           ],
           { cancelable: false }
-        );
+        )
       } else {
-        requestPermission();
+        requestPermission()
       }
     }
-  };
+  }
 
   useEffect(() => {
-    checkPermissions();
-  }, [permission?.status]); 
+    checkPermissions()
+  }, [permission?.status])
+
+  useEffect(() => {
+    if (permission?.status === "granted") {
+      setShowCalibration(true)
+    }
+  }, [permission])
 
   if (!permission) {
     return (
       <View style={styles.container}>
         <Text>로딩 중...</Text>
       </View>
-    );
+    )
   }
 
   if (permission.status !== "granted") {
     return (
       <View style={styles.permissionContainer}>
         <Text style={{ fontSize: 16 }}>카메라 권한이 필요합니다.</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
+        <TouchableOpacity
+          onPress={requestPermission}
+          style={styles.permissionButton}
+        >
           <Text style={styles.permissionButtonText}>권한 요청</Text>
         </TouchableOpacity>
       </View>
-    );
+    )
   }
 
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} facing="back" />
-       <ClassProgressBar targetMinutes={1} />
-       <TraggicLight />
-        <AlertButton />
+
+      <ClassProgressBar targetMinutes={1} />
+      <TraggicLight />
+      <AlertButton />
+
+      <CalibrationModal
+        visible={showCalibration}
+        onFinish={() => setShowCalibration(false)}
+      />
     </View>
-  );
+  )
 }
 
-// 스타일 정의 추가
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
   },
   camera: {
     flex: 1,
@@ -88,4 +99,4 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
-});
+})
