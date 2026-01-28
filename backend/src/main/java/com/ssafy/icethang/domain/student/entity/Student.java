@@ -1,6 +1,7 @@
 package com.ssafy.icethang.domain.student.entity;
 
 import com.ssafy.icethang.domain.classgroup.entity.ClassGroup;
+import com.ssafy.icethang.domain.theme.entity.Theme;
 import com.ssafy.icethang.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -28,7 +29,7 @@ public class Student extends BaseEntity {
     @JoinColumn(name = "group_id")
     private ClassGroup classGroup;
 
-    @Column(nullable = false)
+    @Column(name = "student_name", nullable = false)
     private String name;
 
     @Column(name = "device_uuid", unique = true, nullable = false)
@@ -42,6 +43,14 @@ public class Student extends BaseEntity {
 
     @Column(name = "current_level")
     private int currentLevel;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "equipped_character_id")
+    private Theme equippedCharacter;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "equipped_background_id")
+    private Theme equippedBackground;
 
     @Builder
     public Student(String name, String deviceUuid, ClassGroup classGroup, Integer studentNumber) {
