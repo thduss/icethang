@@ -13,8 +13,15 @@ interface ClassResultModalProps {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MODAL_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 550); 
+
+const BASE_WIDTH = 550; 
+
+const MODAL_WIDTH = Math.min(SCREEN_WIDTH * 0.95, 950); 
 const MODAL_HEIGHT = MODAL_WIDTH * 0.75; 
+
+const SCALE = MODAL_WIDTH / BASE_WIDTH;
+
+const normalize = (size: number) => Math.round(size * SCALE);
 
 export default function ClassResultModal({ 
   visible, 
@@ -27,7 +34,6 @@ export default function ClassResultModal({
 
   const today = new Date();
   const dateString = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
-
   const safeMaxXP = maxXP === 0 ? 100 : maxXP;
 
   return (
@@ -46,20 +52,20 @@ export default function ClassResultModal({
         >
           <View style={styles.contentContainer}>
             
-            {/* 헤더 */}
+            {/*  헤더 */}
             <View style={styles.headerBadge}>
-              <Ionicons name="sparkles" size={14} color="#FFD700" style={{marginRight: 5}} />
+              <Ionicons name="sparkles" size={normalize(14)} color="#FFD700" style={{marginRight: 5}} />
               <Text style={styles.headerText}>경험치를 받았어요!</Text>
-              <Ionicons name="sparkles" size={14} color="#FFD700" style={{marginLeft: 5}} />
+              <Ionicons name="sparkles" size={normalize(14)} color="#FFD700" style={{marginLeft: 5}} />
             </View>
 
-            {/* 타이틀 & 날짜  */}
+            {/*  타이틀 & 날짜 */}
             <View style={styles.topSection}>
                 <Text style={styles.title}>오늘의 경험치 통계</Text>
                 <Text style={styles.dateText}>☁️ {dateString} ☁️</Text>
             </View>
 
-            {/* 캐릭터  */}
+            {/*  캐릭터 */}
             <View style={styles.characterContainer}>
                <Image 
                  source={require('../../assets/common_Enter.png')} 
@@ -68,7 +74,7 @@ export default function ClassResultModal({
                />
                <Image 
                  source={require('../../assets/common_IsTeacher.png')} 
-                 style={[styles.characterImage, { width: 90, height: 90, zIndex: 10, marginBottom: 15 }]} 
+                 style={[styles.characterImage, { width: normalize(90), height: normalize(90), zIndex: 10, marginBottom: normalize(15) }]} 
                  resizeMode="contain" 
                />
                <Image 
@@ -78,7 +84,7 @@ export default function ClassResultModal({
                />
             </View>
 
-            {/* 경험치 섹션 */}
+            {/*  경험치 섹션 */}
             <View style={styles.xpSection}>
                 <Text style={styles.xpInfoText}>
                     오늘 수업으로 획득한 경험치 <Text style={styles.xpGreen}>+{gainedXP}</Text> ⬆
@@ -89,7 +95,7 @@ export default function ClassResultModal({
                 </View>
             </View>
 
-            {/* 보상 텍스트  */}
+            {/*  보상 텍스트 */}
             <View style={styles.rewardTextContainer}>
                 <Text style={styles.rewardBigText}>
                   ✨ {gainedXP} 경험치 획득 완료! ✨
@@ -99,18 +105,18 @@ export default function ClassResultModal({
                 </Text>
             </View>
             
-            {/*확인 버튼 */}
+            {/* 확인 버튼 */}
             <TouchableOpacity style={styles.confirmButton} onPress={onClose}>
                 <Text style={styles.confirmButtonText}>확인</Text>
             </TouchableOpacity>
 
-            {/* 보물상자 */}
+            {/*  보물상자 */}
             <View style={styles.chestPosition}>
-                <Image 
-                   source={require('../../assets/reward.png')} 
-                   style={{ width: 160, height: 160 }} 
-                   resizeMode="contain" 
-                 />
+                 <Image 
+                    source={require('../../assets/reward.png')} 
+                    style={{ width: normalize(160), height: normalize(160) }} 
+                    resizeMode="contain" 
+                  />
             </View>
 
           </View>
@@ -136,41 +142,45 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center', 
     justifyContent: 'flex-start', 
-    paddingTop: 20, 
-    paddingBottom: 20,
+    paddingTop: normalize(20), 
+    paddingBottom: normalize(20),
   },
   
   // 헤더
   headerBadge: {
     position: 'absolute',
-    top: -14, 
+    top: -normalize(14), 
     backgroundColor: '#8D6E63', 
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 6,
+    paddingHorizontal: normalize(18),
+    paddingVertical: normalize(6),
     borderRadius: 20,
     borderWidth: 2,
     borderColor: '#EFEBE9',
     zIndex: 20,
   },
-  headerText: { color: 'white', fontWeight: 'bold', fontSize: 15 },
+  headerText: { 
+    color: 'white', 
+    fontWeight: 'bold', 
+    fontSize: normalize(15) 
+  },
 
-  // 상단 타이틀 섹션
+  // 상단
   topSection: {
     alignItems: 'center',
-    marginTop: 5, 
+    marginTop: normalize(5), 
     marginBottom: 0,
   },
   title: {
-    fontSize: 22, 
+    fontSize: normalize(22), 
     fontWeight: '800', 
     color: '#5D4037',
-    marginBottom: 8, 
+    marginBottom: normalize(10), 
   },
   dateText: {
     color: '#8D6E63',
-    fontSize: 13,
+    fontSize: normalize(13), 
     fontWeight: '600',
   },
 
@@ -179,55 +189,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'flex-end',
-    marginTop: 15, 
-    marginBottom: 5,
+    marginTop: normalize(15), 
+    marginBottom: normalize(10),
   },
-  characterImage: {
-    width: 75,
-    height: 75,
+  characterImage: { 
+    width: normalize(75), 
+    height: normalize(75),
     marginHorizontal: -5, 
   },
 
-  // 경험치 바 섹션
+  // 경험치 섹션
   xpSection: {
     width: '100%',
     alignItems: 'center',
-    marginBottom: 10, 
+    marginBottom: normalize(15), 
   },
   xpInfoText: {
-    fontSize: 15,
+    fontSize: normalize(15), 
     color: '#6D4C41',
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: normalize(5),
   },
   xpGreen: {
     color: '#558B2F', 
-    fontSize: 17,
+    fontSize: normalize(17),
     fontWeight: '900',
   },
 
   // 보상 텍스트
   rewardTextContainer: {
     alignItems: 'center',
-    marginBottom: 5, 
+    marginBottom: normalize(10), 
   },
   rewardBigText: {
-    fontSize: 18,
+    fontSize: normalize(18),
     fontWeight: 'bold',
     color: '#5D4037',
-    marginBottom: 2,
+    marginBottom: normalize(3),
   },
   rewardSmallText: {
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#8D6E63',
   },
 
   // 버튼
   confirmButton: {
     backgroundColor: '#5C9DFF',
-    paddingVertical: 10,
-    width: 140, 
-    borderRadius: 25,
+    paddingVertical: normalize(12), 
+    width: normalize(150), 
+    borderRadius: 30,
     borderBottomWidth: 4,
     borderBottomColor: '#3669C9',
     alignItems: 'center',
@@ -237,13 +247,14 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: normalize(17),
   },
 
+  // 보물상자 위치
   chestPosition: {
     position: 'absolute',
-    bottom: 30,
-    left: 40,   
+    bottom: normalize(35),
+    left: normalize(45),   
     zIndex: 10,
     transform: [{ rotate: '-5deg' }] 
   }
