@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { router } from 'expo-router';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -21,21 +22,21 @@ export const Header = ({ className, participantCount, onEndClass }: HeaderProps)
 
   return (
     <View style={styles.headerContainer}>
-      
+
       {/* 커스텀 토글 */}
       <View style={styles.toggleWrapper}>
         <Text style={[styles.toggleText, isTabletMode && styles.activeText]}>
           태블릿 수업
         </Text>
 
-        <TouchableOpacity 
-          style={styles.customSwitchTrack} 
-          activeOpacity={0.9} 
+        <TouchableOpacity
+          style={styles.customSwitchTrack}
+          activeOpacity={0.9}
           onPress={toggleSwitch}
         >
           <View style={[
-            styles.customSwitchThumb, 
-            { alignSelf: isTabletMode ? 'flex-start' : 'flex-end' } 
+            styles.customSwitchThumb,
+            { alignSelf: isTabletMode ? 'flex-start' : 'flex-end' }
           ]} />
         </TouchableOpacity>
 
@@ -50,9 +51,9 @@ export const Header = ({ className, participantCount, onEndClass }: HeaderProps)
       </Text>
 
       {/* 종료 버튼 */}
-      <TouchableOpacity 
-        style={styles.endButton} 
-        onPress={onEndClass}
+      <TouchableOpacity
+        style={styles.endButton}
+        onPress={() => router.replace('/screens/Teacher_MainPage')}
         activeOpacity={0.8}
       >
         <Text style={styles.endButtonText}>수업 종료</Text>
