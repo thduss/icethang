@@ -10,16 +10,18 @@ import lombok.Getter;
 @AllArgsConstructor
 public class ClassResponse {
     private Long classId;
-    private String groupName;
+    private Integer grade;
+    private Integer classNum;
     private String inviteCode;
     private Long teacherId;
 
     public static ClassResponse from(ClassGroup classGroup) {
         return ClassResponse.builder()
                 .classId(classGroup.getId())
-                .groupName(classGroup.getGroupName())
+                .grade(classGroup.getGrade())
+                .classNum(classGroup.getClassNum())
                 .inviteCode(classGroup.getInviteCode())
-                .teacherId(classGroup.getTeacherId())
+                .teacherId(classGroup.getTeacher().getId())
                 .build();
     }
 }

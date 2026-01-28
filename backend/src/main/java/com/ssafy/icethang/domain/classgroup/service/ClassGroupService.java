@@ -1,5 +1,7 @@
 package com.ssafy.icethang.domain.classgroup.service;
 
+import com.ssafy.icethang.domain.auth.entity.Auth;
+import com.ssafy.icethang.domain.auth.repository.AuthRepository;
 import com.ssafy.icethang.domain.classgroup.dto.request.ClassCreateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.request.ClassUpdateRequest;
 import com.ssafy.icethang.domain.classgroup.dto.response.ClassResponse;
@@ -25,11 +27,13 @@ public class ClassGroupService {
 
     private final ClassGroupRepository classGroupRepository;
     private final StudentRepository studentRepository;
+    private final AuthRepository teacherRepository;
 
     // 반 생성
     @Transactional
     public Long createClass(ClassCreateRequest request, Long teacherId) {
         String inviteCode;
+        Auth teacher = teacherRepository.getReferenceById(teacherId);
 
         // 초대코드 중복 안 나올 때까지 돌리기
         do {
@@ -39,8 +43,9 @@ public class ClassGroupService {
 
         // 저장
         ClassGroup classGroup = ClassGroup.builder()
-                .teacherId(teacherId)
-                .groupName(request.getGroupName())
+                .teacher(teacher)
+                .grade(request.getGrade())
+                .classNum(request.getClassNum())
                 .inviteCode(inviteCode)
                 .allowDigitalMode(true)
                 .allowNormalMode(true)
@@ -81,11 +86,11 @@ public class ClassGroupService {
         ClassGroup classGroup = classGroupRepository.findById(classId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 반이 존재하지 않습니다."));
 
-        if (!classGroup.getTeacherId().equals(teacherId)) {
+        if (!classGroup.getTeacher().getId().equals(teacherId)) {
             throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
 
-        classGroup.updateGroupName(request.getGroupName());
+        classGroup.updateClassInfo(request.getGrade(), request.getClassNum());
     }
 
     // 반 삭제
@@ -94,7 +99,7 @@ public class ClassGroupService {
         ClassGroup classGroup = classGroupRepository.findById(classId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 반이 존재하지 않습니다."));
 
-        if (!classGroup.getTeacherId().equals(teacherId)) {
+        if (!classGroup.getTeacher().getId().equals(teacherId)) {
             throw new IllegalArgumentException("삭제 권한이 없습니다.");
         }
         classGroupRepository.deleteById(classId);

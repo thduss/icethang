@@ -1,5 +1,6 @@
 package com.ssafy.icethang.domain.classgroup.entity;
 
+import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -22,11 +23,15 @@ public class ClassGroup extends BaseEntity {
     @Column(name = "group_id")
     private Long id;
 
-    @Column(name = "teacher_id", nullable = false)
-    private Long teacherId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    private Auth teacher;
 
-    @Column(name = "groups_name", nullable = false)
-    private String groupName;
+    @Column(name = "grade", nullable = false)
+    private Integer grade;
+
+    @Column(name = "class_num", nullable = false)
+    private Integer classNum;
 
     @Column(name = "invite_code", unique = true)
     private String inviteCode;
@@ -41,17 +46,19 @@ public class ClassGroup extends BaseEntity {
     private Boolean allowThemeChange;
 
     @Builder
-    public ClassGroup(Long teacherId, String groupName, String inviteCode,
+    public ClassGroup(Auth teacher, Integer grade, Integer classNum, String inviteCode,
                       boolean allowDigitalMode, boolean allowNormalMode, boolean allowThemeChange) {
-        this.teacherId = teacherId;
-        this.groupName = groupName;
+        this.teacher = teacher;
+        this.grade = grade;
+        this.classNum = classNum;
         this.inviteCode = inviteCode;
         this.allowDigitalMode = allowDigitalMode;
         this.allowNormalMode = allowNormalMode;
         this.allowThemeChange = allowThemeChange;
     }
 
-    public void updateGroupName(String newGroupName) {
-        this.groupName = newGroupName;
+    public void updateClassInfo(Integer grade, Integer classNum) {
+        this.grade = grade;
+        this.classNum = classNum;
     }
 }

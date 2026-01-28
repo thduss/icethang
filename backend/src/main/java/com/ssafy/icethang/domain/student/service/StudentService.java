@@ -110,7 +110,8 @@ public class StudentService {
                 .studentId(student.getId())
                 .studentName(student.getName())
                 .classId(student.getClassGroup().getId())
-                .className(student.getClassGroup().getGroupName())
+                .grade(student.getClassGroup().getGrade())
+                .classNum(student.getClassGroup().getClassNum())
                 .studentNumber(student.getStudentNumber())
                 .accessToken(accessToken)
                 .build();

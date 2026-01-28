@@ -6,5 +6,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class ClassCreateRequest {
-    private String groupName;
+    private Integer grade;
+    private Integer classNum;
 }
