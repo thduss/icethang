@@ -1,16 +1,22 @@
 package com.ssafy.icethang.domain.classgroup.entity;
 
+import com.ssafy.icethang.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE class_groups SET deleted_at = CURRENT_TIMESTAMP WHERE group_id = ?")
+@Where(clause = "deleted_at IS NULL")
 @Table(name = "class_groups")
-public class ClassGroup {
+public class ClassGroup extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "group_id")

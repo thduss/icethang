@@ -11,10 +11,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Getter
-@MappedSuperclass // 컬럼만 준다
+@MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 // JPA Auditing
-public class BaseEntity {
+public abstract class BaseEntity {
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -22,4 +22,12 @@ public class BaseEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    // soft delete
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

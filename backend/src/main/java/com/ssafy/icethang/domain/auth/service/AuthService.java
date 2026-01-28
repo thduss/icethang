@@ -53,11 +53,13 @@ public class AuthService {
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
 
+        // DB에 있는 비밀번호랑 비교
         Authentication authentication = authenticationManager.authenticate(authenticationToken);
 
         String accessToken = tokenProvider.createToken(authentication);
         String refreshToken = tokenProvider.createRefreshToken(authentication);
 
+        // 리프레시 토큰 redis에 저장
         redisService.setValues(
                 request.getEmail(),
                 refreshToken,
@@ -73,28 +75,28 @@ public class AuthService {
 
     // 토큰 재발급
     public TokenResponseDto reissue(String refreshToken) {
-        // 1. Refresh Token 검증
+        // Refresh Token 검증
         if (!tokenProvider.validateToken(refreshToken)) {
             throw new RuntimeException("Refresh Token이 유효하지 않습니다.");
         }
 
-        // 2. Refresh Token에서 User ID(이메일) 가져오기
+        // Refresh Token에서 이메일 가져오기
         Authentication authentication = tokenProvider.getAuthentication(refreshToken);
         String email = authentication.getName();
 
-        // 3. Redis에서 저장된 Refresh Token 가져오기
+        // Redis에서 저장된 Refresh Token 가져오기
         String redisRefreshToken = redisService.getValues(email);
 
-        // 4. 검사: Redis에 없거나, 요청온 토큰과 다르면 에러
+        // 검사: Redis에 없거나, 요청온 토큰과 다르면 에러
         if (redisRefreshToken == null || !redisRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("토큰의 유저 정보가 일치하지 않습니다.");
         }
 
-        // 5. 새로운 토큰 생성
+        // 새로운 토큰 생성
         String newAccessToken = tokenProvider.createToken(authentication);
         String newRefreshToken = tokenProvider.createRefreshToken(authentication);
 
-        // 6. Redis 업데이트
+        // Redis 업데이트
         redisService.setValues(email, newRefreshToken, Duration.ofDays(7));
 
         return TokenResponseDto.builder()
@@ -128,8 +130,10 @@ public class AuthService {
         }
     }
 
+    // 로그아웃
     @Transactional
     public void logout(String accessToken, String email){
+        // redis 삭제
         if(redisService.getValues(email) != null){
             redisService.deleteValues(email);
         }
