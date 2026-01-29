@@ -1,4 +1,4 @@
-package com.ssafy.icethang.domain.monitoring.dto;
+package com.ssafy.icethang.domain.monitoring.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
