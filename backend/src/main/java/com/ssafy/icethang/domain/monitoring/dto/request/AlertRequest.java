@@ -1,5 +1,6 @@
-package com.ssafy.icethang.domain.monitoring.dto;
+package com.ssafy.icethang.domain.monitoring.dto.request;
 
+import com.ssafy.icethang.domain.monitoring.dto.AlertType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

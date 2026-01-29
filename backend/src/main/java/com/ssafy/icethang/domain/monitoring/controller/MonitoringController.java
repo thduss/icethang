@@ -1,7 +1,7 @@
 package com.ssafy.icethang.domain.monitoring.controller;
 
-import com.ssafy.icethang.domain.monitoring.dto.AlertRequest;
-import com.ssafy.icethang.domain.monitoring.dto.ModeChangeRequest;
+import com.ssafy.icethang.domain.monitoring.dto.request.AlertRequest;
+import com.ssafy.icethang.domain.monitoring.dto.request.ModeChangeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
