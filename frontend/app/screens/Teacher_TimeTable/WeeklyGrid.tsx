@@ -1,16 +1,27 @@
 import React, {useState, useEffect} from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { TimeTableItem, DayKey } from './dummyData';
+
+export interface GridRow {
+    period: number;
+    mon: string;
+    tue: string;
+    wed: string;
+    thu: string;
+    fri: string;
+}
+
+export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
 
 interface WeeklyGridProps {
-    data: TimeTableItem[];
-    onSave: (newData: TimeTableItem[]) => void;
+    data: GridRow[];
+    onSave: (newData: GridRow[]) => void;
 }
 
 const WeeklyGrid = ({ data, onSave }: WeeklyGridProps) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [tempData, setTempData] = useState<TimeTableItem[]>(data);
+    const [tempData, setTempData] = useState<GridRow[]>(data);
 
+    // 부모로부터 새 데이터가 오면 갱신
     useEffect(() => {
         setTempData(data);
     }, [data]);
@@ -58,7 +69,7 @@ const WeeklyGrid = ({ data, onSave }: WeeklyGridProps) => {
 
             <View style={styles.table}>
                 <View style={styles.headerRow}>
-                    <Text style={[styles.cell, styles.headerCell]}>요일</Text>
+                    <Text style={[styles.cell, styles.headerCell]}>교시</Text>
                     <Text style={[styles.cell, styles.headerCell]}>월</Text>
                     <Text style={[styles.cell, styles.headerCell]}>화</Text>
                     <Text style={[styles.cell, styles.headerCell]}>수</Text>
@@ -68,10 +79,8 @@ const WeeklyGrid = ({ data, onSave }: WeeklyGridProps) => {
 
                 {tempData.map((row, rowIndex) => (
                     <View key={row.period} style={styles.row}>
-                        {/* 1교시, 2교시... (수정 불가) */}
-                        <Text style={[styles.cell, styles.periodCell]}>{row.period}교시</Text>
+                        <Text style={[styles.cell, styles.periodCell]}>{row.period}</Text>
 
-                        {/* 과목 데이터 (수정 가능) */}
                         {dayKeys.map((day) => (
                         <View key={day} style={styles.inputCellContainer}>
                             {isEditing ? (
@@ -92,7 +101,6 @@ const WeeklyGrid = ({ data, onSave }: WeeklyGridProps) => {
         </View>
     );
 };
-
 
 export default WeeklyGrid;
 
@@ -143,8 +151,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
-    
-
     table: {
         borderWidth: 2,
         borderColor: '#5D4037',

@@ -13,6 +13,7 @@ import memberReducer from './slices/memberSlice';
 import signupReducer from './slices/signupSlice';
 import timeReducer from './slices/timeSlice';
 import classReducer from './slices/classSlice'
+import scheduleReducer from './slices/scheduleSlice'
 
 
 const rootReducer = combineReducers({
@@ -21,7 +22,8 @@ const rootReducer = combineReducers({
   member: memberReducer,
   signup: signupReducer,
   time: timeReducer,
-  class: classReducer
+  class: classReducer,
+  schedule: scheduleReducer,
 });
 
 

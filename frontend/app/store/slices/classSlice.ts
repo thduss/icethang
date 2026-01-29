@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { createClass, getClasses, getSpecificClass, ClassDto } from '../../services/classAPI';
+import { createClass, getClasses, getSpecificClass, ClassDto } from '../../services/classService';
 
 interface ClassState {
   items: ClassDto[];
