@@ -2,6 +2,7 @@ package com.ssafy.icethang.domain.statistics.controller;
 
 import com.ssafy.icethang.domain.statistics.dto.response.DailyStatisticsResponse;
 import com.ssafy.icethang.domain.statistics.dto.response.MonthlyFocusResponse;
+import com.ssafy.icethang.domain.statistics.dto.response.WeeklyFocusResponse;
 import com.ssafy.icethang.domain.statistics.service.StudentStatisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,6 +26,14 @@ public class StudentStatisticsController {
             @RequestParam @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date
     ) {
         return ResponseEntity.ok(studentStatisticsService.getDailyStatistics(studentId, date));
+    }
+
+    @GetMapping("/weekly")
+    public ResponseEntity<List<WeeklyFocusResponse>> getWeeklyStats(
+            @PathVariable Long studentId,
+            @RequestParam @DateTimeFormat(pattern = "yyyyMMdd") LocalDate startDate
+    ) {
+        return ResponseEntity.ok(studentStatisticsService.getWeeklyFocusStats(studentId, startDate));
     }
 
     @GetMapping("/monthly")

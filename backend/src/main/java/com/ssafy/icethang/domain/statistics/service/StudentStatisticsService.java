@@ -2,6 +2,7 @@ package com.ssafy.icethang.domain.statistics.service;
 
 import com.ssafy.icethang.domain.statistics.dto.response.DailyStatisticsResponse;
 import com.ssafy.icethang.domain.statistics.dto.response.MonthlyFocusResponse;
+import com.ssafy.icethang.domain.statistics.dto.response.WeeklyFocusResponse;
 import com.ssafy.icethang.domain.student.entity.StudyLog;
 import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,30 @@ public class StudentStatisticsService {
         return studyLogRepository.findByStudent_IdAndDateOrderByClassNoAsc(studentId, date)
                 .stream()
                 .map(DailyStatisticsResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<WeeklyFocusResponse> getWeeklyFocusStats(Long studentId, LocalDate startDate) {
+        LocalDate endDate = startDate.plusDays(6); // 기준일로부터 7일간
+
+        // 1. 7일치 로그 조회
+        List<StudyLog> logs = studyLogRepository.findByStudent_IdAndDateBetweenOrderByDateAsc(studentId, startDate, endDate);
+
+        // 2. 날짜별 그룹화 및 평균 계산
+        Map<LocalDate, Double> averageMap = logs.stream()
+                .collect(Collectors.groupingBy(
+                        StudyLog::getDate,
+                        Collectors.averagingInt(StudyLog::getFocusRate)
+                ));
+
+        // 3. 7일치 데이터를 순회하며 빈 날짜는 0.0
+        return startDate.datesUntil(endDate.plusDays(1))
+                .map(date -> WeeklyFocusResponse.builder()
+                        .date(date)
+                        .dayOfWeek(date.getDayOfWeek().name().substring(0, 3)) // MON, TUE...
+                        .averageFocusRate(Math.round(averageMap.getOrDefault(date, 0.0) * 10.0) / 10.0)
+                        .build())
                 .toList();
     }
 
