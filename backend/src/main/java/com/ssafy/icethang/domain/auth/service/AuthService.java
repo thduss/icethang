@@ -11,6 +11,7 @@ import com.ssafy.icethang.domain.auth.repository.AuthRepository;
 import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.TokenProvider;
+import com.ssafy.icethang.global.utill.NeisApiService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,7 +30,7 @@ public class AuthService {
     private final TokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
     private final RedisService redisService;
-    private final NiceApiService niceApiService;
+    private final NeisApiService niceApiService;
     private final SchoolsRepository schoolsRepository;
 
     @Transactional
