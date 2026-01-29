@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../../api/api';
 
 interface SignupState {
   teacherLoading: boolean;
@@ -30,8 +30,8 @@ export const signupTeacher = createAsyncThunk<
   try {
     console.log('교사 회원가입 요청:', payload);
 
-    const response = await axios.post(
-      'https://i14e204.p.ssafy.io/dev/auth/signup',
+    const response = await api.post(
+      '/auth/signup',
       payload
     );
 
@@ -65,8 +65,8 @@ export const signupStudent = createAsyncThunk<
   try {
     console.log('학생 회원가입 요청:', payload);
 
-    const response = await axios.post(
-      'https://i14e204.p.ssafy.io/dev/auth/join/student',
+    const response = await api.post(
+      '/auth/join/student',
       payload
     );
 
