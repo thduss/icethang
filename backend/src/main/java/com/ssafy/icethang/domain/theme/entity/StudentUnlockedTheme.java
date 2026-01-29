@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Table(name = "student_unlock_themes")
+@Table(name = "student_unlocked_themes")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 public class StudentUnlockedTheme {

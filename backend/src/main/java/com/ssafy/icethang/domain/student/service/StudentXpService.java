@@ -27,7 +27,12 @@ public class StudentXpService {
     @Transactional(readOnly = true)
     public StudentXpResponse getStudentXp(Long classId, Long studentId) {
         Student student = validateStudentInClass(classId, studentId);
-        return convertToResponse(student);
+
+        String lastReason = studyLogRepository.findTopByStudentOrderByCreatedAtDesc(student)
+                .map(StudyLog::getReason)
+                .orElse("기록된 사유가 없습니다.");
+
+        return buildResponse(student, lastReason);
     }
 
     // 선생님이 경험치 추가 부여
@@ -57,7 +62,7 @@ public class StudentXpService {
 
         studyLogRepository.save(log);
 
-        return convertToResponse(student);
+        return buildResponse(student, finalReason);
     }
 
     // 학생이 classId에 맞는 학생인지 검증
@@ -72,16 +77,11 @@ public class StudentXpService {
     }
 
 
-    private StudentXpResponse convertToResponse(Student student) {
-
-        String lastReason = studyLogRepository.findTopByStudentOrderByCreatedAtDesc(student)
-                .map(StudyLog::getReason)
-                .orElse("기록된 사유가 없습니다.");
-
+    private StudentXpResponse buildResponse(Student student, String reason) {
         return StudentXpResponse.builder()
                 .currentLevel(student.getCurrentLevel())
                 .currentXp(student.getCurrentXp())
-                .reason(lastReason)
+                .reason(reason) // 파라미터로 받은 사유 사용
                 .build();
     }
 }
