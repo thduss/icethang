@@ -1,13 +1,13 @@
 import React from "react";
 import { View, Text, StyleSheet } from 'react-native';
 
-interface Subject {
+export interface TodaySubject {
     period: number;
     subject: string;
 }
 
 interface TodayListProps {
-    data: Subject[];
+    data: TodaySubject[];
 }
 
 const TodayList = ({data}: TodayListProps) => {
@@ -18,19 +18,25 @@ const TodayList = ({data}: TodayListProps) => {
             </View>
 
             <View style={styles.listContainer}>
-                {data.map((item, index) => (
-                    <View key={item.period} style={[
-                        styles.row,
-                        index === data.length - 1 && { borderBottomWidth: 0 }
-                    ]}>
-                        <View style={styles.periodBox}>
-                            <Text style={styles.periodText}>{item.period}교시</Text>
-                        </View>
-                        <View style={styles.subjectBox}>
-                            <Text style={styles.subjectText}>{item.subject}</Text>
-                        </View>
+                {data.length === 0 ? (
+                    <View style={{ alignItems: 'center', marginTop: 20 }}>
+                        <Text style={{ color: '#aaa' }}>수업이 없는 날입니다.</Text>
                     </View>
-                ))}
+                ) : (
+                    data.map((item, index) => (
+                        <View key={`${item.period}-${index}`} style={[
+                            styles.row,
+                            index === data.length - 1 && { borderBottomWidth: 0 }
+                        ]}>
+                            <View style={styles.periodBox}>
+                                <Text style={styles.periodText}>{item.period}교시</Text>
+                            </View>
+                            <View style={styles.subjectBox}>
+                                <Text style={styles.subjectText}>{item.subject}</Text>
+                            </View>
+                        </View>
+                    ))
+                )}
             </View>
         </View>
     );
