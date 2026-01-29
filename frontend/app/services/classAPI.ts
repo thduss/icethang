@@ -1,35 +1,47 @@
-import client from './client';
+import api from "app/api/api";
 
-// 학급 생성 API
-export const createClass = async (groupName: string) => {
-  const body = { 
-    groupName: groupName 
-  };
-  
-  console.log("🚀 [API 전송] 학급 생성 데이터:", body); 
+export interface ClassDto {
+  classId: number; 
+  grade: number;
+  classNum: number;
+  inviteCode?: string;
+  teacherId?: number;
+}
 
-  const response = await client.post('/classes', body);
+// 1. 학급 생성 API (POST /classes)
+export const createClass = async (data: { grade: number; classNum: number }) => {
+  console.log("🚀 [Service] 학급 생성 요청:", data); 
+  const response = await api.post('/classes', data);
   return response.data;
 };
 
-// 학급 목록 조회 API
-export const getClasses = async () => {
-  console.log("📡 [API 요청] 학급 목록 조회 시작");
-  const response = await client.get('/classes'); 
+// 2. 학급 목록 조회 API (GET /classes)
+export const getClasses = async (): Promise<ClassDto[]> => {
+  console.log("📡 [Service] 학급 목록 조회 요청");
+  const response = await api.get('/classes');
+
+  if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+    throw new Error('로그인이 필요하거나 세션이 만료되었습니다.');
+  }
+
   const rawData = response.data;
 
-  const parsedData = Array.isArray(rawData) ? rawData.map((item: any) => {
-    const [gradeStr, classNumStr] = (item.groupName || "").split('-');
-    
-    return {
-      id: item.classId,
-      name: item.groupName,
-      grade: parseInt(gradeStr, 10) || 0,
-      classNum: parseInt(classNumStr, 10) || 0,
-      isActive: true
-    };
-  }) : [];
+  if (Array.isArray(rawData)) {
+    return rawData.map((item: any) => ({
+      classId: item.classid || item.classId, 
+      grade: item.grade,
+      classNum: item.classNum,
+      inviteCode: item.inviteCode,
+      teacherId: item.teacherId
+    }));
+  }
+  
+  return []; 
+};
 
-  console.log("✅ [API 수신] 변환된 데이터 개수:", parsedData.length);
-  return parsedData; 
+// 3. 학급 상세 조회 API (GET /classes/{classId})
+export const getSpecificClass = async (classId: number) => {
+  console.log(`📡 [Service] 학급 상세 조회 요청: ${classId}`);
+  const response = await api.get(`/classes/${classId}`);
+  return response.data;
 };
