@@ -24,4 +24,7 @@ public interface StudyLogRepository extends JpaRepository<StudyLog, Long> {
     List<StudyLog> findByStudent_IdAndDateOrderByClassNoAsc(Long studentId, LocalDate date);
 
     Optional<StudyLog> findTopByStudentAndDateOrderByCreatedAtDesc(Student student, LocalDate date);
+
+    // 특정 학생의 특정 기간 내 모든 로그 조회
+    List<StudyLog> findByStudent_IdAndDateBetweenOrderByDateAsc(Long studentId, LocalDate startDate, LocalDate endDate);
 }
