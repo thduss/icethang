@@ -3,27 +3,23 @@ import { useState, useEffect } from 'react'
 import DraggableFlatList from 'react-native-draggable-flatlist'
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../store/stores';
-import { addClass, resetStatus, fetchClasses, setSelectedClassId, fetchClassDetail } from '../../store/slices/classSlice';
+import { addClass, resetStatus, fetchClasses, fetchClassDetail } from '../../store/slices/classSlice';
 
 const LeftSidebar = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { loading, success, error, items } = useSelector((state: RootState) => state.class || {});
+  const { loading, success, error, items, selectedClassId } = useSelector((state: RootState) => state.class || {});
 
   const [classes, setClasses] = useState<any[]>([]);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [grade, setGrade] = useState('');
   const [classNum, setClassNum] = useState('');
 
-  const selectedClassId = useSelector(
-    (state: RootState) => state.class.selectedClassId
-  );
-
-
+  // 1. 초기 로드
   useEffect(() => {
     dispatch(fetchClasses());
   }, []);
 
+  // 2. 목록 업데이트
   useEffect(() => {
     if (items && Array.isArray(items)) {
       setClasses(items);
@@ -32,21 +28,18 @@ const LeftSidebar = () => {
     }
   }, [items]);
 
+  // 3. 성공/실패 처리
   useEffect(() => {
     if (success) {
       Alert.alert('성공', '새로운 반이 생성되었습니다!');
-      dispatch(fetchClasses());
+      dispatch(fetchClasses()); 
       setGrade('');
       setClassNum('');
       setModalVisible(false);
       dispatch(resetStatus());
     }
     if (error) {
-      const errorMessage =
-        typeof error === 'string'
-          ? error
-          : (error as any)?.message || '알 수 없는 오류가 발생했습니다.';
-
+      const errorMessage = typeof error === 'string' ? error : '알 수 없는 오류가 발생했습니다.';
       Alert.alert('오류', errorMessage);
       dispatch(resetStatus());
     }
@@ -68,21 +61,13 @@ const LeftSidebar = () => {
     const isSelected = selectedClassId === itemId;
 
     return (
-      <View
-        style={[
-          styles.shadowWrapper,
-          isActive && styles.dragging,
-        ]}
-      >
+      <View style={[styles.shadowWrapper, isActive && styles.dragging]}>
         <Pressable
           onLongPress={drag}
           onPress={() => {            
             dispatch(fetchClassDetail(itemId))
           }}
-          style={[
-            styles.innerButton,
-            isSelected && styles.selectedInner,
-          ]}
+          style={[styles.innerButton, isSelected && styles.selectedInner]}
         >
           <Text style={styles.classText}>
             {item.grade}-{item.classNum}
@@ -97,7 +82,7 @@ const LeftSidebar = () => {
       <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
         <DraggableFlatList
           data={classes}
-          keyExtractor={(item, index) => String(item.classId)}
+          keyExtractor={(item, index) => String(item.classId || index)}
           renderItem={renderItem}
           onDragEnd={({ data }) => setClasses(data)}
           contentContainerStyle={styles.classList}
@@ -105,10 +90,7 @@ const LeftSidebar = () => {
       </View>
 
       <View style={{ paddingBottom: 30 }}>
-        <Pressable
-          style={styles.manageButton}
-          onPress={() => setModalVisible(true)}
-        >
+        <Pressable style={styles.manageButton} onPress={() => setModalVisible(true)}>
           <Text style={styles.manageButtonText}>학급 관리</Text>
         </Pressable>
       </View>
@@ -161,80 +143,15 @@ const LeftSidebar = () => {
 export default LeftSidebar;
 
 const styles = StyleSheet.create({
-  sidebar: {
-    width: 140,
-    backgroundColor: "#EBE0CC",
-    height: '100%',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-
-  classList: {
-    paddingTop: 40,
-    paddingBottom: 20,
-    paddingHorizontal: 25,
-    alignItems: "center"
-  },
-
-  shadowWrapper: {
-    width: 90,
-    height: 90,
-    marginBottom: 20,
-    borderRadius: 30,
-    backgroundColor: '#FFFEF5',
-
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-  },
-
-  innerButton: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFEF5",
-  },
-
-  selectedInner: {
-    backgroundColor: "#DCC486",
-  },
-
-  dragging: {
-    opacity: 0.7,
-    transform: [{ scale: 1.05 }]
-  },
-
-  classText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#38220F',
-  },
-
-  manageButton: {
-    width: 110,
-    height: 50,
-    backgroundColor: "#CBB076",
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-
-  manageButtonText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#38220F",
-  },
-
+  sidebar: { width: 140, backgroundColor: "#EBE0CC", height: '100%', alignItems: 'center', zIndex: 1 },
+  classList: { paddingTop: 40, paddingBottom: 20, paddingHorizontal: 25, alignItems: "center" },
+  shadowWrapper: { width: 90, height: 90, marginBottom: 20, borderRadius: 30, backgroundColor: '#FFFEF5', elevation: 6, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 5 },
+  innerButton: { width: '100%', height: '100%', borderRadius: 30, justifyContent: "center", alignItems: "center", backgroundColor: "#FFFEF5" },
+  selectedInner: { backgroundColor: "#DCC486" },
+  dragging: { opacity: 0.7, transform: [{ scale: 1.05 }] },
+  classText: { fontSize: 28, fontWeight: '800', color: '#38220F' },
+  manageButton: { width: 110, height: 50, backgroundColor: "#CBB076", borderRadius: 25, justifyContent: 'center', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 5 },
+  manageButtonText: { fontSize: 18, fontWeight: "700", color: "#38220F" },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   modalBox: { width: 300, backgroundColor: '#FFFDF5', borderRadius: 20, padding: 30, alignItems: 'center', elevation: 10 },
   modalTitle: { fontSize: 24, fontWeight: '700', marginBottom: 20, color: '#38220F' },

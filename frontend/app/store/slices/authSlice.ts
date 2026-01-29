@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk, AnyAction } from '@reduxjs/toolkit';
-import client from '../../api/client';
+import api from 'app/api/api';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -57,7 +57,7 @@ export const initializeAuth = createAsyncThunk(
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return rejectWithValue('저장된 토큰 없음');
 
-      const response = await client.get('/auth/me');
+      const response = await api.get('/auth/me');
       const role = await SecureStore.getItemAsync('userRole');
 
       return { 
@@ -78,7 +78,7 @@ export const joinStudent = createAsyncThunk(
     try {
       const device_uuid = await getDeviceUUID(); 
       
-      const response = await client.post('/auth/join/student', {
+      const response = await api.post('/auth/join/student', {
         ...payload,
         device_uuid: device_uuid || 'unknown-device' 
       });
@@ -103,7 +103,7 @@ export const loginStudent = createAsyncThunk(
     try {
       const device_uuid = await getDeviceUUID(); 
 
-      const response = await client.post('/auth/login/student', {
+      const response = await api.post('/auth/login/student', {
         device_uuid: device_uuid 
       });
       
@@ -125,7 +125,7 @@ export const loginTeacher = createAsyncThunk(
   'auth/loginTeacher',
   async (payload: { email: string; pw: string }, { rejectWithValue }) => {
     try {
-      const response = await client.post('/auth/login/teacher', {
+      const response = await api.post('/auth/login/teacher', {
         email: payload.email,
         password: payload.pw
       });
@@ -148,7 +148,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
-      client.post('/auth/logout').catch(() => {});
+      api.post('/auth/logout').catch(() => {});
       Object.assign(state, initialState);
       if (Platform.OS !== 'web') {
         SecureStore.deleteItemAsync('accessToken');

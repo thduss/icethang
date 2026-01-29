@@ -1,68 +1,8 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { createClass, getClasses } from '../../services/classAPI';
-import client from '../../api/client';
-
-export interface ClassItem {
-  id: number;
-  grade: number;
-  classNum: number;
-  name: string;
-  isActive: boolean;
-}
-
-export const fetchClasses = createAsyncThunk(
-  'class/fetchClasses',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await client.get('/classes');
-      if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-        throw new Error('로그인이 필요하거나 세션이 만료되었습니다.');
-      }
-
-      console.log('✅ 학급 목록 로드 성공');
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ 학급 목록 로드 실패:', error.message);
-      return rejectWithValue(error.response?.data || error.message);
-    }
-  }
-);
-
-export const addClass = createAsyncThunk(
-  'class/addClass',
-  async (payload: { grade: number; classNum: number }, { rejectWithValue }) => {
-    try {
-      console.log(`🚀 [API 전송] 학급 생성 데이터:`, payload);
-
-      const response = await client.post('/classes', {
-        grade: payload.grade,
-        classNum: payload.classNum
-      });
-
-      console.log('✅ 학급 생성 성공:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ 학급 생성 실패:', error.message);
-      return rejectWithValue(error.response?.data || error.message);
-    }
-  }
-);
-
-export const fetchClassDetail = createAsyncThunk(
-  'class/fetchClassDetail',
-  async (classId: number, { rejectWithValue }) => {
-    try {
-      const response = await client.get(`/classes/${classId}`);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || error.message);
-    }
-  }
-);
-
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createClass, getClasses, getSpecificClass, ClassDto } from '../../services/classAPI';
 
 interface ClassState {
-  items: ClassItem[];
+  items: ClassDto[];
   selectedClassId: number | null;
   selectedClassDetail: any | null;
   loading: boolean;
@@ -79,6 +19,49 @@ const initialState: ClassState = {
   error: null,
 };
 
+// 1. 목록 조회 Thunk
+export const fetchClasses = createAsyncThunk(
+  'class/fetchClasses',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await getClasses();
+      console.log(`✅ [Slice] 목록 로드 완료 (${data.length}개)`);
+      return data;
+    } catch (error: any) {
+      console.error('❌ [Slice] 목록 로드 실패:', error.message);
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// 2. 학급 생성 Thunk
+export const addClass = createAsyncThunk(
+  'class/addClass',
+  async (payload: { grade: number; classNum: number }, { rejectWithValue }) => {
+    try {
+      const newClassId = await createClass(payload);
+      console.log('✅ [Slice] 생성 성공, ID:', newClassId);
+      return newClassId;
+    } catch (error: any) {
+      console.error('❌ [Slice] 생성 실패:', error.message);
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// 3. 상세 조회 Thunk
+export const fetchClassDetail = createAsyncThunk(
+  'class/fetchClassDetail',
+  async (classId: number, { rejectWithValue }) => {
+    try {
+      const data = await getSpecificClass(classId);
+      return data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const classSlice = createSlice({
   name: 'class',
   initialState,
@@ -87,9 +70,13 @@ const classSlice = createSlice({
       state.success = false;
       state.error = null;
     },
+    setSelectedClassId: (state, action) => {
+      state.selectedClassId = action.payload;
+    }
   },
   extraReducers: (builder) => {
     builder
+      // --- 목록 조회 ---
       .addCase(fetchClasses.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -103,6 +90,7 @@ const classSlice = createSlice({
         state.error = action.payload as string;
       })
 
+      // --- 학급 생성 ---
       .addCase(addClass.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -117,6 +105,7 @@ const classSlice = createSlice({
         state.error = action.payload as string;
       })
 
+      // --- 상세 조회 ---
       .addCase(fetchClassDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -124,7 +113,7 @@ const classSlice = createSlice({
       })
       .addCase(fetchClassDetail.fulfilled, (state, action) => {
         state.loading = false;
-        state.selectedClassId = action.payload.classId;
+        state.selectedClassId = action.payload.classId || action.meta.arg; 
         state.selectedClassDetail = action.payload;
       })
       .addCase(fetchClassDetail.rejected, (state, action) => {
@@ -132,10 +121,7 @@ const classSlice = createSlice({
         state.error = action.payload as string;
       });
   },
-})
+});
 
-export const {
-  resetStatus,
-} = classSlice.actions;
-
+export const { resetStatus, setSelectedClassId } = classSlice.actions;
 export default classSlice.reducer;
