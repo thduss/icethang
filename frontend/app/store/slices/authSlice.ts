@@ -1,12 +1,12 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk, AnyAction } from '@reduxjs/toolkit';
 import client from '../../api/client';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { getDeviceUUID } from '../../services/device'; 
 
-interface SchoolInfo {
-  school_id: number;
-  school_name: string;
-}
+
+interface SchoolInfo { school_id: number; school_name: string; }
 
 interface StudentInfo {
   student_id: number;
@@ -17,14 +17,14 @@ interface StudentInfo {
   device_uuid: string;
   current_xp: number;
   current_level: number;
-  equipped_character_id: number | null; 
-  equipped_background_id: number | null; 
+  equipped_character_id: number | null;
+  equipped_background_id: number | null;
 }
 
 interface TeacherInfo {
   teacher_id: number;
   email: string;
-  school: SchoolInfo; 
+  school: SchoolInfo;
   teacher_name: string;
   provider: string | null;
 }
@@ -49,60 +49,96 @@ const initialState: AuthState = {
   error: null,
 };
 
-export const loginStudent = createAsyncThunk(
-  'auth/loginStudent',
-  async (loginPayload: { code: string }, { rejectWithValue }) => {
+
+export const initializeAuth = createAsyncThunk(
+  'auth/initialize',
+  async (_, { rejectWithValue }) => {
     try {
-      const response = await client.post('/auth/login/student', loginPayload);
-      
-      if (Platform.OS !== 'web' && response.data.token) { 
-        await SecureStore.setItemAsync('accessToken', response.data.token);
-      }
-      return response.data; 
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return rejectWithValue('저장된 토큰 없음');
+
+      const response = await client.get('/auth/me');
+      const role = await SecureStore.getItemAsync('userRole');
+
+      return { 
+        token, 
+        role: role as 'student' | 'teacher', 
+        data: response.data 
+      };
     } catch (error: any) {
-      return rejectWithValue(error.message || '로그인 실패');
+      return rejectWithValue('세션 만료');
     }
   }
 );
 
+
+export const joinStudent = createAsyncThunk(
+  'auth/joinStudent',
+  async (payload: { code: string; name: string; number: number }, { rejectWithValue }) => {
+    try {
+      const device_uuid = await getDeviceUUID(); 
+      
+      const response = await client.post('/auth/join/student', {
+        ...payload,
+        device_uuid: device_uuid || 'unknown-device' 
+      });
+      
+      const { token } = response.data;
+
+      if (Platform.OS !== 'web' && token) {
+        await SecureStore.setItemAsync('accessToken', token);
+        await SecureStore.setItemAsync('userRole', 'student');
+      }
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || '최초 입장 실패');
+    }
+  }
+);
+
+
+export const loginStudent = createAsyncThunk(
+  'auth/loginStudent',
+  async (_, { rejectWithValue }) => {
+    try {
+      const device_uuid = await getDeviceUUID(); 
+
+      const response = await client.post('/auth/login/student', {
+        device_uuid: device_uuid 
+      });
+      
+      const { token } = response.data;
+
+      if (Platform.OS !== 'web' && token) {
+        await SecureStore.setItemAsync('accessToken', token);
+        await SecureStore.setItemAsync('userRole', 'student');
+      }
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || '기기 인식 로그인 실패');
+    }
+  }
+);
+
+
 export const loginTeacher = createAsyncThunk(
   'auth/loginTeacher',
-  async (loginPayload: { email: string; pw: string }, { rejectWithValue }) => {
+  async (payload: { email: string; pw: string }, { rejectWithValue }) => {
     try {
-      console.log('📡 [AuthSlice] 로그인 시도:', loginPayload.email);
+      const response = await client.post('/auth/login/teacher', {
+        email: payload.email,
+        password: payload.pw
+      });
+      const { accessToken, refreshToken, data } = response.data;
 
-      const requestBody = {
-        email: loginPayload.email,
-        password: loginPayload.pw
-      };
-
-      const response = await client.post('/auth/login/teacher', requestBody);
-      
-      console.log('🔥 [AuthSlice] 서버 응답 성공!');
-
-      const accessToken = response.data.accessToken; 
-      const refreshToken = response.data.refreshToken;
-
-      if (!accessToken) {
-        throw new Error('응답에 accessToken이 없습니다.');
-      }
-
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== 'web' && accessToken) {
         await SecureStore.setItemAsync('accessToken', accessToken);
-        if (refreshToken) {
-          await SecureStore.setItemAsync('refreshToken', refreshToken);
-        }
-        console.log("💾 [AuthSlice] 토큰 SecureStore 저장 완료");
+        await SecureStore.setItemAsync('userRole', 'teacher');
+        if (refreshToken) await SecureStore.setItemAsync('refreshToken', refreshToken);
       }
-
-      return {
-        token: accessToken,
-        data: response.data 
-      };
-
+      return { token: accessToken, data };
     } catch (error: any) {
-      console.error('❌ [AuthSlice] 로그인 실패:', error.response?.data || error.message);
-      return rejectWithValue('이메일 또는 비밀번호를 확인해주세요.');
+      return rejectWithValue(error.response?.data?.message || '선생님 로그인 실패');
     }
   }
 );
@@ -111,40 +147,25 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    studentLoginSuccess: (state, action: PayloadAction<{ token: string; data: StudentInfo }>) => {
-      state.isLoggedIn = true;
-      state.userRole = 'student';
-      state.accessToken = action.payload.token;
-      state.studentData = action.payload.data;
+    logout: (state) => {
+      client.post('/auth/logout').catch(() => {});
+      Object.assign(state, initialState);
+      if (Platform.OS !== 'web') {
+        SecureStore.deleteItemAsync('accessToken');
+        SecureStore.deleteItemAsync('refreshToken');
+        SecureStore.deleteItemAsync('userRole');
+      }
+      AsyncStorage.removeItem('user_session');
     },
-    teacherLoginSuccess: (state, action: PayloadAction<{ token: string; data: TeacherInfo }>) => {
-      state.isLoggedIn = true;
-      state.userRole = 'teacher';
-      state.accessToken = action.payload.token;
-      state.teacherData = action.payload.data;
-    },
-    logout: () => initialState,
   },
   extraReducers: (builder) => {
     builder
-      .addCase(loginStudent.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(loginStudent.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isLoggedIn = true;
-        state.userRole = 'student';
         state.accessToken = action.payload.token;
-        state.studentData = action.payload.data;
-      })
-      .addCase(loginStudent.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      .addCase(loginTeacher.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.userRole = action.payload.role;
+        if (action.payload.role === 'student') state.studentData = action.payload.data;
+        else state.teacherData = action.payload.data;
       })
       .addCase(loginTeacher.fulfilled, (state, action) => {
         state.loading = false;
@@ -153,12 +174,30 @@ const authSlice = createSlice({
         state.accessToken = action.payload.token;
         state.teacherData = action.payload.data;
       })
-      .addCase(loginTeacher.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      });
+      .addMatcher(
+        (action): action is PayloadAction<{ token: string; data: StudentInfo }> =>
+          [loginStudent.fulfilled.type, joinStudent.fulfilled.type].includes(action.type),
+        (state, action) => {
+          state.loading = false;
+          state.isLoggedIn = true;
+          state.userRole = 'student';
+          state.accessToken = action.payload.token;
+          state.studentData = action.payload.data;
+        }
+      )
+      .addMatcher(
+        (action): action is AnyAction => action.type.endsWith('/pending'),
+        (state) => { state.loading = true; state.error = null; }
+      )
+      .addMatcher(
+        (action): action is PayloadAction<string> => action.type.endsWith('/rejected'),
+        (state, action) => {
+          state.loading = false;
+          state.error = action.payload || '에러가 발생했습니다.';
+        }
+      );
   },
 });
 
-export const { studentLoginSuccess, teacherLoginSuccess, logout } = authSlice.actions;
+export const { logout } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,19 +1,27 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Alert, ActivityIndicator } from 'react-native';
+import { 
+  View, Text, TextInput, TouchableOpacity, Image, 
+  KeyboardAvoidingView, Platform, ScrollView, 
+  useWindowDimensions, Alert, ActivityIndicator 
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthService } from '../../services/auth';
+
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store/stores'; 
+import { joinStudent, loginStudent } from '../../store/slices/authSlice'; 
 
 export default function StudentLoginScreen() {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
   const { width: screenWidth } = useWindowDimensions();
 
+  const { loading: reduxLoading } = useSelector((state: RootState) => state.auth);
   const [classNum, setClassNum] = useState(''); 
   const [number, setNumber] = useState('');     
-  const [name, setName] = useState('');        
+  const [name, setName] = useState('');         
   const [authCode, setAuthCode] = useState('');
-  
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const numberRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
@@ -37,20 +45,22 @@ export default function StudentLoginScreen() {
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      const result = await AuthService.studentLogin(
-        name,
-        Number(number) as any,   
-        authCode
-      );
-      if (result.success) {
+      const resultAction = await dispatch(joinStudent({
+        code: authCode,
+        name: name,
+        number: Number(number)
+      }));
+
+      if (joinStudent.fulfilled.match(resultAction)) {
         Alert.alert("환영합니다!", `${name} 학생 입장 성공!`, [
           { text: "확인", onPress: () => router.replace('/screens/Student_Home') }
         ]);
       } else {
-        Alert.alert("입장 실패", result.msg, [
+        const errorMsg = resultAction.payload as string || "입장에 실패했습니다.";
+        Alert.alert("입장 실패", errorMsg, [
           { 
             text: "다시 입력", 
             onPress: () => {
@@ -61,12 +71,14 @@ export default function StudentLoginScreen() {
         ]);
       }
     } catch (error) {
-      console.error(error);
+      console.error("Login Error:", error);
       Alert.alert("오류", "시스템 에러가 발생했습니다.");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
+
+  const isLoading = isSubmitting || reduxLoading;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFDF5' }}>
@@ -80,7 +92,6 @@ export default function StudentLoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ width: cardWidth, height: cardHeight, justifyContent: 'center', alignItems: 'center' }}>
-            
             <Image
               source={require('../../../assets/login_background.png')} 
               style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}
@@ -95,7 +106,6 @@ export default function StudentLoginScreen() {
                 </Text>
               </View>
 
-              {/* 반 & 번호 입력 */}
               <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginBottom: spacing }}>
                 
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F6F8', borderRadius: 20, paddingHorizontal: 12, height: inputHeight }}>
@@ -134,7 +144,6 @@ export default function StudentLoginScreen() {
                 </View>
               </View>
 
-              {/* 이름 입력 */}
               <View style={{ width: '100%', height: inputHeight, backgroundColor: '#F2D7D5', borderRadius: 20, justifyContent: 'center', paddingHorizontal: 16, marginBottom: spacing }}>
                 <TextInput
                   ref={nameRef}
@@ -149,7 +158,6 @@ export default function StudentLoginScreen() {
                 />
               </View>
 
-              {/* 인증코드 입력 */}
               <View style={{ width: '100%', height: inputHeight, backgroundColor: '#FFF9C4', borderRadius: 20, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: spacing * 1.5, borderWidth: 2, borderColor: '#FBC02D', borderStyle: 'dashed' }}>
                 <Text style={{ fontSize: fontSizeInput, fontWeight: 'bold', color: '#8D6E63', width: 70 }}>인증코드</Text>
                 <TextInput
@@ -170,14 +178,26 @@ export default function StudentLoginScreen() {
                    </View>
               </View>
 
-              {/* 입장 버튼 */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleEnter}
-                disabled={loading}
-                style={{ width: '100%', height: buttonHeight, backgroundColor: '#9FA8DA', borderRadius: 25, justifyContent: 'center', alignItems: 'center', shadowColor: "#5C6BC0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4, opacity: loading ? 0.7 : 1 }}
+                disabled={isLoading}
+                style={{ 
+                  width: '100%', 
+                  height: buttonHeight, 
+                  backgroundColor: '#9FA8DA', 
+                  borderRadius: 25, 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  shadowColor: "#5C6BC0", 
+                  shadowOffset: { width: 0, height: 4 }, 
+                  shadowOpacity: 0.3, 
+                  shadowRadius: 4, 
+                  elevation: 4, 
+                  opacity: isLoading ? 0.7 : 1 
+                }}
               >
-                {loading ? (
+                {isLoading ? (
                   <ActivityIndicator color="white" />
                 ) : (
                   <Text style={{ color: 'white', fontWeight: 'bold', fontSize: fontSizeInput * 1.3 }}>입장</Text>
@@ -186,10 +206,10 @@ export default function StudentLoginScreen() {
 
             </View> 
 
-            {/* 로봇 & 장식 */}
             <View pointerEvents="none" style={{ position: 'absolute', zIndex: 20, width: robotSize, height: robotSize, bottom: -cardHeight * 0.05, left: -cardWidth * 0.18, transform: [{ rotate: '-10deg' }] }}>
               <Image source={require('../../../assets/common_Enter.png')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
             </View>
+            
             <Ionicons name="sparkles" size={24} color="#FFF59D" style={{ position: 'absolute', top: '10%', right: '15%' }} />
             <Ionicons name="star" size={18} color="#FFCC80" style={{ position: 'absolute', bottom: '20%', left: '8%' }} />
 
