@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface TimetableRepository extends JpaRepository<Timetable, Long> {
-    List<Timetable> findByClassGroup_Id(Long groupId);
-    void deleteByClassGroup_Id(Long groupId);
+    void deleteByClassGroup_IdAndSem(Long groupId, Integer sem);
     List<Timetable> findByClassGroup_IdAndSem(Long groupId, Integer sem);
 }
