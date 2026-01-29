@@ -1,14 +1,21 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/stores';
+
 
 const Header = () => {
+  const inviteCode = useSelector(
+    (state: RootState) => state.class.selectedClassDetail?.inviteCode
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
 
         <View style={styles.codeBox}>
           <Text style={styles.codeLabel}>인증 코드</Text>
-          <Text style={styles.codeValue}>1359</Text>
+          <Text style={styles.codeValue}>{inviteCode ?? '----'}</Text>
         </View>
 
         <TouchableOpacity
