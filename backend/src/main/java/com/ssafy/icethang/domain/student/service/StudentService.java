@@ -1,6 +1,7 @@
 package com.ssafy.icethang.domain.student.service;
 
 import com.ssafy.icethang.domain.auth.dto.response.TokenResponseDto;
+import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.student.dto.request.StudentJoinRequest;
 import com.ssafy.icethang.domain.student.dto.request.StudentLoginRequest;
 import com.ssafy.icethang.domain.student.dto.response.StudentLoginResponse;
@@ -37,14 +38,30 @@ public class StudentService {
         if(studentRepository.existsByDeviceUuid(request.getDeviceUuid())){
             throw new IllegalStateException("이미 등록된 기기.");
         }
+        // 초대코드로 반 찾기
         ClassGroup classGroup = classGroupRepository.findByInviteCode(request.getInviteCode())
                 .orElseThrow(() -> new IllegalArgumentException("없는 초대코드 입니다."));
+
+        Auth teacher = classGroup.getTeacher();
+
+        if (teacher == null) {
+            throw new IllegalArgumentException("해당 반의 선생님 정보가 유효하지 않습니다.");
+        }
+
+        Integer schoolId = null;
+        if (teacher.getSchool() != null) {
+            schoolId = teacher.getSchool().getSchoolId();
+        } else {
+            // 선생님이 학교 정보 없이 가입된 경우
+            throw new IllegalStateException("선생님의 학교 정보가 설정되지 않았습니다.");
+        }
 
         Student student = Student.builder()
                 .name(request.getName())
                 .deviceUuid(request.getDeviceUuid())
                 .classGroup(classGroup)
                 .studentNumber(request.getStudentNumber())
+                .schoolId(schoolId)
                 .build();
 
         studentRepository.save(student);
