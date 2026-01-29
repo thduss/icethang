@@ -58,6 +58,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.my.icethang",
+      "usesCleartextTraffic": true,
     "permissions": [
         "android.permission.CAMERA",
         "android.permission.SYSTEM_ALERT_WINDOW"

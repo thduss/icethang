@@ -1,10 +1,9 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
 
 const Header = () => {
   return (
     <View style={styles.container}>
-      {/* 상단 줄 */}
       <View style={styles.topRow}>
 
         <View style={styles.codeBox}>
@@ -12,18 +11,13 @@ const Header = () => {
           <Text style={styles.codeValue}>1359</Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.timetable,
-            pressed && styles.timetablePressed,
-          ]}
+        <TouchableOpacity
+          style={styles.timetable}
+          activeOpacity={0.7}
+          onPress={() => router.push('/screens/Teacher_TimeTable')}
         >
-          <Text
-            style={styles.timetableText}
-            onPress={() => router.push('/screens/Teacher_TimeTable')}
-          >
-            시간표</Text>
-        </Pressable>
+          <Text style={styles.timetableText}>시간표</Text>
+        </TouchableOpacity>
 
       </View>
 
@@ -93,13 +87,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 6,
-  },
-
-  timetablePressed: {
-    transform: [{ translateY: 3 }],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    elevation: 2,
   },
 
   timetableText: {

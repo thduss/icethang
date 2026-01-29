@@ -1,311 +1,238 @@
-import { StyleSheet, Text, View, Pressable, Modal, TextInput } from 'react-native'
-import { useState } from 'react'
+import { StyleSheet, Text, View, Pressable, Modal, TextInput, Alert, ActivityIndicator } from 'react-native'
+import { useState, useEffect } from 'react'
 import DraggableFlatList from 'react-native-draggable-flatlist'
-
-interface ClassItem {
-  id: number
-  grade: number
-  classNum: number
-  isActive: boolean
-}
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store/stores'; 
+import { addClass, resetStatus, fetchClasses } from '../../store/slices/classSlice'; 
 
 const LeftSidebar = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, success, error, items } = useSelector((state: RootState) => state.class || {});
 
-  const [classes, setClasses] = useState<ClassItem[]>([
-    { id: 1, grade: 1, classNum: 1, isActive: true },
-    { id: 2, grade: 1, classNum: 2, isActive: true },
-    { id: 3, grade: 1, classNum: 3, isActive: true },
-    { id: 4, grade: 1, classNum: 4, isActive: true },
-  ])
+  const [classes, setClasses] = useState<any[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [grade, setGrade] = useState('');
+  const [classNum, setClassNum] = useState('');
 
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(1)
+  useEffect(() => {
+    dispatch(fetchClasses());
+  }, []);
 
-  const [modalVisible, setModalVisible] = useState(false)
-  const [grade, setGrade] = useState('')
-  const [classNum, setClassNum] = useState('')
-
-  // 학급 추가
-  const handleAddClass = () => {
-    if (!grade || !classNum) return
-
-    const newClass: ClassItem = {
-      id: Date.now(),
-      grade: Number(grade),
-      classNum: Number(classNum),
-      isActive: true,
+  useEffect(() => {
+    if (items && Array.isArray(items)) {
+      setClasses(items);
+    } else {
+      setClasses([]);
     }
+  }, [items]);
 
-    setClasses(prev => [...prev, newClass])
-    setGrade('')
-    setClassNum('')
-    setModalVisible(false)
-  }
+  useEffect(() => {
+    if (success) {
+      Alert.alert('성공', '새로운 반이 생성되었습니다!');
+      dispatch(fetchClasses());
+      setGrade('');
+      setClassNum('');
+      setModalVisible(false);
+      dispatch(resetStatus());
+    }
+    if (error) {
+      Alert.alert('오류', String(error));
+      dispatch(resetStatus());
+    }
+  }, [success, error]);
 
-  // 학급 삭제
-  const handleDeleteClass = () => {
-    if (!selectedClassId) return
-
-    setClasses(prev => prev.filter(c => c.id !== selectedClassId))
-    setSelectedClassId(null)
-    setModalVisible(false)
-  }
-
-  // 학급 비활성화
-  const handleDeactivateClass = () => {
-    if (!selectedClassId) return
-
-    setClasses(prev =>
-      prev.map(c =>
-        c.id === selectedClassId ? { ...c, isActive: false } : c
-      )
-    )
-    setModalVisible(false)
-  }
-
+  const handleAddClass = () => {
+    if (!grade || !classNum) {
+      Alert.alert('알림', '학년과 반을 모두 입력해주세요.');
+      return;
+    }
+    dispatch(addClass({ 
+      grade: parseInt(grade, 10), 
+      classNum: parseInt(classNum, 10) 
+    }));
+  };
 
   const renderItem = ({ item, drag, isActive }: any) => {
-    const label = `${item.grade}-${item.classNum}`
-
+    const itemId = item.id || item.schoolClassId || `${item.grade}-${item.classNum}`
+    const isSelected = selectedClassId === itemId; 
+    
     return (
-      <Pressable
-        onLongPress={item.isActive ? drag : undefined}
-        disabled={!item.isActive}
-        onPress={() => setSelectedClassId(item.id)}
-        style={({ pressed }) => [
-          styles.classButton,
-          selectedClassId === item.id && styles.selected,
-          !item.isActive && styles.disabledClass,
+      <View
+        style={[
+          styles.shadowWrapper,
           isActive && styles.dragging,
-          pressed && { transform: [{ scale: 0.95 }] },
         ]}
       >
-
-        <Text style={styles.classText}>{label}</Text>
-      </Pressable>
+        <Pressable
+          onLongPress={drag}
+          onPress={() => setSelectedClassId(itemId)}
+          style={[
+            styles.innerButton,
+            isSelected && styles.selectedInner, 
+          ]}
+        >
+          <Text style={styles.classText}>
+            {item.grade}-{item.classNum}
+          </Text>
+        </Pressable>
+      </View>
     )
   }
 
   return (
-    <>
-      {/* 왼쪽 사이드바 */}
-      <View style={styles.sidebar}>
-        <View style={{ flex: 1 }}>
-          <DraggableFlatList
-            style={{ flex: 1 }}
-            data={classes}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderItem}
-            onDragEnd={({ data }) => setClasses(data)}
-            contentContainerStyle={styles.classList}
-          />
-        </View>
+    <View style={styles.sidebar}>
+      <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
+        <DraggableFlatList
+          data={classes}
+          keyExtractor={(item, index) => {
+            const key = item.id || item.schoolClassId || `${item.grade}-${item.classNum}` || index;
+            return String(key);
+          }}
+          renderItem={renderItem}
+          onDragEnd={({ data }) => setClasses(data)}
+          
+          contentContainerStyle={styles.classList}
+          clipChildren={false} 
+          overflow="visible"
+        />
+      </View>
 
-
-        {/* 학급 관리 버튼 */}
+      <View style={{ paddingBottom: 30 }}> 
         <Pressable
-          style={({ pressed }) => [
-            styles.manageButton,
-            pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-          ]}
+          style={styles.manageButton}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#270800' }}>
-            학급 관리
-          </Text>
+          <Text style={styles.manageButtonText}>학급 관리</Text>
         </Pressable>
       </View>
 
-
-      {/* 학급 관리 모달 */}
       <Modal
         transparent
-        animationType="fade"
         visible={modalVisible}
+        animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <View style={styles.titleWrapper}>
-              <Text style={styles.modalTitle}>학급 관리</Text>
-            </View>
-
+            <Text style={styles.modalTitle}>학급 관리</Text>
             <TextInput
-              placeholder="학년을 입력하세요."
+              placeholder="학년"
               value={grade}
               onChangeText={setGrade}
               style={styles.input}
               keyboardType="number-pad"
             />
-
             <TextInput
-              placeholder="반을 입력하세요."
+              placeholder="반"
               value={classNum}
               onChangeText={setClassNum}
               style={styles.input}
               keyboardType="number-pad"
             />
-
-            <Pressable style={styles.modalButton} onPress={handleAddClass}>
-              <Text style={styles.classButtonText}>학급 추가</Text>
-            </Pressable>
-
-            <Pressable style={styles.modalButton} onPress={handleDeleteClass}>
-              <Text style={styles.classButtonText}>학급 삭제</Text>
-            </Pressable>
-
-            <Pressable style={styles.modalButton} onPress={handleDeactivateClass}>
-              <Text style={styles.classButtonText}>학급 비활성화</Text>
-            </Pressable>
+            
+            {loading ? (
+              <ActivityIndicator color="#CBB076" style={{ marginTop: 10 }} />
+            ) : (
+              <Pressable style={styles.modalButton} onPress={handleAddClass}>
+                <Text style={styles.btnText}>학급 추가</Text>
+              </Pressable>
+            )}
 
             <Pressable
-              style={styles.closeButton}
+              style={[styles.modalButton, { backgroundColor: '#8D7B68', marginTop: 10 }]}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.closeText}>닫기</Text>
+              <Text style={[styles.btnText, { color: '#FFF' }]}>닫기</Text>
             </Pressable>
           </View>
         </View>
       </Modal>
-    </>
+    </View>
   )
 }
+
 export default LeftSidebar;
 
 const styles = StyleSheet.create({
-
-  sidebar: {
-    width: 120,
-    paddingVertical: 20,
-    backgroundColor: "#E7D7B5"
+  sidebar: { 
+    width: 140, 
+    backgroundColor: "#EBE0CC",
+    height: '100%',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  
+  classList: { 
+    paddingTop: 40,
+    paddingBottom: 20,
+    paddingHorizontal: 25,
+    alignItems: "center" 
   },
 
-  disabledClass: {
-    opacity: 0.4,
-  },
-
-  dragging: {
-    opacity: 0.6,
-    transform: [{ scale: 1.05 }],
-  },
-
-  classList: {
-    alignItems: "center",
-    paddingTop: 16,
-  },
-
-  classText: {
-    fontSize: 25,
-    fontWeight: '700',
-    color: '#270800',
-  },
-
-  classButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FCFDEB",
-    marginBottom: 18,
-    shadowColor: "#6B4E2E",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-
-  selected: {
-    backgroundColor: "#E3CA92",
-    shadowColor: "#503b16",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 10,
-
-    transform: [{ translateY: 2 }],
-  },
-
-  manageButton: {
-    alignSelf: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+  shadowWrapper: {
+    width: 90, 
+    height: 90, 
+    marginBottom: 20, 
     borderRadius: 30,
-    backgroundColor: "#ddba6d",
-    borderWidth: 0,
-    shadowColor: "#271c10",
+    backgroundColor: '#FFFEF5',
+    
+    elevation: 6, 
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
   },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  innerButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
+    justifyContent: "center", 
+    alignItems: "center", 
+    backgroundColor: "#FFFEF5",
+  },
+
+  selectedInner: { 
+    backgroundColor: "#DCC486",
+  },
+
+  dragging: { 
+    opacity: 0.7, 
+    transform: [{ scale: 1.05 }] 
+  },
+
+  classText: { 
+    fontSize: 28, 
+    fontWeight: '800', 
+    color: '#38220F',
+  },
+
+  manageButton: { 
+    width: 110,
+    height: 50,
+    backgroundColor: "#CBB076",
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
+    
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 5,
   },
 
-  modalBox: {
-    width: 310,
-    backgroundColor: '#F6F1E1',
-    borderRadius: 20,
-    padding: 20,
-    alignItems: 'center',
+  manageButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#38220F",
   },
 
-  titleWrapper: {
-    paddingHorizontal: 80,
-    paddingVertical: 8,
-    backgroundColor: '#685441',
-    borderRadius: 30,
-    marginBottom: 20,
-  },
-
-  modalTitle: {
-    fontSize: 25,
-    fontWeight: '700',
-    color: "#FFF",
-    textAlign: "center",
-  },
-
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#C4B28A',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: '#FFF',
-  },
-
-  modalButton: {
-    width: '100%',
-    padding: 12,
-    borderRadius: 20,
-    backgroundColor: '#E3CA92',
-    alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1.5,
-    borderColor: '#b4aa94',
-  },
-
-  closeButton: {
-    marginTop: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 20,
-    backgroundColor: '#685441',
-  },
-
-  closeText: {
-    color: "#FFF",
-    fontWeight: 800,
-  },
-
-  classButtonText: {
-    color: "#52381F",
-    fontWeight: 500,
-    fontSize: 15,
-  }
-})
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalBox: { width: 300, backgroundColor: '#FFFDF5', borderRadius: 20, padding: 30, alignItems: 'center', elevation: 10 },
+  modalTitle: { fontSize: 24, fontWeight: '700', marginBottom: 20, color: '#38220F' },
+  input: { width: '100%', height: 50, backgroundColor: '#F5F5F5', borderRadius: 12, paddingHorizontal: 15, marginBottom: 12, fontSize: 16 },
+  modalButton: { width: '100%', height: 50, borderRadius: 12, backgroundColor: '#DCC486', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  btnText: { fontSize: 18, fontWeight: '700', color: '#38220F' }
+});

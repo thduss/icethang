@@ -1,9 +1,8 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../api/api';
+import client from '../../api/client';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-// 로그인용 슬라이스 (학교+교사+학생)
 interface SchoolInfo {
   school_id: number;
   school_name: string;
@@ -30,13 +29,6 @@ interface TeacherInfo {
   provider: string | null;
 }
 
-interface GroupSettings { // 반 학생 선생 공용 모드(디지털/일반 수업 선택용)- 추가 사용 가능성 있어서 냅둔거
-  groups_name: string;
-  allow_digital_mode: boolean; 
-  allow_normal_mode: boolean;
-  allow_theme_change: boolean;
-}
-
 interface AuthState {
   isLoggedIn: boolean;
   userRole: 'student' | 'teacher' | null;
@@ -61,8 +53,9 @@ export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
   async (loginPayload: { code: string }, { rejectWithValue }) => {
     try {
-      const response = await api.post('/auth/login/student', loginPayload);
-      if (Platform.OS !== 'web' && response.data.token) {
+      const response = await client.post('/auth/login/student', loginPayload);
+      
+      if (Platform.OS !== 'web' && response.data.token) { 
         await SecureStore.setItemAsync('accessToken', response.data.token);
       }
       return response.data; 
@@ -76,18 +69,40 @@ export const loginTeacher = createAsyncThunk(
   'auth/loginTeacher',
   async (loginPayload: { email: string; pw: string }, { rejectWithValue }) => {
     try {
-      console.log('로그인 시도:', loginPayload);
-      const response = await api.post('/auth/login/teacher', loginPayload);
-      console.log('응답 데이터:', response.data);
+      console.log('📡 [AuthSlice] 로그인 시도:', loginPayload.email);
 
-      if (Platform.OS !== 'web' && response.data.token) {
-        await SecureStore.setItemAsync('accessToken', response.data.token);
+      const requestBody = {
+        email: loginPayload.email,
+        password: loginPayload.pw
+      };
+
+      const response = await client.post('/auth/login/teacher', requestBody);
+      
+      console.log('🔥 [AuthSlice] 서버 응답 성공!');
+
+      const accessToken = response.data.accessToken; 
+      const refreshToken = response.data.refreshToken;
+
+      if (!accessToken) {
+        throw new Error('응답에 accessToken이 없습니다.');
       }
 
-      return response.data; 
+      if (Platform.OS !== 'web') {
+        await SecureStore.setItemAsync('accessToken', accessToken);
+        if (refreshToken) {
+          await SecureStore.setItemAsync('refreshToken', refreshToken);
+        }
+        console.log("💾 [AuthSlice] 토큰 SecureStore 저장 완료");
+      }
+
+      return {
+        token: accessToken,
+        data: response.data 
+      };
+
     } catch (error: any) {
-      console.error('로그인 에러:', error.response?.data || error.message);
-      return rejectWithValue(error.response?.data?.message || '이메일 또는 비밀번호를 확인해주세요.');
+      console.error('❌ [AuthSlice] 로그인 실패:', error.response?.data || error.message);
+      return rejectWithValue('이메일 또는 비밀번호를 확인해주세요.');
     }
   }
 );
@@ -110,7 +125,6 @@ const authSlice = createSlice({
     },
     logout: () => initialState,
   },
-
   extraReducers: (builder) => {
     builder
       .addCase(loginStudent.pending, (state) => {

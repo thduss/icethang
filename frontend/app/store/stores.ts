@@ -7,12 +7,12 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '@react-native-seoul/kakao-login';
 
-// 아래부터 리듀서
 import authReducer from './slices/authSlice'; 
 import themeReducer from './slices/themeSlice';
 import memberReducer from './slices/memberSlice';
 import signupReducer from './slices/signupSlice';
 import timeReducer from './slices/timeSlice';
+import classReducer from './slices/classSlice'
 
 
 const rootReducer = combineReducers({
@@ -21,13 +21,14 @@ const rootReducer = combineReducers({
   member: memberReducer,
   signup: signupReducer,
   time: timeReducer,
+  class: classReducer
 });
 
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth','theme'] // 자동 로그인 & 테마 유지
+  whitelist: ['auth','theme']
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
