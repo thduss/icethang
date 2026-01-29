@@ -87,9 +87,6 @@ const classSlice = createSlice({
       state.success = false;
       state.error = null;
     },
-    setSelectedClassId: (state, action: PayloadAction<number>) => {
-      state.selectedClassId = action.payload;
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -123,9 +120,11 @@ const classSlice = createSlice({
       .addCase(fetchClassDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.selectedClassDetail = null;
       })
       .addCase(fetchClassDetail.fulfilled, (state, action) => {
         state.loading = false;
+        state.selectedClassId = action.payload.classId;
         state.selectedClassDetail = action.payload;
       })
       .addCase(fetchClassDetail.rejected, (state, action) => {
@@ -137,7 +136,6 @@ const classSlice = createSlice({
 
 export const {
   resetStatus,
-  setSelectedClassId,
 } = classSlice.actions;
 
 export default classSlice.reducer;

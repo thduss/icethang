@@ -77,7 +77,6 @@ const LeftSidebar = () => {
         <Pressable
           onLongPress={drag}
           onPress={() => {            
-            dispatch(setSelectedClassId(itemId))
             dispatch(fetchClassDetail(itemId))
           }}
           style={[
