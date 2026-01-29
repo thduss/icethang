@@ -6,22 +6,21 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../store/stores'; 
-import { joinStudent, loginStudent } from '../../store/slices/authSlice'; 
+import { joinStudent } from '../../store/slices/authSlice'; 
 
 export default function StudentLoginScreen() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { width: screenWidth } = useWindowDimensions();
 
-  const { loading: reduxLoading } = useSelector((state: RootState) => state.auth);
+  const { loading: isLoading } = useSelector((state: RootState) => state.auth);
+
   const [classNum, setClassNum] = useState(''); 
   const [number, setNumber] = useState('');     
   const [name, setName] = useState('');         
   const [authCode, setAuthCode] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const numberRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
@@ -38,47 +37,35 @@ export default function StudentLoginScreen() {
   const paddingH = cardWidth * 0.14; 
   const paddingV = cardHeight * 0.12; 
 
-
   const handleEnter = async () => {
     if (!classNum || !number || !name || !authCode) {
       Alert.alert("알림", "모든 정보를 입력해주세요.");
       return;
     }
 
-    setIsSubmitting(true);
+    const resultAction = await dispatch(joinStudent({
+      code: authCode,
+      name: name,
+      number: Number(number)
+    }));
 
-    try {
-      const resultAction = await dispatch(joinStudent({
-        code: authCode,
-        name: name,
-        number: Number(number)
-      }));
-
-      if (joinStudent.fulfilled.match(resultAction)) {
-        Alert.alert("환영합니다!", `${name} 학생 입장 성공!`, [
-          { text: "확인", onPress: () => router.replace('/screens/Student_Home') }
-        ]);
-      } else {
-        const errorMsg = resultAction.payload as string || "입장에 실패했습니다.";
-        Alert.alert("입장 실패", errorMsg, [
-          { 
-            text: "다시 입력", 
-            onPress: () => {
-                setAuthCode(''); 
-                codeRef.current?.focus(); 
-            }
+    if (joinStudent.fulfilled.match(resultAction)) {
+      Alert.alert("환영합니다!", `${name} 학생 입장 성공!`, [
+        { text: "확인", onPress: () => router.replace('/screens/Student_Home') }
+      ]);
+    } else {
+      const errorMsg = resultAction.payload as string || "입장에 실패했습니다.";
+      Alert.alert("입장 실패", errorMsg, [
+        { 
+          text: "다시 입력", 
+          onPress: () => {
+              setAuthCode(''); 
+              codeRef.current?.focus(); 
           }
-        ]);
-      }
-    } catch (error) {
-      console.error("Login Error:", error);
-      Alert.alert("오류", "시스템 에러가 발생했습니다.");
-    } finally {
-      setIsSubmitting(false);
+        }
+      ]);
     }
   };
-
-  const isLoading = isSubmitting || reduxLoading;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFDF5' }}>
@@ -107,7 +94,6 @@ export default function StudentLoginScreen() {
               </View>
 
               <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginBottom: spacing }}>
-                
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F6F8', borderRadius: 20, paddingHorizontal: 12, height: inputHeight }}>
                    <Text style={{ fontSize: fontSizeInput, fontWeight: 'bold', color: '#78909C', marginRight: 5 }}>반</Text>
                    <Ionicons name="school" size={18} color="#D4A373" style={{ marginRight: 5 }} /> 
@@ -181,7 +167,7 @@ export default function StudentLoginScreen() {
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleEnter}
-                disabled={isLoading}
+                disabled={isLoading} 
                 style={{ 
                   width: '100%', 
                   height: buttonHeight, 
