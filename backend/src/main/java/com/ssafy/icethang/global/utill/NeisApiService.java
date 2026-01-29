@@ -1,6 +1,5 @@
-package com.ssafy.icethang.domain.auth.service;
+package com.ssafy.icethang.global.utill;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.icethang.domain.auth.entity.Schools;
 import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,37 +10,32 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
-public class NiceApiService {
+public class NeisApiService {
 
     private final SchoolsRepository schoolsRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${nice.api.key}")
+    @Value("${neis.api.key}")
     private String apiKey;
 
     // 생성자를 통해 Repository 주입 및 RestTemplate 초기화
-    public NiceApiService(SchoolsRepository schoolsRepository) {
+    public NeisApiService(SchoolsRepository schoolsRepository) {
         this.schoolsRepository = schoolsRepository;
         this.restTemplate = new RestTemplate();
 
-        // 한글 깨짐 방지를 위한 UTF-8 설정
         this.restTemplate.getMessageConverters()
                 .add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
     }
 
+    // 학교info API 연결
     public Schools searchAndSaveSchool(String schoolName) {
         try {
             // 1. 학교명 수동 인코딩
@@ -92,6 +86,57 @@ public class NiceApiService {
 
         } catch (Exception e) {
             throw new RuntimeException("나이스 서버가 자바 요청을 거부함: " + e.getMessage());
+        }
+    }
+
+    // 시간표 API 연결
+    public List<Map<String, String>> fetchTimetable(
+            String scCode,
+            String schoolCode,
+            int grade,
+            int classNum,
+            String startDate,
+            String endDate,
+            String ay,
+            String sem
+    ) {
+        try {
+            // 1. URL 조립
+            String urlString = "https://open.neis.go.kr/hub/elsTimetable"
+                    + "?KEY=" + apiKey.trim()
+                    + "&Type=json"
+                    + "&ATPT_OFCDC_SC_CODE=" + scCode
+                    + "&SD_SCHUL_CODE=" + schoolCode
+                    + "&AY=" + ay
+                    + "&SEM=" + sem
+                    + "&GRADE=" + grade
+                    + "&CLASS_NM=" + classNum
+                    + "&TI_FROM_YMD=" + startDate
+                    + "&TI_TO_YMD=" + endDate;
+
+            // 2. 헤더 설정
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
+            headers.set("Accept", "application/json, text/plain, */*");
+            headers.set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7");
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            URI uri = new URI(urlString);
+            // 2. 호출
+            ResponseEntity<Map> responseEntity = restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
+            Map<String, Object> response = responseEntity.getBody();
+
+            // 3. 데이터 존재 여부 확인
+            if (response == null || !response.containsKey("elsTimetable")) {
+                return List.of();
+            }
+
+            // 4. 나이스 특유의 중첩 구조 파싱
+            List<Map<String, Object>> timetableInfo = (List<Map<String, Object>>) response.get("elsTimetable");
+            return (List<Map<String, String>>) timetableInfo.get(1).get("row");
+
+        } catch (Exception e) {
+            throw new RuntimeException("나이스 시간표 호출 중 오류 발생: " + e.getMessage());
         }
     }
 
