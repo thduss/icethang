@@ -1,68 +1,25 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React from "react";
+import { View, StyleSheet } from "react-native";
 
-const TrafficLight = () => {
-  const [signal, setSignal] = useState('red');
+interface TrafficLightProps {
+  size?: "small" | "large"; 
+}
+
+export default function TrafficLight({ size = "large" }: TrafficLightProps) {
+  const isSmall = size === "small";
 
   return (
-    <View style={styles.container}>
-      <View style={styles.body}>
-        <View style={[
-          styles.light, 
-          { backgroundColor: signal === 'red' ? '#FF3B30' : '#444' }
-        ]} />
-        
-        <View style={[
-          styles.light, 
-          { backgroundColor: signal === 'yellow' ? '#FFCC00' : '#444', elevation: 20 }
-        ]} />
-        <View style={[
-          styles.light, 
-          { backgroundColor: signal === 'green' ? '#00eb27' : '#444' }
-        ]} />
-      </View>
-
-      {/* 테스트용 버튼  이거 나중에 카메라로 정보 받으면 state 변환하고 버튼 삭제 예정*/}
-      <TouchableOpacity 
-        style={styles.button} 
-        onPress={() => {
-          if (signal === 'red') setSignal('green');
-          else if (signal === 'green') setSignal('yellow');
-          else setSignal('red');
-        }}
-      />
+    <View style={[styles.container, isSmall && styles.smallContainer]}>
+      <View style={[styles.light, isSmall && styles.smallLight, { backgroundColor: 'red' }]} />
+      <View style={[styles.light, isSmall && styles.smallLight, { backgroundColor: '#333' }]} />
+      <View style={[styles.light, isSmall && styles.smallLight, { backgroundColor: '#333' }]} />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    position: 'absolute',
-    bottom: '25%',
-    right: 20,
-    alignItems: 'center',
-  },
-  body: {
-    backgroundColor: '#333',
-    padding: 15,
-    borderRadius: 20,
-    gap: 10, 
-  },
-  light: {
-    width: 60,
-    height: 60,
-    borderRadius: 30, 
-    borderWidth: 2,
-    borderColor: '#111',
-  },
-  button: {
-    marginTop: 20,
-    width: 100,
-    height: 40,
-    backgroundColor: '#ddd',
-    borderRadius: 5,
-  }
+  container: { width: 100, height: 260, backgroundColor: "#333", borderRadius: 20, padding: 10, justifyContent: 'space-around' },
+  smallContainer: { width: 40, height: 110, borderRadius: 10, padding: 5 },
+  light: { width: 80, height: 80, borderRadius: 40 },
+  smallLight: { width: 30, height: 30, borderRadius: 15 },
 });
-
-export default TrafficLight;
