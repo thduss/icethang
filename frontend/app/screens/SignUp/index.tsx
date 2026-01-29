@@ -197,7 +197,6 @@ export default function SignupScreen() {
                 <Text style={[styles.checkboxText, { fontSize: fontSizeInput * 0.9 }]}>이용약관 동의</Text>
               </TouchableOpacity>
 
-              {/* ✅ [수정완료] 가입하기 버튼 내부에 Text 컴포넌트 추가 */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 onPress={handleSignup}
@@ -240,8 +239,6 @@ export default function SignupScreen() {
 
               </View>
             </View>
-
-            {/* 로봇 이미지 */}
             <View 
               pointerEvents="none" 
               style={{ 
@@ -267,8 +264,6 @@ export default function SignupScreen() {
     </View>
   );
 }
-
-// InputBox 컴포넌트
 const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, fontSize, color }: InputBoxProps) => (
   <View style={[styles.inputContainer, { height, borderColor: color }]}>
     <Ionicons name={icon} size={fontSize * 1.3} color={color === '#F4D4D4' ? '#C68D8D' : '#8DA6C6'} />
@@ -284,7 +279,6 @@ const InputBox = ({ icon, placeholder, value, onChange, isPassword, height, font
   </View>
 );
 
-// 스타일 정의 
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../../api/api';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
@@ -61,8 +61,7 @@ export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
   async (loginPayload: { code: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post('https://i14e204.p.ssafy.io/dev/auth/login/student', loginPayload);
-      
+      const response = await api.post('/auth/login/student', loginPayload);
       if (Platform.OS !== 'web' && response.data.token) {
         await SecureStore.setItemAsync('accessToken', response.data.token);
       }
@@ -78,7 +77,7 @@ export const loginTeacher = createAsyncThunk(
   async (loginPayload: { email: string; pw: string }, { rejectWithValue }) => {
     try {
       console.log('로그인 시도:', loginPayload);
-      const response = await axios.post('https://i14e204.p.ssafy.io/dev/auth/login/teacher', loginPayload);
+      const response = await api.post('/auth/login/teacher', loginPayload);
       console.log('응답 데이터:', response.data);
 
       if (Platform.OS !== 'web' && response.data.token) {
@@ -129,7 +128,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // 교사 로그인 처리
       .addCase(loginTeacher.pending, (state) => {
         state.loading = true;
         state.error = null;

@@ -8,7 +8,6 @@ export default function StudentLoginScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
 
-  // 1. 입력 상태
   const [classNum, setClassNum] = useState(''); 
   const [number, setNumber] = useState('');     
   const [name, setName] = useState('');        
@@ -16,12 +15,10 @@ export default function StudentLoginScreen() {
   
   const [loading, setLoading] = useState(false);
 
-  // 2. 포커스 Refs
   const numberRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
   const codeRef = useRef<TextInput>(null);
 
-  // [크기 설정]
   const cardWidth = Math.min(screenWidth * 0.75, 580); 
   const cardHeight = cardWidth * 1.1; 
   const inputHeight = Math.min(cardHeight * 0.12, 54); 
@@ -33,9 +30,8 @@ export default function StudentLoginScreen() {
   const paddingH = cardWidth * 0.14; 
   const paddingV = cardHeight * 0.12; 
 
-  //  로그인 실행 함수
+
   const handleEnter = async () => {
-    // 1. 빈칸 체크
     if (!classNum || !number || !name || !authCode) {
       Alert.alert("알림", "모든 정보를 입력해주세요.");
       return;
@@ -44,20 +40,16 @@ export default function StudentLoginScreen() {
     setLoading(true);
 
     try {
-      // 2. 서버 요청 
       const result = await AuthService.studentLogin(
         name,
-        number,   
+        Number(number) as any,   
         authCode
       );
-
-      // 3. 결과 처리
       if (result.success) {
         Alert.alert("환영합니다!", `${name} 학생 입장 성공!`, [
           { text: "확인", onPress: () => router.replace('/screens/Student_Home') }
         ]);
       } else {
-        // 실패 시
         Alert.alert("입장 실패", result.msg, [
           { 
             text: "다시 입력", 
