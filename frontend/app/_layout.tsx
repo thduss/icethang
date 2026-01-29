@@ -60,10 +60,11 @@ export default function RootLayout() {
           <ThemeProvider>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
-              <Stack.Screen name="screens/select/index" />
-              <Stack.Screen name="screens/teacher_login/index" />
-              <Stack.Screen name="screens/student_login/index" />
-              <Stack.Screen name="screens/Teacher_MainPage" />
+              <Stack.Screen name="screens/Select/index" />
+              <Stack.Screen name="screens/Teacher_Login/index" />
+              <Stack.Screen name="screens/Student_Login/index" />
+              <Stack.Screen name="screens/Teacher_MainPage/index" />
+
             </Stack>
           </ThemeProvider>
         </PersistGate>
