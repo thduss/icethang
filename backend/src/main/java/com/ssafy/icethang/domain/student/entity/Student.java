@@ -25,6 +25,9 @@ public class Student extends BaseEntity {
     @Column(name = "student_id")
     private Long id;
 
+    @Column(name = "school_id")
+    private Integer schoolId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
     private ClassGroup classGroup;
@@ -53,11 +56,12 @@ public class Student extends BaseEntity {
     private Theme equippedBackground;
 
     @Builder
-    public Student(String name, String deviceUuid, ClassGroup classGroup, Integer studentNumber) {
+    public Student(String name, String deviceUuid, ClassGroup classGroup, Integer studentNumber, Integer schoolId) {
         this.name = name;
         this.deviceUuid = deviceUuid;
         this.classGroup = classGroup;
         this.studentNumber = studentNumber;
+        this.schoolId = schoolId;
         this.currentXp = 0;
         this.currentLevel = 1;
     }
