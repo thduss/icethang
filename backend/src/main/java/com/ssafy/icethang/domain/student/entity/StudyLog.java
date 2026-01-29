@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -43,35 +44,37 @@ public class StudyLog extends BaseEntity {
     @Column(length = 50)
     private String subject; // 과목명
 
-    // erd 수정 필요
     @Column(length = 50)
     private String reason;
-
-    @Column(name = "earned_xp")
-    private int earnedXp;
 
     @Column(name = "focus_rate")
     private Integer focusRate;
 
-    @Column(name = "distraction_score")
-    private Integer distractionScore;
-
     @Column(name = "out_of_seat_count")
     private Integer outofseatCount;
 
-    @Column(name = "bad_posture_time")
-    private Integer badpostureTime;
+    @UpdateTimestamp
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     // builder에 포함 안시키면 null
     @Builder
-    public StudyLog(Student student, Long timetableId, Integer classNo, String subject,
-                    String reason, int earnedXp) {
+    public StudyLog(Student student, Long timetableId, LocalDate date, Integer classNo,
+                    String subject, String reason, Integer focusRate, Integer outofseatCount) {
         this.student = student;
         this.timetableId = timetableId;
+        this.date = (date != null) ? date : LocalDate.now();
         this.classNo = classNo;
         this.subject = subject;
         this.reason = reason;
-        this.earnedXp = earnedXp;
-        this.date = LocalDate.now();
+        this.focusRate = focusRate;
+        this.outofseatCount = outofseatCount;
     }
 }

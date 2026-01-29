@@ -51,7 +51,6 @@ public class StudentXpService {
         StudyLog log = StudyLog.builder()
                 .student(student)
                 .subject(null)      // timetable 만들면 연결시키기
-                .earnedXp(request.getAmount())
                 .classNo(0)         // 수정 필요
                 .reason(finalReason)
                 .build();
