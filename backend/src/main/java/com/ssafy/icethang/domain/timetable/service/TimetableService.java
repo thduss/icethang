@@ -54,8 +54,8 @@ public class TimetableService {
         ClassGroup group = classGroupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("반 정보를 찾을 수 없습니다."));
 
-        // 4. 기존 데이터 청소 (혹시 모를 찌꺼기 제거)
-        timetableRepository.deleteByClassGroup_Id(groupId);
+        // 4. 기존 데이터 청소
+        timetableRepository.deleteByClassGroup_IdAndSem(groupId, sem);
         timetableRepository.flush();
 
         // 5. 날짜 범위 계산 및 API 호출
