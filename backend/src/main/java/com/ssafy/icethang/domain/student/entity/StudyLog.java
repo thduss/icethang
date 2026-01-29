@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
@@ -53,7 +54,7 @@ public class StudyLog extends BaseEntity {
     @Column(name = "out_of_seat_count")
     private Integer outofseatCount;
 
-    @UpdateTimestamp
+    @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

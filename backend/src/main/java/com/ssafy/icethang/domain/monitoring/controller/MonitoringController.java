@@ -91,7 +91,6 @@ public class MonitoringController {
                 .student(student)
                 .subject("임시")
                 .classNo(0)      // 0교시로 처리
-                .earnedXp(0)     // 경험치도 0
                 .build();
         return studyLogRepository.save(newLog); // DB에 저장하고 객체 반환
     }
