@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { createClass, getClasses } from '../../services/classAPI';
-import client from '../../api/client'; 
+import client from '../../api/client';
 
 export interface ClassItem {
   id: number;
@@ -48,8 +48,23 @@ export const addClass = createAsyncThunk(
   }
 );
 
+export const fetchClassDetail = createAsyncThunk(
+  'class/fetchClassDetail',
+  async (classId: number, { rejectWithValue }) => {
+    try {
+      const response = await client.get(`/classes/${classId}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+
 interface ClassState {
   items: ClassItem[];
+  selectedClassId: number | null;
+  selectedClassDetail: any | null;
   loading: boolean;
   success: boolean;
   error: string | null;
@@ -57,6 +72,8 @@ interface ClassState {
 
 const initialState: ClassState = {
   items: [],
+  selectedClassId: null,
+  selectedClassDetail: null,
   loading: false,
   success: false,
   error: null,
@@ -69,6 +86,9 @@ const classSlice = createSlice({
     resetStatus: (state) => {
       state.success = false;
       state.error = null;
+    },
+    setSelectedClassId: (state, action: PayloadAction<number>) => {
+      state.selectedClassId = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -98,9 +118,26 @@ const classSlice = createSlice({
       .addCase(addClass.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+
+      .addCase(fetchClassDetail.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchClassDetail.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedClassDetail = action.payload;
+      })
+      .addCase(fetchClassDetail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
-});
+})
 
-export const { resetStatus } = classSlice.actions;
+export const {
+  resetStatus,
+  setSelectedClassId,
+} = classSlice.actions;
+
 export default classSlice.reducer;

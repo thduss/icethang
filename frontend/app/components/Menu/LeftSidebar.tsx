@@ -2,18 +2,23 @@ import { StyleSheet, Text, View, Pressable, Modal, TextInput, Alert, ActivityInd
 import { useState, useEffect } from 'react'
 import DraggableFlatList from 'react-native-draggable-flatlist'
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../../store/stores'; 
-import { addClass, resetStatus, fetchClasses } from '../../store/slices/classSlice'; 
+import { AppDispatch, RootState } from '../../store/stores';
+import { addClass, resetStatus, fetchClasses, setSelectedClassId, fetchClassDetail } from '../../store/slices/classSlice';
 
 const LeftSidebar = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { loading, success, error, items } = useSelector((state: RootState) => state.class || {});
 
   const [classes, setClasses] = useState<any[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [grade, setGrade] = useState('');
   const [classNum, setClassNum] = useState('');
+
+  const selectedClassId = useSelector(
+    (state: RootState) => state.class.selectedClassId
+  );
+
 
   useEffect(() => {
     dispatch(fetchClasses());
@@ -37,7 +42,12 @@ const LeftSidebar = () => {
       dispatch(resetStatus());
     }
     if (error) {
-      Alert.alert('오류', String(error));
+      const errorMessage =
+        typeof error === 'string'
+          ? error
+          : (error as any)?.message || '알 수 없는 오류가 발생했습니다.';
+
+      Alert.alert('오류', errorMessage);
       dispatch(resetStatus());
     }
   }, [success, error]);
@@ -47,16 +57,16 @@ const LeftSidebar = () => {
       Alert.alert('알림', '학년과 반을 모두 입력해주세요.');
       return;
     }
-    dispatch(addClass({ 
-      grade: parseInt(grade, 10), 
-      classNum: parseInt(classNum, 10) 
+    dispatch(addClass({
+      grade: parseInt(grade, 10),
+      classNum: parseInt(classNum, 10)
     }));
   };
 
   const renderItem = ({ item, drag, isActive }: any) => {
-    const itemId = item.id || item.schoolClassId || `${item.grade}-${item.classNum}`
-    const isSelected = selectedClassId === itemId; 
-    
+    const itemId = item.classId;    
+    const isSelected = selectedClassId === itemId;
+
     return (
       <View
         style={[
@@ -66,10 +76,13 @@ const LeftSidebar = () => {
       >
         <Pressable
           onLongPress={drag}
-          onPress={() => setSelectedClassId(itemId)}
+          onPress={() => {            
+            dispatch(setSelectedClassId(itemId))
+            dispatch(fetchClassDetail(itemId))
+          }}
           style={[
             styles.innerButton,
-            isSelected && styles.selectedInner, 
+            isSelected && styles.selectedInner,
           ]}
         >
           <Text style={styles.classText}>
@@ -85,20 +98,14 @@ const LeftSidebar = () => {
       <View style={{ flex: 1, width: '100%', alignItems: 'center' }}>
         <DraggableFlatList
           data={classes}
-          keyExtractor={(item, index) => {
-            const key = item.id || item.schoolClassId || `${item.grade}-${item.classNum}` || index;
-            return String(key);
-          }}
+          keyExtractor={(item, index) => String(item.classId)}
           renderItem={renderItem}
           onDragEnd={({ data }) => setClasses(data)}
-          
           contentContainerStyle={styles.classList}
-          clipChildren={false} 
-          overflow="visible"
         />
       </View>
 
-      <View style={{ paddingBottom: 30 }}> 
+      <View style={{ paddingBottom: 30 }}>
         <Pressable
           style={styles.manageButton}
           onPress={() => setModalVisible(true)}
@@ -130,7 +137,7 @@ const LeftSidebar = () => {
               style={styles.input}
               keyboardType="number-pad"
             />
-            
+
             {loading ? (
               <ActivityIndicator color="#CBB076" style={{ marginTop: 10 }} />
             ) : (
@@ -155,29 +162,29 @@ const LeftSidebar = () => {
 export default LeftSidebar;
 
 const styles = StyleSheet.create({
-  sidebar: { 
-    width: 140, 
+  sidebar: {
+    width: 140,
     backgroundColor: "#EBE0CC",
     height: '100%',
     alignItems: 'center',
     zIndex: 1,
   },
-  
-  classList: { 
+
+  classList: {
     paddingTop: 40,
     paddingBottom: 20,
     paddingHorizontal: 25,
-    alignItems: "center" 
+    alignItems: "center"
   },
 
   shadowWrapper: {
-    width: 90, 
-    height: 90, 
-    marginBottom: 20, 
+    width: 90,
+    height: 90,
+    marginBottom: 20,
     borderRadius: 30,
     backgroundColor: '#FFFEF5',
-    
-    elevation: 6, 
+
+    elevation: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -188,34 +195,34 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 30,
-    justifyContent: "center", 
-    alignItems: "center", 
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#FFFEF5",
   },
 
-  selectedInner: { 
+  selectedInner: {
     backgroundColor: "#DCC486",
   },
 
-  dragging: { 
-    opacity: 0.7, 
-    transform: [{ scale: 1.05 }] 
+  dragging: {
+    opacity: 0.7,
+    transform: [{ scale: 1.05 }]
   },
 
-  classText: { 
-    fontSize: 28, 
-    fontWeight: '800', 
+  classText: {
+    fontSize: 28,
+    fontWeight: '800',
     color: '#38220F',
   },
 
-  manageButton: { 
+  manageButton: {
     width: 110,
     height: 50,
     backgroundColor: "#CBB076",
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    
+
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
