@@ -32,7 +32,7 @@ public class Student extends BaseEntity {
     @JoinColumn(name = "group_id")
     private ClassGroup classGroup;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "student_name", nullable = false)
     private String name;
 
     @Column(name = "device_uuid", unique = true, nullable = false)
