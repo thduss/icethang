@@ -15,6 +15,8 @@ import WeeklyStatistics from './WeeklyStatistics'
 import WeeklyCalendar from './WeeklyCalendar'
 import ExpModal from './ExpModal'
 import SubjectStatistics from './SubjectStatistics'
+import DropdownCalendarModal from './DropdownCalendarModal'
+
 
 type StatisticsView = ViewType | 'daily'
 
@@ -31,6 +33,9 @@ const index = () => {
   const [isExpModalVisible, setExpModalVisible] = useState(false)
 
   const [calendarVisible, setCalendarVisible] = useState(false)
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false)
+
+
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedWeek, setSelectedWeek] = useState<{
     start: Date
@@ -97,8 +102,8 @@ const index = () => {
               <StatisticsFilter
                 year={year}
                 month={month}
-                onPressYear={() => console.log('연도 선택')}
-                onPressMonth={() => console.log('월 선택')}
+                onPressYear={() => setCalendarModalVisible(true)}
+                onPressMonth={() => setCalendarModalVisible(true)}
                 onPressExp={() => setExpModalVisible(true)}
               />
               <MonthlyStatistics
@@ -148,6 +153,19 @@ const index = () => {
           {view === 'subject' && <SubjectStatistics />}
         </StatisticsBorder>
 
+        <DropdownCalendarModal
+          visible={calendarModalVisible}
+          initialYear={year}
+          initialMonth={month}
+          onClose={() => setCalendarModalVisible(false)}
+          onConfirm={(y, m) => {
+            setYear(y)
+            setMonth(m)
+            setCalendarModalVisible(false)
+          }}
+        />
+
+
         <ExpModal
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
@@ -167,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3EED4',
     flex: 1,
   },
-  
+
   content: {
     flex: 1,
     padding: 16,

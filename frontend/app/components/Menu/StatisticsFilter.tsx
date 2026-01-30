@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   expButton: {
     backgroundColor: '#5B4A2F',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 3,
     borderRadius: 12,
   },
 
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
 
   box: {
-    paddingVertical: 8,
+    paddingVertical: 2,
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: '#E8DFC1',
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
   },
 

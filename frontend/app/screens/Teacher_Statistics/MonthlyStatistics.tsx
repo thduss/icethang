@@ -138,7 +138,7 @@ export default MonthlyStatistics
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 8,
+    // marginTop: 0,
     paddingBottom: 10,
     alignItems: 'center',
     width: '100%',
@@ -179,8 +179,8 @@ const styles = StyleSheet.create({
   },
 
   dayCell: {
-    padding: 16,
-    marginBottom: -93,
+    padding: 17,
+    marginBottom: -88,
   },
 
   dayBox: {

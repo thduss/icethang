@@ -42,19 +42,19 @@ const styles = StyleSheet.create({
 
   box: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 3,
     borderRadius: 16,
     backgroundColor: '#F6F3DC',
     alignItems: 'center',
   },
 
   label: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#555',
   },
   
   value: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '700',
     marginTop: 6,
   },
