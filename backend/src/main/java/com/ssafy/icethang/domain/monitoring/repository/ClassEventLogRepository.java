@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface ClassEventLogRepository extends JpaRepository<ClassEventLog, Long> {
     @Query("SELECT COUNT(e) FROM ClassEventLog e " +
@@ -18,4 +19,6 @@ public interface ClassEventLogRepository extends JpaRepository<ClassEventLog, Lo
                                          @Param("eventType") AlertType eventType,
                                          @Param("start") LocalDateTime start,
                                          @Param("end") LocalDateTime end);
+
+    List<ClassEventLog> findAllByStudentAndStudyLogIsNullOrderByDetectedAtAsc(Student student);
 }
