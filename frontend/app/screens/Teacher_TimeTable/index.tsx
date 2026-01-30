@@ -10,7 +10,7 @@ import WeeklyGrid, { GridRow } from "./WeeklyGrid";
 import TodayList, { TodaySubject } from "./TodayList";
 
 import { AppDispatch, RootState } from '../../store/stores';
-import { fetchSchedules } from '../../store/slices/scheduleSlice';
+import { fetchSchedules, modifySchedule, addSchedule } from '../../store/slices/scheduleSlice';
 import { ScheduleDto } from '../../services/scheduleService';
 
 const TeacherTimeTable = () => {
@@ -23,12 +23,13 @@ const TeacherTimeTable = () => {
     // API 호출 (반이 선택되면 자동 실행)
     useEffect(() => {
         if (selectedClassId) {
-            // 오늘 날짜를 YYYYMMDD 변환
-            const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+            const targetDate = "20251029"; 
             
+            console.log(`🧪 테스트 요청 시작: 반ID=${selectedClassId}, 날짜=${targetDate}`);
+
             dispatch(fetchSchedules({ 
                 groupId: selectedClassId, 
-                targetDate: today 
+                targetDate: targetDate 
             }));
         }
     }, [selectedClassId]);
@@ -68,8 +69,50 @@ const TeacherTimeTable = () => {
     }, [scheduleData]);
 
     // 저장 핸들러 (Todo : 현재는 기능 없음, 추후 POST 연결)
-    const handleUpdateSchedule = (newData: GridRow[]) => {
-        console.log('시간표 수정 시도 (아직 API 없음):', newData);
+    const handleUpdateSchedule = async (newGrid: GridRow[]) => {
+        if (!selectedClassId) return;
+        console.log('📝 변경 사항 감지 중...');
+
+        const days = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
+        const currentSem = scheduleData.length > 0 ? scheduleData[0].sem : 1;
+
+        for (const row of newGrid) {
+            const period = row.period;
+
+            for (const day of days) {
+                const newSubject = row[day];
+
+                const targetDayUpper = day.toUpperCase();
+                const originalItem = scheduleData.find(
+                    item => item.classNo === period && item.dayOfWeek === targetDayUpper
+                );
+
+                if (originalItem) {
+                    if (originalItem.subject !== newSubject) {
+                        console.log(`🔄 수정 발견! ${day.toUpperCase()} ${period}교시: ${originalItem.subject} -> ${newSubject}`);
+
+                        dispatch(modifySchedule({
+                            groupId: selectedClassId,
+                            timetableId: originalItem.timetableId,
+                            data: { subject: newSubject }
+                        }));
+                    }
+                }
+                else if (newSubject !== "") {
+                    console.log(`➕ 추가: ${targetDayUpper} ${period}교시 - ${newSubject}`);
+                    
+                    dispatch(addSchedule({
+                        groupId: selectedClassId,
+                        data: {
+                            dayOfWeek: targetDayUpper,
+                            classNo: period,
+                            subject: newSubject,
+                            sem: currentSem
+                        }
+                    }));
+                }
+            }
+        }
     };
 
     return (
