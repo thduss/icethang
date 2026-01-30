@@ -4,6 +4,7 @@ import com.ssafy.icethang.domain.timetable.dto.request.TimetableRequest;
 import com.ssafy.icethang.domain.timetable.dto.response.TimetableResponse;
 import com.ssafy.icethang.domain.timetable.service.TimetableService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,5 +44,15 @@ public class TimetableController {
     ) {
         timetableService.deleteTimetable(timetableId);
         return ResponseEntity.noContent().build();
+    }
+
+    // 4. 추가
+    @PostMapping
+    public ResponseEntity<Void> createTimetable(
+            @PathVariable Long groupId,
+            @RequestBody TimetableRequest requestDto
+    ) {
+        timetableService.createTimetable(groupId, requestDto);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

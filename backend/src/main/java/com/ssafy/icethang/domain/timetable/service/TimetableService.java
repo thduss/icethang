@@ -123,4 +123,29 @@ public class TimetableService {
         }
         timetableRepository.deleteById(timetableId);
     }
+
+
+    @Transactional
+    public void createTimetable(Long groupId, TimetableRequest dto) {
+        // 1. 해당 그룹(반)이 존재하는지 확인
+        ClassGroup classGroup = classGroupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 그룹이 존재하지 않습니다."));
+
+        boolean exists = timetableRepository.existsByClassGroup_IdAndDayOfWeekAndClassNo(groupId, dto.getDayOfWeek(), dto.getClassNo());
+        if (exists) {
+            throw new IllegalStateException("이미 해당 교시에 수업이 등록되어 있습니다.");
+        }
+
+        // 2. 새로운 시간표 엔티티 생성
+        Timetable timetable = Timetable.builder()
+                .classGroup(classGroup)
+                .dayOfWeek(dto.getDayOfWeek())
+                .classNo(dto.getClassNo())
+                .subject(dto.getSubject())
+                .sem(dto.getSem())
+                .build();
+
+        // 3. 저장
+        timetableRepository.save(timetable);
+    }
 }
