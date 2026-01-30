@@ -15,6 +15,8 @@ import WeeklyStatistics from './WeeklyStatistics'
 import WeeklyCalendar from './WeeklyCalendar'
 import ExpModal from './ExpModal'
 import SubjectStatistics from './SubjectStatistics'
+import DropdownCalendarModal from './DropdownCalendarModal'
+
 
 type StatisticsView = ViewType | 'daily'
 
@@ -31,6 +33,9 @@ const index = () => {
   const [isExpModalVisible, setExpModalVisible] = useState(false)
 
   const [calendarVisible, setCalendarVisible] = useState(false)
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false)
+
+
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedWeek, setSelectedWeek] = useState<{
     start: Date
@@ -93,12 +98,12 @@ const index = () => {
         <StatisticsBorder>
           {/* 월간 보기 */}
           {view === 'monthly' && (
-            <>
+            <View style={styles.monthlyLayout}>
               <StatisticsFilter
                 year={year}
                 month={month}
-                onPressYear={() => console.log('연도 선택')}
-                onPressMonth={() => console.log('월 선택')}
+                onPressYear={() => setCalendarModalVisible(true)}
+                onPressMonth={() => setCalendarModalVisible(true)}
                 onPressExp={() => setExpModalVisible(true)}
               />
               <MonthlyStatistics
@@ -114,7 +119,7 @@ const index = () => {
                 left={{ label: '월간 평균', value: '80%' }}
                 right={{ label: '가장 집중한 주', value: '3주차' }}
               />
-            </>
+            </View>
           )}
 
           {/* 일간 상세 보기 */}
@@ -148,6 +153,19 @@ const index = () => {
           {view === 'subject' && <SubjectStatistics />}
         </StatisticsBorder>
 
+        <DropdownCalendarModal
+          visible={calendarModalVisible}
+          initialYear={year}
+          initialMonth={month}
+          onClose={() => setCalendarModalVisible(false)}
+          onConfirm={(y, m) => {
+            setYear(y)
+            setMonth(m)
+            setCalendarModalVisible(false)
+          }}
+        />
+
+
         <ExpModal
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
@@ -167,9 +185,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3EED4',
     flex: 1,
   },
-  
+
   content: {
     flex: 1,
     padding: 16,
+  },
+
+  monthlyLayout: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
 })
