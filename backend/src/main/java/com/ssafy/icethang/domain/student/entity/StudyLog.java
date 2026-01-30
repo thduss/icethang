@@ -6,15 +6,10 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Getter
@@ -48,27 +43,22 @@ public class StudyLog extends BaseEntity {
     @Column(length = 50)
     private String reason;
 
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
     @Column(name = "focus_rate")
     private Integer focusRate;
 
     @Column(name = "out_of_seat_count")
     private Integer outofseatCount;
 
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
     // builder에 포함 안시키면 null
     @Builder
     public StudyLog(Student student, Long timetableId, LocalDate date, Integer classNo,
-                    String subject, String reason, Integer focusRate, Integer outofseatCount) {
+                    String subject, String reason, Integer focusRate, Integer outofseatCount, LocalTime startTime, LocalTime endTime) {
         this.student = student;
         this.timetableId = timetableId;
         this.date = (date != null) ? date : LocalDate.now();
@@ -77,5 +67,7 @@ public class StudyLog extends BaseEntity {
         this.reason = reason;
         this.focusRate = focusRate;
         this.outofseatCount = outofseatCount;
+        this.startTime = startTime;
+        this.endTime  = endTime;
     }
 }

@@ -29,7 +29,7 @@ public class ClassEventLog {
     private Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "log_id", nullable = false)
+    @JoinColumn(name = "log_id", nullable = true)
     private StudyLog studyLog;
 
     @Enumerated(EnumType.STRING)
@@ -49,5 +49,10 @@ public class ClassEventLog {
         this.studyLog = studyLog;
         this.eventType = eventType;
         this.detectedAt = (detectedAt != null) ? detectedAt : LocalDateTime.now();
+    }
+
+    // 수업 종료시에 studylog에 연결
+    public void updateStudyLog(StudyLog studyLog) {
+        this.studyLog = studyLog;
     }
 }
