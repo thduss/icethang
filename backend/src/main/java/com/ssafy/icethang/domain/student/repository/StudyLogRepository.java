@@ -9,22 +9,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface StudyLogRepository extends JpaRepository<StudyLog, Long> {
-    // 학습 로그 최신순으로 조회
-    List<StudyLog> findAllByStudentIdOrderByCreatedAtDesc(Long studentId);
 
-    // 특정 학생의 로그 개수 조회
-    long countByStudentAndDateAndReasonContaining(Student student, LocalDate date, String reasonKeyword);
+    // 일별 조회
+    List<StudyLog> findByStudent_ClassGroup_IdAndStudent_IdAndDateOrderByClassNoAsc(Long groupId, Long studentId, LocalDate date);
 
-    // 특정 학생의 가장 최신 학습 로그 1개를 가져오기
+    List<StudyLog> findByStudent_ClassGroup_IdAndStudent_IdAndDateBetweenOrderByDateAsc(Long groupId, Long studentId, LocalDate start, LocalDate end);
+
+    List<StudyLog> findByStudent_ClassGroup_IdAndStudent_Id(Long groupId, Long studentId);
+
     Optional<StudyLog> findTopByStudentOrderByCreatedAtDesc(Student student);
-
-    // 학생 ID와 날짜로 조회 (교시 순서대로 정렬)
-    List<StudyLog> findByStudent_IdAndDateOrderByClassNoAsc(Long studentId, LocalDate date);
-
-    Optional<StudyLog> findTopByStudentAndDateOrderByCreatedAtDesc(Student student, LocalDate date);
-
-    // 특정 학생의 특정 기간 내 모든 로그 조회
-    List<StudyLog> findByStudent_IdAndDateBetweenOrderByDateAsc(Long studentId, LocalDate startDate, LocalDate endDate);
 }

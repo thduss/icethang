@@ -17,7 +17,7 @@ public class DailyStatisticsResponse {
                 .classNo(studyLog.getClassNo())
                 .subject(studyLog.getSubject())
                 .focusRate(studyLog.getFocusRate())
-                .outOfSeatCount(studyLog.getOutofseatCount())
+                .outOfSeatCount(studyLog.getOutOfSeatCount())
                 .build();
     }
 }

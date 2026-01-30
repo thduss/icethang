@@ -53,7 +53,7 @@ public class StudyLog extends BaseEntity {
     private Integer focusRate;
 
     @Column(name = "out_of_seat_count")
-    private Integer outofseatCount;
+    private Integer outOfSeatCount;
 
     // builder에 포함 안시키면 null
     @Builder
@@ -66,7 +66,7 @@ public class StudyLog extends BaseEntity {
         this.subject = subject;
         this.reason = reason;
         this.focusRate = focusRate;
-        this.outofseatCount = outofseatCount;
+        this.outOfSeatCount = outofseatCount;
         this.startTime = startTime;
         this.endTime  = endTime;
     }
