@@ -93,7 +93,7 @@ const index = () => {
         <StatisticsBorder>
           {/* 월간 보기 */}
           {view === 'monthly' && (
-            <>
+            <View style={styles.monthlyLayout}>
               <StatisticsFilter
                 year={year}
                 month={month}
@@ -114,7 +114,7 @@ const index = () => {
                 left={{ label: '월간 평균', value: '80%' }}
                 right={{ label: '가장 집중한 주', value: '3주차' }}
               />
-            </>
+            </View>
           )}
 
           {/* 일간 상세 보기 */}
@@ -171,5 +171,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+
+  monthlyLayout: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
 })
