@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     gap: 16,
-    marginTop: 24,
+    marginTop: 16,
   },
 
   box: {
