@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, Image, Animated, Dimensions } from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, Image, Animated, Dimensions, ImageBackground } from 'react-native';
 import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
@@ -15,7 +15,6 @@ export default function LevelUpRewardModal({ visible, onClose, rewardName = "새
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
 
-  
   const [step, setStep] = useState<'closed' | 'opening' | 'opened'>('closed');
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export default function LevelUpRewardModal({ visible, onClose, rewardName = "새
 
   const onChestOpened = () => {
     setStep('opened');
-    // 보상 팝업 애니메이션
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true })
@@ -45,7 +43,11 @@ export default function LevelUpRewardModal({ visible, onClose, rewardName = "새
 
   return (
     <Modal animationType="fade" transparent visible={visible}>
-      <View style={styles.overlay}>
+      <ImageBackground 
+        source={require('../../assets/reward_background.png')}
+        style={styles.overlay}
+        resizeMode="cover"
+      >
         <View style={styles.contentContainer}>
           
           {/* 타이틀 */}
@@ -69,7 +71,6 @@ export default function LevelUpRewardModal({ visible, onClose, rewardName = "새
             {/* 보상 아이템  */}
             {step === 'opened' && (
               <Animated.View style={[styles.rewardItemBox, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-                {/* 획득한 캐릭터 이미지 */}
                 <Image 
                   source={require('../../assets/common_IsStudent.png')} 
                   style={{ width: 180, height: 180 }}
@@ -108,7 +109,7 @@ export default function LevelUpRewardModal({ visible, onClose, rewardName = "새
           </View>
 
         </View>
-      </View>
+      </ImageBackground>
     </Modal>
   );
 }
@@ -116,7 +117,7 @@ export default function LevelUpRewardModal({ visible, onClose, rewardName = "새
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', 
     justifyContent: 'center',
     alignItems: 'center',
   },
