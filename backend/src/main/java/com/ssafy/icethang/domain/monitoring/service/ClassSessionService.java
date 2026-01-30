@@ -73,7 +73,7 @@ public class ClassSessionService {
                     .date(request.getDate())
                     .startTime(request.getStartTime())
                     .endTime(request.getEndTime())
-                    .subject(null) // 후 처리 필요
+                    .subject(request.getSubject())
                     .classNo(0)    // 후 처리 필요
                     .focusRate(focusRate)
                     .outofseatCount(awayCount)
