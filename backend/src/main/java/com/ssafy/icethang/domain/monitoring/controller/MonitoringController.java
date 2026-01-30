@@ -40,8 +40,9 @@ public class MonitoringController {
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("학생 없음"));
 
-        StudyLog parentLog = studyLogRepository.findTopByStudentAndDateOrderByCreatedAtDesc(student, LocalDate.now())
-                .orElseGet(() -> createPlaceholderLog(student));
+        // 임시 저장
+//        StudyLog parentLog = studyLogRepository.findTopByStudentAndDateOrderByCreatedAtDesc(student, LocalDate.now())
+//                .orElseGet(() -> createPlaceholderLog(student));
 
         // 프론트에서 넘어온시간이 없다면 서버 시간 쓰기
         LocalDateTime eventTime = (request.getDetectedAt() != null)
@@ -51,7 +52,7 @@ public class MonitoringController {
         // 상세 이벤트 로그 저장
         ClassEventLog eventLog = ClassEventLog.builder()
                 .student(student)
-                .studyLog(parentLog)
+                .studyLog(null)
                 .eventType(request.getType())
                 .detectedAt(eventTime) // 결정된 시간 저장
                 .build();
@@ -75,7 +76,7 @@ public class MonitoringController {
                 .studentNumber(student.getStudentNumber())
                 .type(request.getType())
                 .message(alertMsg)
-                .alertTime(eventTime) // [적용] 응답에도 동일한 시간 사용
+                .alertTime(eventTime) //
                 .totalAwayCount(awayCount)
                 .totalUnfocusCount(unfocusCount)
                 .build();

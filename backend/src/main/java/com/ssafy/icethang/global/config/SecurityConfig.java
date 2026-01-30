@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/classes/*/students/*/xp", "/themes/**").hasAnyRole("STUDENT", "TEACHER")
                         // [수정 API] 오직 선생님만 접근 가능하도록 설정
                         .requestMatchers("/classes/*/students/*/xp/give").hasRole("TEACHER")
+                        .requestMatchers("/classes/*/session/**").hasRole("TEACHER")
                         // 소켓 연결
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/students/**", "/classes/**").authenticated()
