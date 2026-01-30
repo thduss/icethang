@@ -12,4 +12,6 @@ public class ClassSessionEndRequest {
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;
+    private String subject;      // 과목명 (예: 수학)
+    private Integer classNo;
 }
