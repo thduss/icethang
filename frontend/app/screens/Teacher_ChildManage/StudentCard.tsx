@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Image, Pressable } from 'react-native'
+﻿import { StyleSheet, Text, View, Image, Pressable } from 'react-native'
 
 interface StudentCardProps {
   name: string
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
 
   titleWrapper: {
-    paddingHorizontal: 40,   
+    paddingHorizontal: 15,   
     paddingVertical: 8, 
     backgroundColor: '#f0e3ba', 
     borderRadius: 30,

@@ -2,12 +2,12 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 // 학생 목록 관리용
 
 interface StudentMember {
-  student_id: number;
-  student_name: string;
-  student_number: number;
-  current_level: number;
-  current_xp: number;
-  device_uuid: string;
+  studentId: number;
+  studentName: string;
+  studentNumber: number;
+  deviceUuid: string | null;
+  currentXp?: number;
+  currentLevel?: number;
 }
 
 interface MemberState {
@@ -31,13 +31,13 @@ const memberSlice = createSlice({
       state.students.push(action.payload);
     },
     updateStudentInfo: (state, action: PayloadAction<StudentMember>) => {
-      const index = state.students.findIndex(s => s.student_id === action.payload.student_id);
+      const index = state.students.findIndex(s => s.studentId === action.payload.studentId);
       if (index !== -1) {
         state.students[index] = action.payload;
       }
     },
     removeStudent: (state, action: PayloadAction<number>) => {
-      state.students = state.students.filter(s => s.student_id !== action.payload);
+      state.students = state.students.filter(s => s.studentId !== action.payload);
     }
   },
 });

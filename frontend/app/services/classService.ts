@@ -45,3 +45,5 @@ export const getSpecificClass = async (classId: number) => {
   const response = await api.get(`/classes/${classId}`);
   return response.data;
 };
+
+
