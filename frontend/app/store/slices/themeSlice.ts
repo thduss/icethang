@@ -1,47 +1,90 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../api/api';
 
-interface Theme {
-  theme_id: number;
-  theme_name: string;
-  asset_url: string;
-  asset_type: string;
-  theme_category: 'CHARACTER' | 'BACKGROUND';
-}
+export const fetchAllThemes = createAsyncThunk('theme/fetchAllThemes', async () => {
+
+  const [resAllBg, resAllChar, resMyBg, resMyChar] = await Promise.all([
+    api.get(`/themes/backgrounds`),     
+    api.get(`/themes/characters`),       
+    api.get(`/themes/backgrounds/my`),
+    api.get(`/themes/characters/my`)   
+  ]);
+
+  return {
+    allBackgrounds: resAllBg.data,
+    allCharacters: resAllChar.data,
+    myBackgrounds: resMyBg.data,
+    myCharacters: resMyChar.data,
+  };
+});
+
+
+export const equipTheme = createAsyncThunk(
+  'theme/equipTheme',
+  async ({ id, category }: { id: number; category: 'CHARACTER' | 'BACKGROUND' }) => {
+    const type = category === 'BACKGROUND' ? 'backgrounds' : 'characters';
+    
+    await api.patch(`/themes/${type}/${id}/equip`);
+    
+    return { id, category };
+  }
+);
 
 interface ThemeState {
-  allThemes: Theme[];
-  unlockedThemeIds: number[]; // 내가 갖고있는거
+  unlockedThemeIds: number[];    
   equippedCharacterId: number | null; 
   equippedBackgroundId: number | null;
+  loading: boolean;
 }
 
-const initialState: ThemeState = {
-  allThemes: [],
-  unlockedThemeIds: [1,2], 
-  equippedBackgroundId: 1,
-  equippedCharacterId: 10,           };
+const initialState: ThemeState = { 
+  unlockedThemeIds: [1, 2, 3, 4], 
+  equippedBackgroundId: 1,        
+  equippedCharacterId: 5,        
+  loading: false,
+};
 
 const themeSlice = createSlice({
   name: 'theme',
   initialState,
   reducers: {
-    setAllThemes: (state, action: PayloadAction<Theme[]>) => {
-      state.allThemes = action.payload;
-    },
-    setUnlockedThemes: (state, action: PayloadAction<number[]>) => {
-      state.unlockedThemeIds = action.payload;
-    },
-    unlockNewTheme: (state, action: PayloadAction<number>) => {
-      state.unlockedThemeIds.push(action.payload);
-    },
     setEquippedCharacter: (state, action: PayloadAction<number>) => {
       state.equippedCharacterId = action.payload;
     },
     setEquippedBackground: (state, action: PayloadAction<number>) => {
       state.equippedBackgroundId = action.payload;
     },
-  }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchAllThemes.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchAllThemes.fulfilled, (state, action) => {
+        const { myBackgrounds, myCharacters } = action.payload;
+
+        const myBgIds = myBackgrounds.map((item: any) => item.id);
+        const myCharIds = myCharacters.map((item: any) => item.id);
+        state.unlockedThemeIds = [...myBgIds, ...myCharIds];
+
+        const equippedBg = myBackgrounds.find((item: any) => item.is_equipped);
+        const equippedChar = myCharacters.find((item: any) => item.is_equipped);
+
+        if (equippedBg) state.equippedBackgroundId = equippedBg.id;
+        if (equippedChar) state.equippedCharacterId = equippedChar.id;
+        
+        state.loading = false;
+      })
+      .addCase(equipTheme.fulfilled, (state, action) => {
+        const { id, category } = action.payload;
+        if (category === 'BACKGROUND') {
+          state.equippedBackgroundId = id;
+        } else {
+          state.equippedCharacterId = id;
+        }
+      });
+  },
 });
 
-export const { setAllThemes, setUnlockedThemes, unlockNewTheme, setEquippedCharacter, setEquippedBackground } = themeSlice.actions;
+export const { setEquippedCharacter, setEquippedBackground } = themeSlice.actions;
 export default themeSlice.reducer;
