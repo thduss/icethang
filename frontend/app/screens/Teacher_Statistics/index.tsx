@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native'
 import { useState, useEffect } from 'react'
 import { useLocalSearchParams, router } from 'expo-router'
+import { getStudentDetail } from '../../api/student'
 
 import LeftSidebar from '../../components/Menu/LeftSidebar'
 import StatisticsHeader from '../../components/Menu/StatisticsHeader'
@@ -17,14 +18,27 @@ import ExpModal from './ExpModal'
 import SubjectStatistics from './SubjectStatistics'
 import DropdownCalendarModal from './DropdownCalendarModal'
 
-
 type StatisticsView = ViewType | 'daily'
 
+interface StudentDetail {
+  studentId: number
+  name: string
+  studentNumber: number
+  deviceUuid: string
+  currentXp: number
+  currentLevel: number
+}
+
+
 const index = () => {
-  const { name, number } = useLocalSearchParams<{
-    name: string
-    number: string
+  const { studentId, classId } = useLocalSearchParams<{
+    studentId: string
+    classId: string
   }>()
+
+  const [student, setStudent] = useState<StudentDetail | null>(null)
+  const [studentLoading, setStudentLoading] = useState(true)
+  const [studentError, setStudentError] = useState<string | null>(null)
 
   const [view, setView] = useState<ViewType | 'daily'>('monthly')
   const [year, setYear] = useState(2025)
@@ -42,6 +56,33 @@ const index = () => {
     end: Date
   } | null>(null)
 
+  useEffect(() => {
+    const fetchStudentDetail = async () => {
+      if (!studentId || !classId) return
+
+      try {
+        setStudentLoading(true)
+        setStudentError(null)
+
+        const data = await getStudentDetail(
+          Number(classId),
+          Number(studentId)
+        )
+
+        console.log('✅ 학생 상세 정보:', data)
+        setStudent(data)
+      } catch (e) {
+        console.error('❌ 학생 상세 조회 실패:', e)
+        setStudentError('학생 정보를 불러오지 못했습니다.')
+      } finally {
+        setStudentLoading(false)
+      }
+    }
+
+    fetchStudentDetail()
+  }, [studentId, classId])
+
+
   const handleBack = () => {
     if (view === 'daily') {
       setView('monthly')
@@ -53,6 +94,7 @@ const index = () => {
   const handleTabChange = (newView: ViewType) => {
     setView(newView)
   }
+
 
   const getWeekFromDate = (date: Date) => {
     const day = date.getDay()
@@ -73,11 +115,27 @@ const index = () => {
     }
   }, [view, selectedWeek])
 
-  useEffect(() => {
-    if (!selectedWeek) return
-    console.log('주간 통계 API 호출:', selectedWeek.start, selectedWeek.end)
-    // TODO: 실제 API 연결
-  }, [selectedWeek])
+  if (studentLoading) {
+    return (
+      <View style={styles.centerState}>
+        <ActivityIndicator size="large" color="#8D7B68" />
+        <Text style={styles.stateText}>학생 정보 불러오는 중...</Text>
+      </View>
+    )
+  }
+
+  /**
+   * ❌ 학생 정보 에러
+   */
+  if (studentError || !student) {
+    return (
+      <View style={styles.centerState}>
+        <Text style={styles.stateText}>
+          {studentError ?? '학생 정보를 불러올 수 없습니다.'}
+        </Text>
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -85,8 +143,8 @@ const index = () => {
 
       <View style={styles.content}>
         <StatisticsHeader
-          name={name}
-          number={Number(number)}
+          name={student.name}
+          number={Number(student.studentNumber)}
           onBack={handleBack}
         />
 
@@ -169,7 +227,7 @@ const index = () => {
         <ExpModal
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
-          studentName={name || "학생"}
+          studentName={student.name}
         />
 
       </View>
