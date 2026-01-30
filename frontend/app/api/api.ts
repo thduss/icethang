@@ -7,17 +7,17 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 5000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// 요청 인터셉터 (토큰 주입)
 api.interceptors.request.use(
   async (config) => {
     let token: string | null = null;
 
-    // SecureStore 확인
     try {
       if (Platform.OS !== 'web') {
         token = await SecureStore.getItemAsync('accessToken');
@@ -26,7 +26,6 @@ api.interceptors.request.use(
       console.log('⚠️ SecureStore 에러:', e);
     }
 
-    // AsyncStorage 확인
     if (!token) {
       try {
         const sessionJson = await AsyncStorage.getItem('user_session');
@@ -42,7 +41,6 @@ api.interceptors.request.use(
       }
     }
 
-    // AsyncStorage 확인
     if (!token) {
       try {
         token = await AsyncStorage.getItem('accessToken');
@@ -50,7 +48,6 @@ api.interceptors.request.use(
       } catch (e) {}
     }
 
-    // 토큰 헤더 설정
     if (token) {
       const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       config.headers['Authorization'] = authHeader;
@@ -61,6 +58,26 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// --- 추가된 응답 인터셉터 (디버깅용) ---
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ [Response Success] ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      // 서버가 응답을 줬으나 에러인 경우 (400, 404, 500 등)
+      console.error('❌ [API Response Error]:', error.response.status, error.response.data);
+    } else if (error.request) {
+      // 요청은 나갔으나 응답이 아예 없는 경우 (Network Error)
+      console.error('❌ [API Network Error]: 서버에 연결할 수 없습니다. IP 주소(10.0.2.2)를 확인하세요.');
+    } else {
+      console.error('❌ [API Error]:', error.message);
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default api;
