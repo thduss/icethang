@@ -13,7 +13,7 @@ const api = axios.create({
   },
 });
 
-// 요청 인터셉터 (토큰 주입)
+// 엑세스 토큰 실어 보내기
 api.interceptors.request.use(
   async (config) => {
     let token: string | null = null;
@@ -31,28 +31,20 @@ api.interceptors.request.use(
         const sessionJson = await AsyncStorage.getItem('user_session');
         if (sessionJson) {
           const session = JSON.parse(sessionJson);
-          if (session.token) {
-            token = session.token;
-            console.log('🔑 [API] AsyncStorage(user_session)에서 토큰 발견');
-          }
+          if (session.token) token = session.token;
         }
-      } catch (e) {
-        console.log('⚠️ AsyncStorage 파싱 에러:', e);
-      }
+      } catch (e) {}
     }
 
     if (!token) {
       try {
         token = await AsyncStorage.getItem('accessToken');
-        if (token) console.log('🔑 [API] AsyncStorage(accessToken)에서 토큰 발견');
       } catch (e) {}
     }
-
+    console.log("👉 인터셉터 진입! 토큰 유무:", !!token);
     if (token) {
       const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       config.headers['Authorization'] = authHeader;
-    } else {
-      console.log('ℹ️ [API] 토큰 없이 요청 보냄:', config.url);
     }
 
     return config;
@@ -60,21 +52,114 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// --- 추가된 응답 인터셉터 (디버깅용) ---
+// 토큰 갱신 로직
+
+const handleTokenRefresh = async (originalRequest: any) => {
+  if (originalRequest._retry) {
+    return Promise.reject(new Error("토큰 갱신 실패 (무한루프 방지)"));
+  }
+  
+  console.log("♻️ [Token Refresh] 토큰 만료 감지! 갱신을 시도합니다.");
+  originalRequest._retry = true;
+
+  try {
+    let refreshToken = null;
+    if (Platform.OS !== 'web') {
+      refreshToken = await SecureStore.getItemAsync('refreshToken');
+    }
+
+    if (!refreshToken) {
+      console.error("🚨 저장된 리프레시 토큰이 없습니다!");
+      throw new Error('No refresh token');
+    }
+
+    console.log("📦 [Debug] 전송할 RefreshToken:", refreshToken.substring(0, 10) + "...");
+
+    // Body는 비우고 Cookie 헤더만
+    const { data } = await axios.post(
+      `${BASE_URL}/auth/refresh`, 
+      {}, 
+      {
+        headers: { 
+          'Cookie': `refreshToken=${refreshToken}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }
+    );
+
+    console.log("✅ [Token Refresh] 성공! 새 토큰을 받았습니다.");
+    
+    // 서버 응답 구조 대응
+    const newAccessToken = data.accessToken || data.token; 
+    const newRefreshToken = data.refreshToken;
+    
+    if (Platform.OS !== 'web') {
+      await SecureStore.setItemAsync('accessToken', newAccessToken);
+      // 리프레시 토큰이 갱신되어 왔을 때만 저장
+      if (newRefreshToken) await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+    }
+
+    // 헤더 교체 후 재요청
+    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+    return api(originalRequest);
+
+  } catch (refreshError: any) {
+    console.error("❌ [Token Refresh Failed] 서버 응답:", refreshError.response?.data);
+    console.error("❌ [Token Refresh Failed] 상태 코드:", refreshError.response?.status);
+    
+    if (Platform.OS !== 'web') {
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('refreshToken');
+      await SecureStore.deleteItemAsync('userRole');
+    }
+    return Promise.reject(refreshError);
+  }
+};
+
 api.interceptors.response.use(
-  (response) => {
+  async (response) => {
+    const url = response.config.url;
+
+    if (url?.includes('login') || url?.includes('join')) {
+        return response;
+    }
+
+    const data = response.data;
+
+    if (typeof data === 'string' && (
+        data.includes('<!DOCTYPE html>') || 
+        data.includes('Please sign in') || 
+        data.includes('Login with OAuth 2.0')
+    )) {
+        console.log(`⚠️ [Soft 401] HTML 로그인 페이지 감지 -> 갱신 시도`);
+        return handleTokenRefresh(response.config);
+    }
+
+    const msg = data?.message || data?.msg || data?.error || (typeof data === 'string' ? data : "");
+    const code = data?.code || data?.status;
+
+    if (
+        (typeof msg === 'string' && (msg.includes("만료") || msg.includes("로그인") || msg.includes("권한") || msg.includes("Session"))) ||
+        code === 401 ||
+        code === "401"
+    ) {
+      console.log(`⚠️ [Soft 401] 에러 메시지 감지: "${msg.substring(0, 30)}..." -> 갱신 시도`);
+      return handleTokenRefresh(response.config);
+    }
+
     console.log(`✅ [Response Success] ${response.config.method?.toUpperCase()} ${response.config.url}`);
     return response;
   },
-  (error) => {
+  async (error) => {
+    if (error.response?.status === 401) {
+      return handleTokenRefresh(error.config);
+    }
+    
     if (error.response) {
-      // 서버가 응답을 줬으나 에러인 경우 (400, 404, 500 등)
-      console.error('❌ [API Response Error]:', error.response.status, error.response.data);
-    } else if (error.request) {
-      // 요청은 나갔으나 응답이 아예 없는 경우 (Network Error)
-      console.error('❌ [API Network Error]: 서버에 연결할 수 없습니다. IP 주소(10.0.2.2)를 확인하세요.');
+      console.error('❌ [API Error]:', error.response.status, error.response.data);
     } else {
-      console.error('❌ [API Error]:', error.message);
+      console.error('❌ [Error]:', error.message);
     }
     return Promise.reject(error);
   }

@@ -1,6 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+// [추가된 Import]
+import * as SecureStore from 'expo-secure-store';
+import { useDispatch } from 'react-redux';
+import { restoreAuth } from '../../store/slices/authSlice'; // 경로 확인 필요
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +20,37 @@ const scale = cardWidth / 320;
 
 export default function SelectRoleScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
+
+  const handleTeacherStart = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        // 저장된 토큰 확인
+        const accessToken = await SecureStore.getItemAsync('accessToken');
+        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const userRole = await SecureStore.getItemAsync('userRole');
+
+        // 자동 로그인 조건: 토큰 O + 역할 선생님
+        if (accessToken && refreshToken && userRole === 'teacher') {
+          console.log("🔄 자동 로그인: 저장된 교사 세션 확인됨");
+          
+          dispatch(restoreAuth({ 
+            accessToken: accessToken, 
+            userRole: 'teacher' 
+          }));
+
+          // 메인 페이지로 바로 이동
+          router.replace('/screens/Teacher_MainPage');
+          return;
+        }
+      }
+    } catch (e) {
+      console.log("세션 확인 중 오류 (로그인 화면으로 이동):", e);
+    }
+
+    // 조건 불만족 -> 로그인 화면으로 이동
+    router.push('/screens/Teacher_Login');
+  };
 
   return (
     <View style={styles.container}>
@@ -42,7 +77,7 @@ export default function SelectRoleScreen() {
           
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
-            onPress={() => router.push('/screens/Teacher_Login')}
+            onPress={handleTeacherStart}
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { fontSize: 16 * scale }]}>선생님으로 시작하기</Text>
