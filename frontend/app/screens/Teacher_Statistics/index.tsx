@@ -1,6 +1,15 @@
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native'
 import { useState, useEffect } from 'react'
 import { useLocalSearchParams, router } from 'expo-router'
+import { useDispatch, useSelector } from 'react-redux'
+
+import { AppDispatch, RootState } from 'app/store/stores'
+import {
+  fetchDailyStatistics,
+  fetchWeeklyStatistics,
+  fetchMonthlyStatistics,
+  fetchSubjectStatistics
+} from 'app/store/slices/statisticsSlice'
 import { getStudentDetail } from '../../api/student'
 
 import LeftSidebar from '../../components/Menu/LeftSidebar'
@@ -9,7 +18,6 @@ import StatisticsTabs, { ViewType } from 'app/components/Menu/StatisticsTabs'
 import StatisticsFilter from 'app/components/Menu/StatisticsFilter'
 import StatisticsSummary from 'app/components/Menu/StatisticsSummary'
 import StatisticsBorder from 'app/components/Menu/StatisticsBorder'
-
 import DailyStatistics from './DailyStatistics'
 import MonthlyStatistics from './MonthlyStatistics'
 import WeeklyStatistics from './WeeklyStatistics'
@@ -31,6 +39,21 @@ interface StudentDetail {
 
 
 const index = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { name, number, groupId } = useLocalSearchParams<{
+    name: string;
+    number: string;
+    groupId: string;
+  }>();
+
+  console.log('📍 현재 파라미터 상태:', { name, number, groupId });
+
+  const { daily, weekly, monthly, subjects, loading } = useSelector((state: RootState) => state.statistics);
+
+  const now = new Date();
+  const [view, setView] = useState<ViewType | 'daily'>('monthly');
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
   const { studentId, classId } = useLocalSearchParams<{
     studentId: string
     classId: string
@@ -44,12 +67,30 @@ const index = () => {
   const [year, setYear] = useState(2025)
   const [month, setMonth] = useState(11)
 
-  const [isExpModalVisible, setExpModalVisible] = useState(false)
+  const [isExpModalVisible, setExpModalVisible] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
-  const [calendarVisible, setCalendarVisible] = useState(false)
-  const [calendarModalVisible, setCalendarModalVisible] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedWeek, setSelectedWeek] = useState<{ start: Date; end: Date } | null>(null);
 
+  const formatToYYYYMM = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
+  const formatToYYYYMMDD = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}${m}${d}`;
+  };
 
+  const getWeekFromDate = (date: Date) => {
+    const day = date.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const start = new Date(date);
+    start.setDate(date.getDate() + mondayOffset);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 4);
+    return { start, end };
+  };
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedWeek, setSelectedWeek] = useState<{
     start: Date
@@ -84,37 +125,52 @@ const index = () => {
 
 
   const handleBack = () => {
-    if (view === 'daily') {
-      setView('monthly')
-    } else {
-      router.back()
-    }
-  }
+    if (view === 'daily') setView('monthly');
+    else router.back();
+  };
 
-  const handleTabChange = (newView: ViewType) => {
-    setView(newView)
-  }
-
-
-  const getWeekFromDate = (date: Date) => {
-    const day = date.getDay()
-    const mondayOffset = day === 0 ? -6 : 1 - day
-
-    const start = new Date(date)
-    start.setDate(date.getDate() + mondayOffset)
-
-    const end = new Date(start)
-    end.setDate(start.getDate() + 4)
-
-    return { start, end }
-  }
+  const handleTabChange = (newView: ViewType) => setView(newView);
 
   useEffect(() => {
-    if (view === 'weekly' && !selectedWeek) {
-      setSelectedWeek(getWeekFromDate(new Date()))
+    if (groupId && number) {
+      dispatch(fetchMonthlyStatistics({
+        groupId: Number(groupId),
+        studentId: Number(number),
+        month: formatToYYYYMM(year, month)
+      }));
     }
-  }, [view, selectedWeek])
+  }, [year, month, groupId, number]);
 
+  useEffect(() => {
+    if (view === 'weekly' && !selectedWeek) setSelectedWeek(getWeekFromDate(now));
+    if (view === 'weekly' && selectedWeek && groupId && number) {
+      dispatch(fetchWeeklyStatistics({
+        groupId: Number(groupId),
+        studentId: Number(number),
+        startDate: formatToYYYYMMDD(selectedWeek.start)
+      }));
+    }
+  }, [view, selectedWeek, groupId, number]);
+
+  useEffect(() => {
+    if (view === 'daily' && selectedDate && groupId && number) {
+      dispatch(fetchDailyStatistics({
+        groupId: Number(groupId),
+        studentId: Number(number),
+        date: selectedDate
+      }));
+    }
+  }, [view, selectedDate, groupId, number]);
+
+  useEffect(() => {
+    if (view === 'subject' && groupId && number) {
+      dispatch(fetchSubjectStatistics({
+        groupId: Number(groupId),
+        studentId: Number(number),
+        month: formatToYYYYMM(year, month)
+      }));
+    }
+  }, [view, year, month, groupId, number]);
   if (studentLoading) {
     return (
       <View style={styles.centerState}>
@@ -143,18 +199,14 @@ const index = () => {
 
       <View style={styles.content}>
         <StatisticsHeader
-          name={student.name}
-          number={Number(student.studentNumber)}
-          onBack={handleBack}
-        />
+          name={name}
+          number={Number(number)}
+          onBack={handleBack} />
 
-        <StatisticsTabs
-          value={view === 'daily' ? 'monthly' : view}
-          onChange={handleTabChange}
-        />
+        <StatisticsTabs value={view === 'daily' ? 'monthly' : view} onChange={handleTabChange} />
 
         <StatisticsBorder>
-          {/* 월간 보기 */}
+          {/* 월간 보기 (히트맵) */}
           {view === 'monthly' && (
             <View style={styles.monthlyLayout}>
               <StatisticsFilter
@@ -167,15 +219,15 @@ const index = () => {
               <MonthlyStatistics
                 year={year}
                 month={month}
+                data={monthly}
                 onSelectDate={(date) => {
-                  console.log('선택한 날짜:', date)
-                  setSelectedDate(date)
-                  setView('daily')
+                  setSelectedDate(date.replace(/-/g, ''));
+                  setView('daily');
                 }}
               />
               <StatisticsSummary
-                left={{ label: '월간 평균', value: '80%' }}
-                right={{ label: '가장 집중한 주', value: '3주차' }}
+                left={{ label: '월간 평균', value: `${calculateAvg(monthly)}%` }}
+                right={{ label: '데이터 수', value: `${monthly.length}일` }}
               />
             </View>
           )}
@@ -184,6 +236,7 @@ const index = () => {
           {view === 'daily' && (
             <DailyStatistics
               date={selectedDate}
+              data={daily}
               onBack={() => setView('monthly')}
             />
           )}
@@ -191,24 +244,24 @@ const index = () => {
           {/* 주간 보기 */}
           {view === 'weekly' && (
             <>
-
               <WeeklyCalendar
                 visible={calendarVisible}
                 onClose={() => setCalendarVisible(false)}
                 onSelectDate={(date) => {
-                  setSelectedWeek(getWeekFromDate(date))
-                  setCalendarVisible(false)
+                  setSelectedWeek(getWeekFromDate(date));
+                  setCalendarVisible(false);
                 }}
               />
-
               <WeeklyStatistics
                 weekRange={selectedWeek}
+                data={weekly}
                 onPressCalendar={() => setCalendarVisible(true)}
               />
             </>
           )}
 
-          {view === 'subject' && <SubjectStatistics />}
+          {/* 과목별 통계 */}
+          {view === 'subject' && <SubjectStatistics data={subjects} />}
         </StatisticsBorder>
 
         <DropdownCalendarModal
@@ -217,40 +270,31 @@ const index = () => {
           initialMonth={month}
           onClose={() => setCalendarModalVisible(false)}
           onConfirm={(y, m) => {
-            setYear(y)
-            setMonth(m)
-            setCalendarModalVisible(false)
+            setYear(y);
+            setMonth(m);
+            setCalendarModalVisible(false);
           }}
         />
-
 
         <ExpModal
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
-          studentName={student.name}
-        />
-
+          studentName={name || "학생"} />
       </View>
     </View>
   )
 }
 
+// 수치 계산
+const calculateAvg = (data: any[]) => {
+  if (!data || data.length === 0) return 0;
+  return (data.reduce((a, b) => a + (b.averageFocusRate || 0), 0) / data.length).toFixed(1);
+};
+
 export default index
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: '#F3EED4',
-    flex: 1,
-  },
-
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-
-  monthlyLayout: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
+  container: { flexDirection: 'row', backgroundColor: '#F3EED4', flex: 1 },
+  content: { flex: 1, padding: 16 },
+  monthlyLayout: { flex: 1, justifyContent: 'space-between' },
 })
