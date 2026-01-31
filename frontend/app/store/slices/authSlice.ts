@@ -18,6 +18,7 @@ export interface StudentInfo {
   currentLevel: number;
   schoolId: number;
   groupId: number | null;
+  className?: string;
 }
 
 export interface TeacherInfo {
@@ -52,6 +53,23 @@ const initialState: AuthState = {
   loading: false,
   error: null,
 };
+
+const extractRefreshToken = (headers: any) => {
+  try {
+    const cookies = headers['set-cookie'];
+    if (Array.isArray(cookies)) {
+      const refreshCookie = cookies.find(c => c.includes('refreshToken='));
+      if (refreshCookie) {
+        return refreshCookie.split('refreshToken=')[1].split(';')[0];
+      }
+    } else if (typeof cookies === 'string' && cookies.includes('refreshToken=')) {
+      return cookies.split('refreshToken=')[1].split(';')[0];
+    }
+  } catch (e) {
+    console.log("🍪 쿠키 파싱 실패:", e);
+  }
+  return null;
+}
 
 export const joinTeacher = createAsyncThunk<AuthResponse<TeacherInfo>, { email: string; password: string; name: string; school: string }>(
   'auth/joinTeacher',
@@ -130,13 +148,22 @@ export const loginStudent = createAsyncThunk<AuthResponse<StudentInfo>, void>(
   async (_, { rejectWithValue }) => {
     try {
       const deviceUuid = await getDeviceUUID();
+      console.log("🚀 학생 자동 로그인 시도 (UUID):", deviceUuid);
+      
       const response = await api.post('/auth/login/student', { deviceUuid });
-      const { accessToken, ...data } = response.data;
+      let { accessToken, refreshToken, ...data } = response.data;
+      const finalAccessToken = accessToken;
+
+      if (!refreshToken && response.headers) {
+        refreshToken = extractRefreshToken(response.headers);
+      }
+
       if (Platform.OS !== 'web' && accessToken) {
         await SecureStore.setItemAsync('accessToken', accessToken);
+        if (refreshToken) await SecureStore.setItemAsync('refreshToken', refreshToken);
         await SecureStore.setItemAsync('userRole', 'student');
       }
-      return { accessToken, data: data as StudentInfo };
+      return { accessToken: finalAccessToken, refreshToken, data: data as StudentInfo };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || '학생 로그인 실패');
     }
@@ -200,7 +227,7 @@ const authSlice = createSlice({
         (action) => action.type.endsWith('/rejected'),
         (state, action: PayloadAction<string>) => {
           state.loading = false;
-          state.error = action.payload || '알 수 없는 에러가 발생했습니다.';
+          state.error = action.payload || '로그인 처리에 실패했습니다.';
         }
       );
   },
