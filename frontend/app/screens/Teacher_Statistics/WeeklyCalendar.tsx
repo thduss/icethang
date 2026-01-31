@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, Pressable, Modal } from 'react-native'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Picker } from '@react-native-picker/picker'
 
 interface WeeklyCalendarProps {
   visible: boolean
@@ -8,71 +9,108 @@ interface WeeklyCalendarProps {
 }
 
 const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토']
+const YEARS = Array.from({ length: 10 }, (_, i) => 2020 + i)
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 
 const CELL_SIZE = 40
-const COLUMN_COUNT = 7
-const GRID_WIDTH = CELL_SIZE * COLUMN_COUNT
+const GRID_WIDTH = CELL_SIZE * 7
 
-const WeeklyCalendar = ({
-  visible,
-  onClose,
-  onSelectDate,
-}: WeeklyCalendarProps) => {
+const isSameDay = (a: Date, b: Date) =>
+  a.toDateString() === b.toDateString()
 
+/** 선택 날짜 기준 월~금 계산 */
+const getWeekdaysFromDate = (date: Date) => {
+  const day = date.getDay()
+  const mondayOffset = day === 0 ? -6 : 1 - day
 
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const monday = new Date(date)
+  monday.setDate(date.getDate() + mondayOffset)
 
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+}
+
+const WeeklyCalendar = ({ visible, onClose, onSelectDate }: WeeklyCalendarProps) => {
+  const today = new Date()
+
+  const [year, setYear] = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth() + 1)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   const createCalendarDates = () => {
-    const year = currentDate.getFullYear()
-    const month = currentDate.getMonth()
-
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
+    const firstDay = new Date(year, month - 1, 1)
+    const lastDay = new Date(year, month, 0)
 
     const startPadding = firstDay.getDay()
     const totalDays = lastDay.getDate()
 
     const dates: (Date | null)[] = []
-
-    for (let i = 0; i < startPadding; i++) {
-      dates.push(null)
-    }
-
+    for (let i = 0; i < startPadding; i++) dates.push(null)
     for (let d = 1; d <= totalDays; d++) {
-      dates.push(new Date(year, month, d))
+      dates.push(new Date(year, month - 1, d))
     }
-
     return dates
   }
 
   const dates = createCalendarDates()
 
-  /** 월 이동 */
-  const changeMonth = (offset: number) => {
-    const next = new Date(currentDate)
-    next.setMonth(currentDate.getMonth() + offset)
-    setCurrentDate(next)
+  const selectedWeekdays = useMemo(
+    () => (selectedDate ? getWeekdaysFromDate(selectedDate) : []),
+    [selectedDate]
+  )
+
+  const moveMonth = (offset: number) => {
+    const next = new Date(year, month - 1 + offset, 1)
+    setYear(next.getFullYear())
+    setMonth(next.getMonth() + 1)
     setSelectedDate(null)
   }
 
+  useEffect(() => {
+    if (visible) {
+      setYear(today.getFullYear())
+      setMonth(today.getMonth() + 1)
+      setSelectedDate(null)
+    }
+  }, [visible])
+
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modal}>
 
-          {/* 헤더 (월 이동) */}
+          {/* 헤더 */}
           <View style={styles.header}>
-            <Pressable onPress={() => changeMonth(-1)}>
+            <Pressable onPress={() => moveMonth(-1)}>
               <Text style={styles.arrow}>{'<'}</Text>
             </Pressable>
 
-            <Text style={styles.monthText}>
-              {currentDate.getMonth() + 1}월 {currentDate.getFullYear()}
-            </Text>
+            <View style={styles.pickerRow}>
+              <Picker
+                selectedValue={year}
+                style={styles.picker}
+                onValueChange={(v) => setYear(Number(v))}
+              >
+                {YEARS.map((y) => (
+                  <Picker.Item key={y} label={`${y}년`} value={y} />
+                ))}
+              </Picker>
 
-            <Pressable onPress={() => changeMonth(1)}>
+              <Picker
+                selectedValue={month}
+                style={styles.picker}
+                onValueChange={(v) => setMonth(Number(v))}
+              >
+                {MONTHS.map((m) => (
+                  <Picker.Item key={m} label={`${m}월`} value={m} />
+                ))}
+              </Picker>
+            </View>
+
+            <Pressable onPress={() => moveMonth(1)}>
               <Text style={styles.arrow}>{'>'}</Text>
             </Pressable>
           </View>
@@ -80,9 +118,7 @@ const WeeklyCalendar = ({
           {/* 요일 */}
           <View style={styles.weekRow}>
             {WEEK_DAYS.map((day) => (
-              <Text key={day} style={styles.weekText}>
-                {day}
-              </Text>
+              <Text key={day} style={styles.weekText}>{day}</Text>
             ))}
           </View>
 
@@ -95,11 +131,18 @@ const WeeklyCalendar = ({
                   onPress={() => setSelectedDate(date)}
                   style={[
                     styles.dayBox,
-                    selectedDate?.toDateString() === date.toDateString() &&
-                    styles.selectedDay,
+                    selectedWeekdays.some(d => isSameDay(d, date)) && styles.weekHighlight,
+                    selectedDate && isSameDay(selectedDate, date) && styles.selectedDay,
                   ]}
                 >
-                  <Text>{date.getDate()}</Text>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      selectedDate && isSameDay(selectedDate, date) && styles.selectedDayText,
+                    ]}
+                  >
+                    {date.getDate()}
+                  </Text>
                 </Pressable>
               ) : (
                 <View key={index} style={styles.emptyBox} />
@@ -107,7 +150,7 @@ const WeeklyCalendar = ({
             )}
           </View>
 
-          {/* 버튼 영역 */}
+          {/* 하단 버튼 */}
           <View style={styles.footer}>
             <Pressable onPress={onClose} style={styles.cancelBtn}>
               <Text>취소</Text>
@@ -115,15 +158,8 @@ const WeeklyCalendar = ({
 
             <Pressable
               disabled={!selectedDate}
-              onPress={() => {
-                if (selectedDate) {
-                  onSelectDate(selectedDate)
-                }
-              }}
-              style={[
-                styles.applyBtn,
-                !selectedDate && styles.disabledBtn,
-              ]}
+              onPress={() => selectedDate && onSelectDate(selectedDate)}
+              style={[styles.applyBtn, !selectedDate && styles.disabledBtn]}
             >
               <Text style={styles.applyText}>적용</Text>
             </Pressable>
@@ -155,26 +191,27 @@ const styles = StyleSheet.create({
 
   header: {
     width: GRID_WIDTH,
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
 
-  arrow: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-
-  monthText: {
-    fontWeight: '700',
-  },
-
-  weekRow: {
-    width: GRID_WIDTH,
+  pickerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 
+  picker: {
+    width: 120,
+    height: 70,
+    justifyContent: 'center',
+  },
+
+  arrow: { fontSize: 18, fontWeight: '700' },
+  weekRow: { width: GRID_WIDTH, flexDirection: 'row' },
   weekText: {
     width: CELL_SIZE,
     height: CELL_SIZE,
@@ -199,8 +236,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
+  weekHighlight: {
+    backgroundColor: '#E8EDFF',
+  },
+
   selectedDay: {
     backgroundColor: '#4C6EF5',
+  },
+
+  dayText: {
+    fontSize: 14,
+    color: '#3A2E1F',
+  },
+
+  selectedDayText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 
   emptyBox: {
@@ -216,24 +267,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  cancelBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
+  cancelBtn: { paddingHorizontal: 12, paddingVertical: 8 },
   applyBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: '#4C6EF5',
     borderRadius: 8,
   },
-
-  applyText: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
-
-  disabledBtn: {
-    opacity: 0.4,
-  },
+  applyText: { color: '#FFF', fontWeight: '600' },
+  disabledBtn: { opacity: 0.4 },
 })
