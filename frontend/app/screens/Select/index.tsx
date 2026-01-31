@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-// [추가된 Import]
 import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
-import { restoreAuth } from '../../store/slices/authSlice'; // 경로 확인 필요
+import { restoreAuth, loginStudent } from '../../store/slices/authSlice';
+import { AppDispatch } from 'app/store/stores';
 
 const { width } = Dimensions.get('window');
 
@@ -20,7 +20,7 @@ const scale = cardWidth / 320;
 
 export default function SelectRoleScreen() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const handleTeacherStart = async () => {
     try {
@@ -50,6 +50,34 @@ export default function SelectRoleScreen() {
 
     // 조건 불만족 -> 로그인 화면으로 이동
     router.push('/screens/Teacher_Login');
+  };
+
+  const handleStudentStart = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const accessToken = await SecureStore.getItemAsync('accessToken');
+        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const userRole = await SecureStore.getItemAsync('userRole');
+
+        if (accessToken && refreshToken && userRole === 'student') {
+          console.log("🔄 [학생] 저장된 토큰으로 자동 로그인");
+          dispatch(restoreAuth({ accessToken, userRole: 'student' }));
+          router.replace('/screens/Student_Home');
+          return;
+        }
+      }
+    } catch (e) { console.log("토큰 확인 실패:", e); }
+
+    console.log("📡 [학생] 토큰 없음 -> UUID로 자동 로그인 시도 중...");
+    try {
+      await dispatch(loginStudent()).unwrap();
+
+      console.log("✅ [학생] UUID 로그인 성공!");
+      router.replace('/screens/Student_Home');
+    } catch (error) {
+      console.log("👋 [학생] 처음 방문이거나 기기 정보 없음 -> 로그인 화면으로 이동");
+      router.push('/screens/Student_Login');
+    }
   };
 
   return (
@@ -105,7 +133,7 @@ export default function SelectRoleScreen() {
           
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
-            onPress={() => router.push('/screens/Student_Login')}
+            onPress={handleStudentStart}
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { fontSize: 16 * scale }]}>학생으로 시작하기</Text>
