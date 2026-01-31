@@ -153,4 +153,8 @@ public class TokenProvider {
         }
         return false;
     }
+
+    public String getEmailFromToken(String token) {
+        return parseClaims(token).getSubject();
+    }
 }

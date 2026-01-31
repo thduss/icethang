@@ -4,6 +4,7 @@ import com.ssafy.icethang.domain.auth.dto.request.LoginRequest;
 import com.ssafy.icethang.domain.auth.dto.request.SignupRequest;
 import com.ssafy.icethang.domain.auth.dto.request.UpdateUserRequest;
 import com.ssafy.icethang.domain.auth.dto.response.TokenResponseDto;
+import com.ssafy.icethang.domain.auth.dto.response.UserResponse;
 import com.ssafy.icethang.domain.auth.entity.Auth;
 import com.ssafy.icethang.domain.auth.service.AuthService;
 import com.ssafy.icethang.domain.student.dto.request.StudentJoinRequest;
@@ -35,9 +36,9 @@ public class AuthController {
     }
     // 선생님 회원정보 조회
     @GetMapping("/me")
-    public ResponseEntity<Auth> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<UserResponse> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
         Auth auth = authService.getUser(userDetails.getUsername());
-        return ResponseEntity.ok(auth);
+        return ResponseEntity.ok(UserResponse.from(auth));
     }
     // 선생님 회원정보 수정
     @PatchMapping("/me")
