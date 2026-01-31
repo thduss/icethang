@@ -93,7 +93,7 @@ const StudentGrid = () => {
                 name: student.studentName,
                 number: String(student.studentNumber),
                 studentId: String(student.studentId),
-                groupId: String(selectedClassId),
+                classId: String(selectedClassId),
               },
             })
           }}

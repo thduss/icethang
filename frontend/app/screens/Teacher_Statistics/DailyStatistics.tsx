@@ -5,7 +5,7 @@ import { DailyStat } from 'app/store/slices/statisticsSlice'
 
 interface DailyStatisticsProps {
   date: string
-  data: DailyStat[]
+  data: any[]
   onBack: () => void
 }
 
