@@ -19,4 +19,6 @@ public interface StudyLogRepository extends JpaRepository<StudyLog, Long> {
     List<StudyLog> findByStudent_ClassGroup_IdAndStudent_Id(Long groupId, Long studentId);
 
     Optional<StudyLog> findTopByStudentOrderByCreatedAtDesc(Student student);
+
+    List<StudyLog> findAllByStudentOrderByCreatedAtDesc(Student student);
 }

@@ -2,17 +2,22 @@ package com.ssafy.icethang.domain.student.controller;
 
 import com.ssafy.icethang.domain.student.dto.request.StudentXpUpdateRequest;
 import com.ssafy.icethang.domain.student.dto.response.StudentXpResponse;
+import com.ssafy.icethang.domain.student.dto.response.StudyLogResponse;
+import com.ssafy.icethang.domain.student.service.StudentService;
 import com.ssafy.icethang.domain.student.service.StudentXpService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/classes")
 @RequiredArgsConstructor
 public class StudentXpController {
     private final StudentXpService studentXpService;
+    private final StudentService studentService;
 
     // 학생 경험치랑 레벨 조회
     @GetMapping("/{classId}/students/{studentId}/xp")
@@ -31,5 +36,14 @@ public class StudentXpController {
             @RequestBody StudentXpUpdateRequest request) {
         StudentXpResponse response = studentXpService.updateStudentExp(classId, studentId, request);
         return ResponseEntity.ok(response);
+    }
+
+    // 특정 학생의 학습 로그 목록 조회
+    @GetMapping("/{classId}/students/{studentId}/logs")
+    public ResponseEntity<List<StudyLogResponse>> getStudentLogs(
+            @PathVariable Long studentId) {
+
+        List<StudyLogResponse> logs = studentService.getStudentStudyLogs(studentId);
+        return ResponseEntity.ok(logs);
     }
 }
