@@ -1,15 +1,16 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native'
 import { useState, useEffect } from 'react'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { AppDispatch, RootState } from 'app/store/stores'
-import { 
-  fetchDailyStatistics, 
-  fetchWeeklyStatistics, 
-  fetchMonthlyStatistics, 
-  fetchSubjectStatistics 
+import {
+  fetchDailyStatistics,
+  fetchWeeklyStatistics,
+  fetchMonthlyStatistics,
+  fetchSubjectStatistics
 } from 'app/store/slices/statisticsSlice'
+import { getStudentDetail } from '../../services/studentService'
 
 import LeftSidebar from '../../components/Menu/LeftSidebar'
 import StatisticsHeader from '../../components/Menu/StatisticsHeader'
@@ -25,107 +26,184 @@ import ExpModal from './ExpModal'
 import SubjectStatistics from './SubjectStatistics'
 import DropdownCalendarModal from './DropdownCalendarModal'
 
+type StatisticsView = ViewType | 'daily'
+
+interface StudentDetail {
+  studentId: number
+  name: string
+  studentNumber: number
+  deviceUuid: string
+  currentXp: number
+  currentLevel: number
+}
+
+
 const index = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { name, number, groupId } = useLocalSearchParams<{
-    name: string;
-    number: string;
-    groupId: string;
-  }>();
+  const { studentId, classId } = useLocalSearchParams<{
+    studentId: string
+    classId: string
+  }>()
 
-  console.log('📍 현재 파라미터 상태:', { name, number, groupId });
-  
-  const { daily, weekly, monthly, subjects, loading } = useSelector((state: RootState) => state.statistics);
 
-  const now = new Date();
-  const [view, setView] = useState<ViewType | 'daily'>('monthly');
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  console.log('📍 현재 파라미터 상태:', { studentId, classId });
 
-  const [isExpModalVisible, setExpModalVisible] = useState(false);
-  const [calendarVisible, setCalendarVisible] = useState(false);
-  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [student, setStudent] = useState<StudentDetail | null>(null)
+  const [studentLoading, setStudentLoading] = useState(true)
+  const [studentError, setStudentError] = useState<string | null>(null)
 
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedWeek, setSelectedWeek] = useState<{ start: Date; end: Date } | null>(null);
+  const { daily, weekly, monthly, subjects } =
+    useSelector((state: RootState) => state.statistics)
 
-  const formatToYYYYMM = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
-  const formatToYYYYMMDD = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}${m}${d}`;
-  };
+
+  const [view, setView] = useState<StatisticsView>('monthly')
+  const [year, setYear] = useState(new Date().getFullYear())
+  const [month, setMonth] = useState(new Date().getMonth() + 1)
+
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedWeek, setSelectedWeek] = useState<{ start: Date; end: Date } | null>(null)
+
+  const [calendarVisible, setCalendarVisible] = useState(false)
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false)
+  const [isExpModalVisible, setExpModalVisible] = useState(false)
+
+
+  /** 학생 상세 조회 */
+  useEffect(() => {
+    const fetchStudent = async () => {
+      if (!studentId || !classId) return
+
+      console.log('📡 [학생 상세 조회 요청]', {
+        classId,
+        studentId,
+      })
+
+      try {
+        setStudentLoading(true)
+        const data = await getStudentDetail(Number(classId), Number(studentId))
+        console.log('✅ [학생 상세 조회 성공]', data)
+
+        setStudent(data)
+      } catch (e) {
+        console.error('❌ [학생 상세 조회 실패]', e)
+        setStudentError('학생 정보를 불러오지 못했습니다.')
+      } finally {
+        setStudentLoading(false)
+      }
+    }
+    fetchStudent()
+  }, [studentId, classId])
+
+
+  /** 통계 API */
+  const formatYYYYMM = (y: number, m: number) =>
+    `${y}-${String(m).padStart(2, '0')}`
+
+  const formatYYYYMMDD = (date: Date) =>
+    `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(
+      date.getDate()
+    ).padStart(2, '0')}`
 
   const getWeekFromDate = (date: Date) => {
-    const day = date.getDay();
-    const mondayOffset = day === 0 ? -6 : 1 - day;
-    const start = new Date(date);
-    start.setDate(date.getDate() + mondayOffset);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 4);
-    return { start, end };
-  };
+    const day = date.getDay()
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const start = new Date(date)
+    start.setDate(date.getDate() + mondayOffset)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 4)
+    return { start, end }
+  }
 
-  const handleBack = () => {
-    if (view === 'daily') setView('monthly');
-    else router.back();
-  };
 
-  const handleTabChange = (newView: ViewType) => setView(newView);
-
+  /** 월간 */
   useEffect(() => {
-    if (groupId && number) {
-      dispatch(fetchMonthlyStatistics({
-        groupId: Number(groupId),
-        studentId: Number(number),
-        month: formatToYYYYMM(year, month)
-      }));
+    if (studentId && classId) {
+      dispatch(
+        fetchMonthlyStatistics({
+          groupId: Number(classId),
+          studentId: Number(studentId),
+          month: formatYYYYMM(year, month),
+        })
+      )
     }
-  }, [year, month, groupId, number]);
+  }, [year, month, studentId, classId])
 
+  /** 주간 */
   useEffect(() => {
-    if (view === 'weekly' && !selectedWeek) setSelectedWeek(getWeekFromDate(now));
-    if (view === 'weekly' && selectedWeek && groupId && number) {
-      dispatch(fetchWeeklyStatistics({
-        groupId: Number(groupId),
-        studentId: Number(number),
-        startDate: formatToYYYYMMDD(selectedWeek.start)
-      }));
+    if (view === 'weekly' && !selectedWeek) {
+      setSelectedWeek(getWeekFromDate(new Date()))
     }
-  }, [view, selectedWeek, groupId, number]);
+    if (view === 'weekly' && selectedWeek) {
+      dispatch(
+        fetchWeeklyStatistics({
+          groupId: Number(classId),
+          studentId: Number(studentId),
+          startDate: formatYYYYMMDD(selectedWeek.start),
+        })
+      )
+    }
+  }, [view, selectedWeek])
 
+  /** 일간 */
   useEffect(() => {
-    if (view === 'daily' && selectedDate && groupId && number) {
-      dispatch(fetchDailyStatistics({
-        groupId: Number(groupId),
-        studentId: Number(number),
-        date: selectedDate
-      }));
+    if (view === 'daily' && selectedDate) {
+      dispatch(
+        fetchDailyStatistics({
+          groupId: Number(classId),
+          studentId: Number(studentId),
+          date: selectedDate,
+        })
+      )
     }
-  }, [view, selectedDate, groupId, number]);
+  }, [view, selectedDate])
 
+  /** 과목별 */
   useEffect(() => {
-    if (view === 'subject' && groupId && number) {
-      dispatch(fetchSubjectStatistics({
-        groupId: Number(groupId),
-        studentId: Number(number),
-        month: formatToYYYYMM(year, month)
-      }));
+    if (view === 'subject') {
+      dispatch(
+        fetchSubjectStatistics({
+          groupId: Number(classId),
+          studentId: Number(studentId),
+          month: formatYYYYMM(year, month),
+        })
+      )
     }
-  }, [view, year, month, groupId, number]);
+  }, [view, year, month])
+
+  /** ================= UI ================= */
+  if (studentLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+      </View>
+    )
+  }
+
+  if (studentError || !student) {
+    return (
+      <View style={styles.center}>
+        <Text>{studentError}</Text>
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
       <LeftSidebar />
 
       <View style={styles.content}>
-        <StatisticsHeader name={name} number={Number(number)} onBack={handleBack} />
+        <StatisticsHeader
+          name={student.name}
+          number={student.studentNumber}
+          onBack={() => (view === 'daily' ? setView('monthly') : router.back())}
+        />
 
-        <StatisticsTabs value={view === 'daily' ? 'monthly' : view} onChange={handleTabChange} />
+        <StatisticsTabs
+          value={view === 'daily' ? 'monthly' : view}
+          onChange={setView}
+        />
 
         <StatisticsBorder>
-          {/* 월간 보기 (히트맵) */}
           {view === 'monthly' && (
             <View style={styles.monthlyLayout}>
               <StatisticsFilter
@@ -140,8 +218,8 @@ const index = () => {
                 month={month}
                 data={monthly}
                 onSelectDate={(date) => {
-                  setSelectedDate(date.replace(/-/g, ''));
-                  setView('daily');
+                  setSelectedDate(date.replace(/-/g, ''))
+                  setView('daily')
                 }}
               />
               <StatisticsSummary
@@ -151,37 +229,40 @@ const index = () => {
             </View>
           )}
 
-          {/* 일간 상세 보기 */}
           {view === 'daily' && (
-            <DailyStatistics 
-              date={selectedDate} 
+            <DailyStatistics
+              date={selectedDate}
               data={daily}
-              onBack={() => setView('monthly')} 
+              onBack={() => setView('monthly')}
             />
           )}
 
-          {/* 주간 보기 */}
           {view === 'weekly' && (
-            <>
-              <WeeklyCalendar
-                visible={calendarVisible}
-                onClose={() => setCalendarVisible(false)}
-                onSelectDate={(date) => {
-                  setSelectedWeek(getWeekFromDate(date));
-                  setCalendarVisible(false);
-                }}
-              />
-              <WeeklyStatistics 
-                weekRange={selectedWeek} 
-                data={weekly}
-                onPressCalendar={() => setCalendarVisible(true)} 
-              />
-            </>
+            <WeeklyStatistics
+              weekRange={selectedWeek}
+              data={weekly}
+              onPressCalendar={() => setCalendarVisible(true)}
+            />
           )}
 
-          {/* 과목별 통계 */}
           {view === 'subject' && <SubjectStatistics data={subjects} />}
         </StatisticsBorder>
+
+        <ExpModal
+          visible={isExpModalVisible}
+          onClose={() => setExpModalVisible(false)}
+          studentName={student.name}
+        />
+
+        <WeeklyCalendar
+          visible={calendarVisible}
+          onClose={() => setCalendarVisible(false)}
+          onSelectDate={(date) => {
+            console.log('📅 주간 캘린더 선택 날짜:', date)
+            setSelectedWeek(getWeekFromDate(date))
+            setCalendarVisible(false)
+          }}
+        />
 
         <DropdownCalendarModal
           visible={calendarModalVisible}
@@ -189,28 +270,30 @@ const index = () => {
           initialMonth={month}
           onClose={() => setCalendarModalVisible(false)}
           onConfirm={(y, m) => {
-            setYear(y);
-            setMonth(m);
-            setCalendarModalVisible(false);
+            console.log('📅 선택된 연/월:', y, m)
+            setYear(y)
+            setMonth(m)
+            setCalendarModalVisible(false)
           }}
         />
-
-        <ExpModal visible={isExpModalVisible} onClose={() => setExpModalVisible(false)} studentName={name || "학생"} />
       </View>
     </View>
   )
 }
 
-// 수치 계산
-const calculateAvg = (data: any[]) => {
-  if (!data || data.length === 0) return 0;
-  return (data.reduce((a, b) => a + (b.averageFocusRate || 0), 0) / data.length).toFixed(1);
-};
+const calculateAvg = (data: any[]) =>
+  data.length === 0
+    ? 0
+    : (
+      data.reduce((sum, d) => sum + (d.averageFocusRate || 0), 0) /
+      data.length
+    ).toFixed(1)
 
 export default index
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', backgroundColor: '#F3EED4', flex: 1 },
+  container: { flex: 1, flexDirection: 'row', backgroundColor: '#F3EED4' },
   content: { flex: 1, padding: 16 },
   monthlyLayout: { flex: 1, justifyContent: 'space-between' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 })

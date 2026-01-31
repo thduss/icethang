@@ -103,7 +103,7 @@ export default function TeacherLoginScreen() {
     }
 
     try {
-      await dispatch(loginTeacher({ email, pw: password })).unwrap();
+      await dispatch(loginTeacher({ email, password })).unwrap();
       console.log("로그인 성공");
     } catch (err: any) {
       console.error("로그인 실패:", err);
