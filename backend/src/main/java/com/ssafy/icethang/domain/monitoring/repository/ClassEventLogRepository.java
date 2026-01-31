@@ -20,5 +20,5 @@ public interface ClassEventLogRepository extends JpaRepository<ClassEventLog, Lo
                                          @Param("start") LocalDateTime start,
                                          @Param("end") LocalDateTime end);
 
-    List<ClassEventLog> findAllByStudentAndStudyLogIsNullOrderByDetectedAtAsc(Student student);
+    List<ClassEventLog> findAllByStudentInAndStudyLogIsNullOrderByDetectedAtAsc(List<Student> students);
 }
