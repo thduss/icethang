@@ -7,6 +7,29 @@ export interface StudentItem {
   deviceUuid?: string
 }
 
+export interface StudentLogResponse {
+  logId: number
+  date: string
+  subject: string
+  classNo: number
+  earnedXp: number
+  focusRate: number | null
+  reason: string | null
+  startTime: string | null
+  endTime: string | null
+}
+
+export const getStudentLogs = async (
+  classId: number,
+  studentId: number
+): Promise<StudentLogResponse[]> => {
+  const response = await client.get(
+    `/classes/${classId}/students/${studentId}/logs`
+  )
+  return Array.isArray(response.data) ? response.data : []
+}
+
+
 export const getStudentsByClass = async (
   classId: number
 ): Promise<StudentItem[]> => {
