@@ -139,7 +139,7 @@ public class ClassSessionService {
                 }else {
                     log.info("      Pass (이미 비집중 상태): {} - {}", type, time);
                 }
-            } else if (event.getEventType() == AlertType.FOCUS) {
+            } else if (event.getEventType() == AlertType.FOCUS || event.getEventType() == AlertType.RESTROOM || event.getEventType() == AlertType.ACTIVITY) {
                 if (lastLossStart != null) {
                     long duration = Duration.between(lastLossStart, time).getSeconds();
                     lossSeconds += duration;
