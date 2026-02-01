@@ -1,50 +1,49 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
-import { Student } from './types';
+import { Student } from '../../store/slices/lessonSlice';
 
 interface NotificationBannerProps {
   leftStudents: Student[];
 }
 
 export const NotificationBanner = ({ leftStudents }: NotificationBannerProps) => {
-  // 이탈 학생이 없으면 아예 렌더링하지 않음
+  
+  // 학생이 없으면 숨김
   if (leftStudents.length === 0) return null;
 
   return (
     <View style={styles.wrapper}>
       
-      {/* 다람쥐 캐릭터 예정 */}
       <View style={styles.characterContainer}>
         <Image 
-          source={{ uri: 'https://cdn-icons-png.flaticon.com/512/235/235359.png' }} 
+          source={require('../../../assets/Teacher_Notification.png')} 
           style={styles.characterImage}
           resizeMode="contain"
         />
       </View>
 
-      {/* 메세지 박스 */}
       <View style={styles.messageBackground}>
         <View style={styles.dashedBorder}>
-
           <ScrollView 
             style={styles.scrollArea}
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={true}
           >
-            {leftStudents.map((student, index) => (
-              <View key={student.id} style={[
-                styles.alertRow, 
-                index === leftStudents.length - 1 && { borderBottomWidth: 0 } 
-              ]}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <Text style={styles.messageText}>
-                  <Text style={styles.highlightText}>{student.name} 학생</Text>
-                  이 수업에서 이탈했습니다.
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
+            {leftStudents.map((student) => {
+              const isLeft = student.status === 'left';
+              const message = isLeft ? '수업에서 이탈했습니다.' : '딴짓 중입니다!';
+              const icon = isLeft ? '🏃' : '👀';
 
+              return (
+                <View key={student.id} style={styles.messageRow}>
+                  <Text style={styles.messageText}>
+                    <Text style={styles.boldText}>{icon} {student.name}</Text>
+                    이 {message}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
         </View>
       </View>
     </View>
@@ -59,22 +58,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 100,
   },
+
   characterContainer: {
-    zIndex: 2,
-    marginRight: -25,
-    elevation: 4, 
+    marginRight: 5,
     alignItems: 'center',
+    justifyContent: 'center',
   },
+
   characterImage: {
-    width: 75,
-    height: 75,
+    width: 90,
+    height: 90,
   },
+
   messageBackground: {
     flex: 1,
     height: '100%', 
     backgroundColor: '#FDFBF8',
     borderRadius: 15,
     padding: 6,
+    
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -88,34 +90,22 @@ const styles = StyleSheet.create({
     borderColor: '#D7C8B6',
     borderStyle: 'dashed',
     borderRadius: 10,
-    paddingLeft: 30,
-    paddingRight: 10,
-    paddingVertical: 5,
+    padding: 10,
+    justifyContent: 'center',
   },
-
+  
   scrollArea: {
     flex: 1,
   },
-  alertRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-  },
-  
-  warningIcon: {
-    fontSize: 16,
-    marginRight: 6,
+  messageRow: {
+    marginBottom: 4,
   },
   messageText: {
     fontSize: 14,
     color: '#5D4037',
-    fontWeight: '500',
   },
-  highlightText: {
+  boldText: {
     fontWeight: 'bold',
-    color: '#D32F2F',
-    fontSize: 15,
-  }
+    color: '#8D7B68',
+  },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Image } from 'react-native';
-import { Student } from './types';
+import { Student } from '../../store/slices/lessonSlice'; 
 
 interface StudentListProps {
   data: Student[];
@@ -20,29 +20,58 @@ export const StudentList = ({ data }: StudentListProps) => {
 
   const renderItem = ({ item }: { item: Student }) => {
     const isLeft = item.status === 'left';
-    const rowBackgroundColor = isLeft ? '#FFF5F5' : 'transparent';
-    const statusColor = isLeft ? '#D32F2F' : '#7FA864';
-    const statusText = isLeft ? '이탈' : '참여중';
-    const statusIcon = isLeft ? '⚠️' : '✅';
+    const isUnfocus = item.status === 'unfocus';
+
+    // 배경색 설정 (이탈: 빨강 / 딴짓: 노랑 / 기본: 투명)
+    let rowBackgroundColor = 'transparent';
+    if (isLeft) rowBackgroundColor = '#FFF5F5';
+    else if (isUnfocus) rowBackgroundColor = '#FFFDE7';
+
+    let statusText = '참여중';
+    let statusColor = '#7FA864';
+    let statusIcon = '✅';
+    let displayCount = item.warningCount;
+
+    if (isLeft) {
+      statusText = '이탈';
+      statusColor = '#D32F2F';
+      statusIcon = '🏃';
+      displayCount = item.awayCount;
+    } else if (isUnfocus) {
+      statusText = '딴짓';
+      statusColor = '#F57C00';
+      statusIcon = '⚠️';
+      displayCount = item.warningCount;
+    }
 
     return (
-      // [수정] TouchableOpacity -> View 변경 (클릭 상호작용 제거)
       <View style={[styles.row, { backgroundColor: rowBackgroundColor }]}>
-        <Text style={[styles.cellText, { flex: 0.8, fontWeight: 'bold' }]}>{item.number}</Text>
+        {/* 번호 */}
+        <Text style={[styles.cellText, { flex: 0.8, fontWeight: 'bold' }]}>
+            {item.studentNumber} 
+        </Text>
         
+        {/* 이름 & 아바타 */}
         <View style={[styles.nameContainer, { flex: 2 }]}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <Image 
+            source={require('../../../assets/Teacher_ChildManage.png')} 
+            style={styles.avatar} 
+          />
+          
           <Text style={styles.nameText}>{item.name}</Text>
         </View>
 
+        {/* 참여 시간 */}
         <Text style={[styles.cellText, { flex: 1.5 }]}>{item.time}</Text>
 
+        {/* 상태 아이콘 & 텍스트 */}
         <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
            <Text style={{ marginRight: 4, fontSize: 12 }}>{statusIcon}</Text>
            <Text style={{ color: statusColor, fontWeight: 'bold', fontSize: 14 }}>{statusText}</Text>
         </View>
 
-        <Text style={[styles.cellText, { flex: 1 }]}>{item.warningCount}</Text>
+        {/* 누적 횟수 (상태에 따라 이탈횟수 or 딴짓횟수) */}
+        <Text style={[styles.cellText, { flex: 1 }]}>{displayCount}회</Text>
       </View>
     );
   };
@@ -52,7 +81,7 @@ export const StudentList = ({ data }: StudentListProps) => {
       <FlatList
         data={data}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()} 
         ListHeaderComponent={renderHeader}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
@@ -60,7 +89,6 @@ export const StudentList = ({ data }: StudentListProps) => {
   );
 };
 
-// 스타일은 이전과 동일
 const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
@@ -105,12 +133,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 20,
   },
+
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
     marginRight: 10,
-    backgroundColor: '#ddd',
+
   },
   nameText: {
     fontSize: 15,

@@ -1,31 +1,118 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, StatusBar, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, StatusBar, LayoutAnimation, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router'; 
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../../store/stores';
+import * as SecureStore from 'expo-secure-store';
+
 import { Header } from './Header';
 import { NotificationBanner } from './NotificationBanner';
 import { StudentList } from './StudentList';
-import { Student } from './types';
 
-const App = () => {
-  // [테스트용 데이터] 
-  // 이탈 학생 4명, 전체 학생 10명
-  const [students, setStudents] = useState<Student[]>([
-    { id: '1', number: 1, name: '김도윤', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940403.png', time: '00:24', status: 'participating', warningCount: 0 },
-    { id: '2', number: 2, name: '박서준', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940401.png', time: '00:12', status: 'left', warningCount: 1 }, // 이탈 1
-    { id: '3', number: 3, name: '최지민', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940404.png', time: '00:24', status: 'participating', warningCount: 0 },
-    { id: '4', number: 4, name: '이민호', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940400.png', time: '00:11', status: 'left', warningCount: 2 }, // 이탈 2
-    { id: '5', number: 5, name: '정하윤', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940405.png', time: '00:05', status: 'left', warningCount: 1 }, // 이탈 3
-    { id: '6', number: 6, name: '강동원', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940402.png', time: '00:02', status: 'left', warningCount: 3 }, // 이탈 4 (여기서부터 스크롤 생김)
-    { id: '7', number: 7, name: '손흥민', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940401.png', time: '00:24', status: 'participating', warningCount: 0 },
-    { id: '8', number: 8, name: '김연아', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940404.png', time: '00:24', status: 'participating', warningCount: 0 },
-    { id: '9', number: 9, name: '아이유', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940403.png', time: '00:24', status: 'participating', warningCount: 0 },
-    { id: '10', number: 10, name: '유재석', avatar: 'https://cdn-icons-png.flaticon.com/512/3940/3940400.png', time: '00:24', status: 'participating', warningCount: 0 },
-  ]);
+import { stompClient, connectSocket, disconnectSocket, changeClassMode } from '../../utils/socket';
+import { 
+  updateStudentAlert, 
+  setClientClassMode, 
+  joinStudent, 
+  Student 
+} from '../../store/slices/lessonSlice';
+import { endClassSession } from '../../api/lesson';
 
-  const leftStudents = students.filter(s => s.status === 'left');
+const TeacherLessonScreen = () => {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const params = useLocalSearchParams();
+  
+  const classIdParam = params.classId ? Number(params.classId) : 0;
+  const classId = classIdParam === 0 ? 1 : classIdParam; 
+  const className = params.className ? String(params.className) : "1학년 1반";
 
-  const handleEndClass = () => {
-    console.log("수업 종료");
+  const { participantCount, alertList, studentList, classMode, startTime } = useSelector((state: RootState) => state.lesson);
+  const token = useSelector((state: RootState) => state.auth?.token);
+
+  useEffect(() => {
+    const initLesson = async () => {
+      if (!classId) return;
+
+      let activeToken = token;
+      if (!activeToken) {
+        activeToken = await SecureStore.getItemAsync('accessToken');
+      }
+
+      if (activeToken) {
+        console.log("🚀 [수업 대기] 선생님 접속 완료. 학생 입장을 기다립니다...");
+
+        // 실시간 소켓 연결
+        if (!stompClient.connected) {
+          connectSocket(activeToken);
+        }
+
+        stompClient.onConnect = () => {
+          console.log(`✅ [반 ${classId}] 실시간 소켓 구독 시작`);
+
+          // 통합 알림 구독 (입장, 딴짓, 이탈)
+          stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
+            const body = JSON.parse(msg.body);
+            console.log('📦 소켓 수신:', body.type, body);
+
+            // 입장 (ENTER) -> 리스트에 추가
+            if (body.type === 'ENTER') {
+              console.log(`👋 학생 입장 확인: ${body.studentName}`);
+              dispatch(joinStudent(body));
+            } 
+            // 상태 변경 (UNFOCUS, AWAY, FOCUS)
+            else if (['FOCUS', 'UNFOCUS', 'AWAY'].includes(body.type)) {
+              dispatch(updateStudentAlert(body));
+            }
+          });
+
+          // 모드 동기화
+          stompClient.subscribe(`/topic/class/${classId}/mode`, (msg) => {
+             const body = JSON.parse(msg.body);
+             dispatch(setClientClassMode(body.mode));
+          });
+        };
+      }
+    };
+
+    initLesson();
+
+    // 나갈 때 소켓 끊기
+    return () => { disconnectSocket(); };
+  }, [classId, token, dispatch]);
+
+
+  const handleToggleMode = () => {
+    const nextMode = classMode === 'NORMAL' ? 'DIGITAL' : 'NORMAL';
+    changeClassMode(classId, nextMode);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    dispatch(setClientClassMode(nextMode));
+  };
+
+  // 수업 종료 핸들러
+  const handleEndClass = async () => {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const endTimeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+
+    const reportData = {
+      date: dateStr,
+      startTime: startTime || "09:00:00",
+      endTime: endTimeStr,
+      subject: "수학",
+      classNo: 1
+    };
+
+    const success = await endClassSession(classId, reportData);
+    
+    if(success) {
+      console.log("✅ 수업 리포트 저장 성공");
+    } else {
+      Alert.alert("알림", "리포트 저장 실패. (수업은 종료됩니다)");
+    }
+
+    router.back(); 
   };
 
   return (
@@ -34,20 +121,20 @@ const App = () => {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         
         <Header 
-          className="1-3" 
-          participantCount={students.filter(s => s.status === 'participating').length} 
+          classId={classId}
+          className={className} 
+          participantCount={participantCount} 
+          currentMode={classMode}       
+          onToggleMode={handleToggleMode}
           onEndClass={handleEndClass} 
         />
 
-        {/* NotificationBanner에 이탈 학생 목록 전체 전달
-          이탈자가 0명이면 내부에서 렌더링 안 함
-        */}
         <View style={styles.bannerWrapper}>
-           <NotificationBanner leftStudents={leftStudents} />
+           <NotificationBanner leftStudents={alertList} />
         </View>
 
-        <View style={styles.contentArea}>
-          <StudentList data={students} />
+        <View style={styles.listWrapper}>
+          <StudentList data={studentList} />
         </View>
 
       </SafeAreaView>
@@ -56,18 +143,9 @@ const App = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F2EBE3',
-  },
-  bannerWrapper: {
-    marginTop: 10,
-    zIndex: 1,
-  },
-  contentArea: {
-    flex: 1,
-    paddingHorizontal: 20,
-  }
+  container: { flex: 1, backgroundColor: '#F3EED4' },
+  bannerWrapper: { paddingHorizontal: 16, marginBottom: 8 },
+  listWrapper: { flex: 1, paddingHorizontal: 16 },
 });
 
-export default App;
+export default TeacherLessonScreen;
