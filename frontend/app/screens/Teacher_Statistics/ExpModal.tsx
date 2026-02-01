@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View, Modal, TouchableOpacity, TextInput, ScrollView } from "react-native";
-import { Star, X, ChevronDown, AlignJustify } from 'lucide-react-native';
+import { Star, AlignJustify } from 'lucide-react-native';
 
 interface ExpModalProps {
-    visible: boolean
-    onClose: () => void
-    studentName: string
+  visible: boolean
+  onClose: () => void
+  studentName: string
+  level?: number
+  xp?: number
+  reason?: string
 }
 
 const historyData = [
@@ -15,114 +18,115 @@ const historyData = [
   { id: 4, date: '10월 22일, 오후 2:00', subject: '수학', desc: '퀴즈 만점 | +50 경험치 (자동)' },
 ]
 
-const ExpModal = ({ visible, onClose, studentName }: ExpModalProps) => {
-    const [amount, setAmount] = useState('')
-    const [reason, setReason] = useState('')
+const ExpModal = ({ visible, onClose, studentName, level = 0, xp = 0, reason }: ExpModalProps) => {
+  const [amount, setAmount] = useState('')
+  const [inputReason, setInputReason] = useState('')
 
-    // 테스트용
-    const currentExp = 2450
-    const maxExp = 3000
-    const progressPercent = (currentExp / maxExp) * 100
+  // 테스트용
+  const maxExp = 3000
+  const progressPercent = Math.min((xp / maxExp) * 100, 100)
 
-    return (
-        <Modal
-            animationType="fade"
-            transparent={true}
-            visible={visible}
-            onRequestClose={onClose}
-        >
-            <View style={styles.overlay}>
-                <View style={styles.modalContainer}>
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
 
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>경험치 관리</Text>
-                        <Star size={16} color="#FFF" style={{ position: 'absolute', right: 15 }} fill='#FFF' />
-                        <Star size={16} color="#FFF" style={{ position: 'absolute', right: 15 }} fill='#FFF' />
-                    </View>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>경험치 관리</Text>
+            <Star size={16} color="#FFF" fill="#FFF" />
+          </View>
 
-                    <View style={styles.contentBody}>
-                        <View style={styles.leftPanel}>
-                            <View style={styles.studentBadge}>
-                                <Text style={styles.studentText}>학생 : {studentName} | 5레벨</Text>
-                            </View>
-                            <View style={styles.formBox}>
-                                <Text style={styles.formLabel}>관리자 작업: 경험치 부여</Text>
+          <View style={styles.contentBody}>
+            <View style={styles.leftPanel}>
+              <View style={styles.studentBadge}>
+                <Text style={styles.studentText}>
+                  학생 : {studentName} | Lv.{level}
+                </Text>
+              </View>
 
-                                <View style={styles.inputRow}>
-                                    <Text style={styles.inputLabel}>경험치 :</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="경험치를 입력하세요"
-                                            value={amount}
-                                            onChangeText={setAmount}
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-                                </View>
+              <View style={styles.formBox}>
+                <Text style={styles.formLabel}>관리자 작업: 경험치 부여</Text>
 
-                                <View style={styles.inputRow}>
-                                    <Text style={styles.inputLabel}>이유 :</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder="사유를 입력하세요"
-                                            value={reason}
-                                            onChangeText={setReason}
-                                        />
-                                    </View>
-                                </View>
-
-                                <View style={styles.formActions}>
-                                    <TouchableOpacity style={styles.grantButton}>
-                                        <Text style={styles.grantButtonText}>경험치 부여</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View> 
-                        </View>
-                        <View style={styles.rightPanel}>
-                            <View style={styles.progressBarContainer}>
-                                <View style={styles.progressBarTracker}>
-                                    <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                                    <Text style={styles.progressText}>{currentExp} / {maxExp} 경험치</Text>
-                                </View>
-                                <Star size={20} color="#7FA864" fill="#7FA864" style={{ marginLeft: 5 }} />
-                            </View>
-
-                            <View style={styles.historyContainer}>
-                                <View style={styles.historyHeader}>
-                                <Text style={styles.historyTitle}>경험치 기록</Text>
-                                <AlignJustify size={16} color="#8D7B68" />
-                                </View>
-                                
-                                <ScrollView style={styles.historyList} nestedScrollEnabled={true}>
-                                {historyData.map((item, index) => (
-                                    <View key={item.id} style={[
-                                    styles.historyItem,
-                                    index === historyData.length - 1 && { borderBottomWidth: 0 }
-                                    ]}>
-                                    <Text style={styles.historyDate}>{item.date} | {item.subject}</Text>
-                                    <Text style={styles.historyDesc}>{item.desc}</Text>
-                                    </View>
-                                ))}
-                                </ScrollView>
-                            </View>
-
-                        </View>
-                    </View>
-                    
-                    <View style={styles.footer}>
-                        <TouchableOpacity style={[styles.footerButton, styles.cancelButton]} onPress={onClose}>
-                            <Text style={styles.footerButtonText}>취소</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.footerButton, styles.confirmButton]} onPress={onClose}>
-                            <Text style={styles.footerButtonText}>확인</Text>
-                        </TouchableOpacity>
-                    </View>
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputLabel}>경험치 :</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="경험치를 입력하세요"
+                      value={amount}
+                      onChangeText={setAmount}
+                      keyboardType="numeric"
+                    />
+                  </View>
                 </View>
+
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputLabel}>이유 :</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="사유를 입력하세요"
+                      value={inputReason}
+                      onChangeText={setInputReason}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formActions}>
+                  <TouchableOpacity style={styles.grantButton}>
+                    <Text style={styles.grantButtonText}>경험치 부여</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-        </Modal>
-    )
+
+            <View style={styles.rightPanel}>
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarTracker}>
+                  <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                  <Text style={styles.progressText}>{xp} / {maxExp} 경험치</Text>
+                </View>
+                <Star size={20} color="#7FA864" fill="#7FA864" style={{ marginLeft: 5 }} />
+              </View>
+
+              <View style={styles.historyContainer}>
+                <View style={styles.historyHeader}>
+                  <Text style={styles.historyTitle}>경험치 기록</Text>
+                  <AlignJustify size={16} color="#8D7B68" />
+                </View>
+
+                <ScrollView style={styles.historyList} nestedScrollEnabled={true}>
+                  {historyData.map((item, index) => (
+                    <View key={item.id} style={styles.historyItem}>
+                      <Text style={styles.historyDate}>
+                        {item.date} | {item.subject}
+                      </Text>
+                      <Text style={styles.historyDesc}>{item.desc}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          </View>
+
+
+          <View style={styles.footer}>
+            <TouchableOpacity style={[styles.footerButton, styles.cancelButton]} onPress={onClose}>
+              <Text style={styles.footerButtonText}>취소</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.footerButton, styles.confirmButton]} onPress={onClose}>
+              <Text style={styles.footerButtonText}>확인</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View >
+    </Modal >
+  )
 }
 
 export default ExpModal
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 10,
   },
-  
+
   // 헤더
   header: {
     backgroundColor: '#8D7B68',
