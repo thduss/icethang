@@ -120,6 +120,54 @@ export const loginTeacher = createAsyncThunk<AuthResponse<TeacherInfo>, { email:
   }
 );
 
+export const loginTeacherKakao = createAsyncThunk<AuthResponse<TeacherInfo>, { kakaoAccessToken: string }>(
+  'auth/loginTeacherKakao',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/kakao', {
+        accessToken: payload.kakaoAccessToken,
+      });
+
+      const accessToken = response.data.accessToken;
+      const refreshToken = response.data.refreshToken;
+      const data = response.data.data || response.data;
+
+      if (Platform.OS !== 'web' && accessToken) {
+        await SecureStore.setItemAsync('accessToken', accessToken);
+        if (refreshToken) await SecureStore.setItemAsync('refreshToken', refreshToken);
+        await SecureStore.setItemAsync('userRole', 'teacher');
+      }
+
+      return { accessToken, refreshToken, data: data as TeacherInfo };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || '카카오 로그인 실패');
+    }
+  }
+);
+
+export const loginTeacherNaver = createAsyncThunk<AuthResponse<TeacherInfo>, { naverAccessToken: string }>(
+  'auth/loginTeacherNaver',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/naver', {
+        accessToken: payload.naverAccessToken,
+      });
+
+      const { accessToken, refreshToken } = response.data;
+      const data = response.data.data || response.data;
+
+      if (Platform.OS !== 'web' && accessToken) {
+        await SecureStore.setItemAsync('accessToken', accessToken);
+        if (refreshToken) await SecureStore.setItemAsync('refreshToken', refreshToken);
+        await SecureStore.setItemAsync('userRole', 'teacher');
+      }
+      return { accessToken, refreshToken, data: data as TeacherInfo };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || '네이버 로그인 실패');
+    }
+  }
+);
+
 export const joinStudent = createAsyncThunk<AuthResponse<StudentInfo>, { code: string; name: string; number: number }>(
   'auth/joinStudent',
   async (payload, { rejectWithValue }) => {
@@ -205,7 +253,7 @@ const authSlice = createSlice({
         }
       )
       .addMatcher(
-        isAnyOf(joinTeacher.fulfilled, loginTeacher.fulfilled),
+        isAnyOf(joinTeacher.fulfilled, loginTeacher.fulfilled, loginTeacherKakao.fulfilled, loginTeacherNaver.fulfilled),
         (state, action) => {
           state.loading = false;
           state.isLoggedIn = true;
