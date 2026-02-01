@@ -1,0 +1,19 @@
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const SOCKET_URL = BASE_URL?.replace('http', 'ws') + '/ws/websocket';
+
+export const SOCKET_CONFIG = {
+  BROKER_URL: SOCKET_URL,
+
+  PUBLISH: {
+    ALERT: "/app/alert", 
+  },
+
+  SUBSCRIBE: {
+    CLASS_TOPIC: (classId: string) => `/topic/class/${classId}`, 
+    MODE_STATUS: (classId: string) => `/topic/class/${classId}/mode`, 
+    STUDENT_COUNT: (classId: string) => `/topic/class/${classId}/count`, 
+  },
+
+  RECONNECT_DELAY: 5000,
+  HEARTBEAT: 4000,
+};
