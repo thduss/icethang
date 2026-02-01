@@ -20,6 +20,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -81,6 +83,16 @@ public class AuthController {
         cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
 
         return ResponseEntity.ok(tokenDto);
+    }
+
+    // 선생님 카카오 로그인
+    @PostMapping("/kakao")
+    public ResponseEntity<TokenResponseDto> kakaoLoginFromApp(@RequestBody Map<String, String> request) {
+        String kakaoAccessToken = request.get("accessToken");
+
+        // 2. 서비스에 넘겨서 모든 처리(카카오 확인 + DB저장 + 우리 토큰 생성)를 시킴
+        TokenResponseDto response = authService.loginWithKakao(kakaoAccessToken);
+        return ResponseEntity.ok(response);
     }
 
     // 토큰 재발급
