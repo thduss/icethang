@@ -11,7 +11,7 @@ const itemData: Item[] = [
   { id: 2, name: '숲길', imageActive: require('./background1.png'), imageInactive: require('./jungle.jpg'), category: 'BACKGROUND' },
   { id: 3, name: '우주', imageActive: require('./background2.png'), imageInactive: require('./universe.jpg'), category: 'BACKGROUND' },
   { id: 4, name: '바다', imageActive: require('./background4.png'), imageInactive: require('./sea.jpg'), category: 'BACKGROUND' },
-  { id: 5, name: '강아지', imageActive: require('../characters/1.gif'), imageInactive: require('./1.png'), category: 'CHARACTER' },
+  { id: 5, name: '강아지', imageActive: require('../characters/1.gif'), imageInactive: require('../characters/1.png'), category: 'CHARACTER' },
   { id: 6, name: '오토바이', imageActive: require('../characters/2.png'), imageInactive: require('./city.jpg'), category: 'CHARACTER' },
   { id: 7, name: '트럭', imageActive: require('../characters/3.png'), imageInactive: require('./city.jpg'), category: 'CHARACTER' },
   { id: 8, name: '배', imageActive: require('../characters/4.png'), imageInactive: require('./city.jpg'), category: 'CHARACTER' },
