@@ -10,7 +10,7 @@ import {
   fetchMonthlyStatistics,
   fetchSubjectStatistics
 } from 'app/store/slices/statisticsSlice'
-import { getStudentDetail } from '../../services/studentService'
+import { getStudentDetail, getStudentXp, StudentXpResponse } from '../../services/studentService'
 
 import LeftSidebar from '../../components/Menu/LeftSidebar'
 import StatisticsHeader from '../../components/Menu/StatisticsHeader'
@@ -28,13 +28,11 @@ import DropdownCalendarModal from './DropdownCalendarModal'
 
 type StatisticsView = ViewType | 'daily'
 
-interface StudentDetail {
+interface StudentBasic {
   studentId: number
   name: string
   studentNumber: number
   deviceUuid: string
-  currentXp: number
-  currentLevel: number
 }
 
 
@@ -48,9 +46,11 @@ const index = () => {
 
   console.log('📍 현재 파라미터 상태:', { studentId, classId });
 
-  const [student, setStudent] = useState<StudentDetail | null>(null)
+  const [student, setStudent] = useState<StudentBasic | null>(null)
   const [studentLoading, setStudentLoading] = useState(true)
   const [studentError, setStudentError] = useState<string | null>(null)
+
+  const [xpInfo, setXpInfo] = useState<StudentXpResponse | null>(null)
 
   const { daily, weekly, monthly, subjects } =
     useSelector((state: RootState) => state.statistics)
@@ -92,6 +92,23 @@ const index = () => {
       }
     }
     fetchStudent()
+  }, [studentId, classId])
+
+
+  /** XP / 레벨 조회 */
+  useEffect(() => {
+    const fetchXp = async () => {
+      if (!studentId || !classId) return
+      try {
+        const data = await getStudentXp(Number(classId), Number(studentId))
+        console.log('🎯 학생 XP 조회 응답:', data)
+        setXpInfo(data)
+      } catch (e) {
+        console.error('❌ XP 조회 실패', e)
+      }
+    }
+
+    fetchXp()
   }, [studentId, classId])
 
 
@@ -252,13 +269,15 @@ const index = () => {
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
           studentName={student.name}
+          level={xpInfo?.currentLevel}
+          xp={xpInfo?.currentXp}
+          reason={xpInfo?.reason}
         />
 
         <WeeklyCalendar
           visible={calendarVisible}
           onClose={() => setCalendarVisible(false)}
           onSelectDate={(date) => {
-            console.log('📅 주간 캘린더 선택 날짜:', date)
             setSelectedWeek(getWeekFromDate(date))
             setCalendarVisible(false)
           }}
