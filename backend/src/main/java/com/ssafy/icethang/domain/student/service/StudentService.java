@@ -16,12 +16,14 @@ import com.ssafy.icethang.domain.theme.repository.ThemeRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import com.ssafy.icethang.global.security.UserPrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -90,9 +92,13 @@ public class StudentService {
 
     // 기기번호로 자동 로그인
     public TokenResponseDto autoLogin(StudentLoginRequest request) {
+        // UUID가 null인지 확인
+        if (request.getDeviceUuid() == null || request.getDeviceUuid().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "기기 식별 번호가 누락되었습니다.");
+        }
         // 기기로 학생 찾기
         Student student = studentRepository.findByDeviceUuid(request.getDeviceUuid())
-                .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 기기입니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 기기를 찾을 수 없어요!"));
 
         ClassGroup classGroup = student.getClassGroup();
         if (classGroup == null) {
