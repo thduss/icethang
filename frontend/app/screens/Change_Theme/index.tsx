@@ -1,23 +1,18 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ImageBackground, ScrollView, Dimensions } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux'; 
+import { useDispatch, useSelector } from 'react-redux';
 import { useAppTheme } from '../../context/ThemeContext';
 import ClassProgressBar from '../../components/ClassProgressBar';
 import { RootState, AppDispatch } from '../../store/stores';
-import { 
-  setEquippedCharacter, 
-  setEquippedBackground, 
-  fetchAllThemes, 
-  equipTheme 
-} from '../../store/slices/themeSlice'; 
-import itemData from '../../../assets/themes/itemData'
+import { fetchAllThemes, equipTheme } from '../../store/slices/themeSlice';
 
 const background = require('../../../assets/theme_background.png');
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const PANEL_MARGIN = 30; 
-const GAP = 12; 
-const VISIBLE_ITEMS = 4; 
+const PANEL_MARGIN = 30;
+const GAP = 12;
+const VISIBLE_ITEMS = 4;
 
 const CONTAINER_INNER_WIDTH = SCREEN_WIDTH - (PANEL_MARGIN * 2) - 100;
 const CARD_WIDTH = Math.floor((CONTAINER_INNER_WIDTH - (GAP * (VISIBLE_ITEMS - 1))) / VISIBLE_ITEMS);
@@ -28,23 +23,36 @@ type ThemeType = "blue" | "jungle" | "universe" | "city" | "sea";
 export default function ReusableGridScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { setTheme } = useAppTheme();
-  const scrollRef = useRef<ScrollView>(null); 
-  const [currentOffset, setCurrentOffset] = useState(0); 
-  
-  const { equippedCharacterId, equippedBackgroundId } = useSelector(
-    (state: RootState) => state.theme
-  );
+  const scrollRef = useRef<ScrollView>(null);
 
   const [activeTab, setActiveTab] = useState<'theme' | 'character'>('character');
+  const [currentOffset, setCurrentOffset] = useState(0);
+
+  const {
+    myCharacters,
+    myBackgrounds,
+    equippedCharacterId,
+    equippedBackgroundId
+  } = useSelector((state: RootState) => state.theme);
+
+
+  const studentId = useSelector(
+    (state: RootState) => state.auth.studentData?.studentId
+  );
 
   useEffect(() => {
-    dispatch(fetchAllThemes());
-  }, [dispatch]);
+    if (studentId) {
+      dispatch(fetchAllThemes(studentId));
+    }
+  }, [dispatch, studentId]);
+
 
   const currentItems = useMemo(() => {
-    const category = activeTab === 'theme' ? 'BACKGROUND' : 'CHARACTER';
-    return itemData.filter(item => item.category === category);
-  }, [activeTab]);
+    if (activeTab === 'character') {
+      return myCharacters ?? [];
+    }
+    return myBackgrounds ?? [];
+  }, [activeTab, myCharacters, myBackgrounds]);
 
   const maxOffset = useMemo(() => {
     const totalItemsWidth = (currentItems.length * CARD_WIDTH) + ((currentItems.length - 1) * GAP);
@@ -56,33 +64,39 @@ export default function ReusableGridScreen() {
   const isRightDisabled = currentOffset >= maxOffset - 5;
 
   const moveScroll = (direction: 'left' | 'right') => {
-    let nextOffset = direction === 'left' ? currentOffset - PAGE_WIDTH : currentOffset + PAGE_WIDTH;
+    let nextOffset =
+      direction === 'left'
+        ? currentOffset - PAGE_WIDTH
+        : currentOffset + PAGE_WIDTH;
+
     nextOffset = Math.max(0, Math.min(nextOffset, maxOffset));
-    
     scrollRef.current?.scrollTo({ x: nextOffset, animated: true });
     setCurrentOffset(nextOffset);
   };
 
-  const handleSelect = async (item: typeof itemData[0]) => {
+  const handleSelect = async (item: any) => {
     const category = activeTab === 'theme' ? 'BACKGROUND' : 'CHARACTER';
 
     try {
       await dispatch(equipTheme({ id: item.id, category })).unwrap();
 
-      if (activeTab === 'theme') {
-        const themeKey = item.name.split('_')[0]; 
-        const validThemes: ThemeType[] = ["blue", "jungle", "universe", "city", "sea"];
-        const targetTheme = validThemes.includes(themeKey as ThemeType) 
-          ? (themeKey as ThemeType) 
-          : "jungle";
-        
-        setTheme(targetTheme);
-        dispatch(setEquippedBackground(item.id));
-      } else {
-        dispatch(setEquippedCharacter(item.id));
+      if (category === 'BACKGROUND') {
+        const themeKey = item.name.split('_')[0];
+        const valid: ThemeType[] = [
+          'blue',
+          'jungle',
+          'universe',
+          'city',
+          'sea',
+        ];
+        setTheme(
+          valid.includes(themeKey as ThemeType)
+            ? (themeKey as ThemeType)
+            : 'jungle'
+        );
       }
-    } catch (error) {
-      console.error("테마 장착 중 오류 발생:", error);
+    } catch (e) {
+      console.error('테마 장착 실패', e);
     }
   };
 
@@ -92,30 +106,52 @@ export default function ReusableGridScreen() {
     scrollRef.current?.scrollTo({ x: 0, animated: false });
   };
 
+  // 캐릭터 미리보기
+  const previewCharacter = (myCharacters ?? []).find(
+    c => c.id === equippedCharacterId
+  );
+
   return (
     <ImageBackground source={background} style={styles.container}>
       <View style={styles.toggleWrapper}>
-        <Pressable onPress={() => handleTabChange('character')} style={[styles.topBtn, activeTab !== 'character' && styles.topBtnInactive]}>
+        <Pressable onPress={() => handleTabChange('character')}
+          style={[styles.topBtn, activeTab !== 'character' && styles.topBtnInactive]}>
           <Text style={styles.topBtnText}>캐릭터</Text>
         </Pressable>
-        <Pressable onPress={() => handleTabChange('theme')} style={[styles.topBtn, activeTab !== 'theme' && styles.topBtnInactive]}>
+        <Pressable
+          onPress={() => handleTabChange('theme')}
+          style={[
+            styles.topBtn,
+            activeTab !== 'theme' && styles.topBtnInactive
+          ]}
+        >
           <Text style={styles.topBtnText}>테마</Text>
         </Pressable>
       </View>
 
       <View style={styles.panel}>
         <View style={styles.headerBox}>
-          <Text style={styles.headerTitle}>{activeTab === 'theme' ? '테마 선택' : '캐릭터 선택'}</Text>
+          <Text style={styles.headerTitle}>
+            {activeTab === 'theme' ? '테마 선택' : '캐릭터 선택'}
+          </Text>
         </View>
 
         <View style={styles.carouselWrapper}>
-          <Pressable style={styles.arrowBtn} onPress={() => moveScroll('left')} disabled={isLeftDisabled}>
-            <Text style={[styles.arrowText, isLeftDisabled && styles.disabledText]}>◀</Text>
+          <Pressable
+            style={styles.arrowBtn}
+            onPress={() => moveScroll('left')}
+            disabled={isLeftDisabled}
+          >
+            <Text
+              style={[
+                styles.arrowText,
+                isLeftDisabled && styles.disabledText
+              ]}>◀</Text>
           </Pressable>
 
           <View style={styles.scrollViewContainer}>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               ref={scrollRef}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
@@ -124,10 +160,10 @@ export default function ReusableGridScreen() {
               onMomentumScrollEnd={(e) => setCurrentOffset(e.nativeEvent.contentOffset.x)}
             >
               {currentItems.map((item, index) => {
-                const isSelected = activeTab === 'theme' 
-                  ? equippedBackgroundId === item.id 
+                const isSelected = activeTab === 'theme'
+                  ? equippedBackgroundId === item.id
                   : equippedCharacterId === item.id;
-                
+
                 const isBG = item.category === 'BACKGROUND';
 
                 return (
@@ -135,24 +171,30 @@ export default function ReusableGridScreen() {
                     key={item.id}
                     onPress={() => handleSelect(item)}
                     style={[
-                      styles.card, 
+                      styles.card,
                       isSelected && styles.selectedCard,
                       index === currentItems.length - 1 && { marginRight: 0 }
                     ]}
                   >
-                    {isBG ? (
-                      <>
-                        <Image source={item.imageInactive} style={styles.bgFullImage} resizeMode="cover" />
-                        <View style={styles.bgTextBadge}>
-                          <Text style={styles.bgCardText} numberOfLines={1}>{item.name}</Text>
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        <Image source={item.imageActive} style={styles.charImage} resizeMode="contain" />
-                        <Text style={styles.charCardText} numberOfLines={1}>{item.name}</Text>
-                      </>
-                    )}
+                    <Image
+                      source={{ uri: BASE_URL + item.assetUrl }}
+                      style={
+                        activeTab === 'character'
+                          ? styles.charImage
+                          : styles.bgFullImage
+                      }
+                      resizeMode="contain"
+                    />
+                    <Text
+                      style={
+                        activeTab === 'character'
+                          ? styles.charCardText
+                          : styles.bgCardText
+                      }
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -166,12 +208,9 @@ export default function ReusableGridScreen() {
       </View>
 
       <View style={styles.previewArea}>
-        {activeTab === 'character' && (
+        {activeTab === 'character' && previewCharacter && (
           <Image
-            source={
-              itemData.find(t => t.id === equippedCharacterId)?.imageActive || 
-              itemData.find(t => t.id === 5)?.imageActive
-            }
+            source={{ uri: BASE_URL + previewCharacter.assetUrl }}
             style={styles.previewImage}
             resizeMode="contain"
           />
@@ -197,17 +236,17 @@ const styles = StyleSheet.create({
   arrowBtn: { width: 45, alignItems: 'center', justifyContent: 'center' },
   arrowText: { fontSize: 24, color: '#D6C29A', fontWeight: 'bold' },
   disabledText: { color: '#E0E0E0', opacity: 0.5 },
-  card: { 
-    width: CARD_WIDTH, 
-    height: CARD_WIDTH + 45, 
-    borderRadius: 15, 
-    backgroundColor: '#fff', 
-    alignItems: 'center', 
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH + 45,
+    borderRadius: 15,
+    backgroundColor: '#fff',
+    alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2, 
+    borderWidth: 2,
     borderColor: '#DDD',
     marginRight: GAP,
-    overflow: 'hidden', 
+    overflow: 'hidden',
   },
   selectedCard: { borderWidth: 4, borderColor: '#FFD86B' },
   charImage: { width: '80%', height: '60%' },
@@ -221,7 +260,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     paddingVertical: 2,
     alignItems: 'center',
   },

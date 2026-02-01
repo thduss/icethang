@@ -3,16 +3,9 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import StudentCard from './StudentCard'
-import client from '../../api/api'
+import { getStudentsByClass, StudentItem } from '../../services/studentService'
 import { RootState } from '../../store/stores'
 
-
-interface StudentItem {
-  studentId: number
-  studentName: string   // 목록 조회할 땐 studentName임!
-  studentNumber: number
-  deviceUuid?: string
-}
 
 const StudentGrid = () => {
   const selectedClassId = useSelector(
@@ -29,17 +22,13 @@ const StudentGrid = () => {
       console.log("📍 현재 요청하는 classId:", classId);
 
       try {
-        const response = await client.get(`/classes/${classId}/students`)
-        console.log("✅ API 서버에서 받아온 데이터:", response.data);
-        const data = Array.isArray(response.data) ? response.data : []
+        const data = await getStudentsByClass(classId)
         setStudents(data)
       } catch (err: any) {
         console.error("❌ 학생 목록 조회 에러:", err);
-        const message =
-          typeof err?.response?.data === 'string'
-            ? err.response.data
-            : err?.message || '학생 목록을 불러오지 못했습니다.'
-        setError(message)
+        setError(
+          err?.message || '학생 목록을 불러오지 못했습니다.'
+        )
         setStudents([])
       } finally {
         setLoading(false)

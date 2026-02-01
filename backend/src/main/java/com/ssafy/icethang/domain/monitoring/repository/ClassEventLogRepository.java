@@ -14,8 +14,9 @@ public interface ClassEventLogRepository extends JpaRepository<ClassEventLog, Lo
     @Query("SELECT COUNT(e) FROM ClassEventLog e " +
             "WHERE e.student = :student " +
             "AND e.eventType = :eventType " +
-            "AND e.createdAt BETWEEN :start AND :end")
-    long countByStudentAndEventTypeToday(@Param("student") Student student,
+            "AND e.createdAt BETWEEN :start AND :end " +
+            "AND e.studyLog IS NULL")
+    long countCurrentSessionLogs(@Param("student") Student student,
                                          @Param("eventType") AlertType eventType,
                                          @Param("start") LocalDateTime start,
                                          @Param("end") LocalDateTime end);

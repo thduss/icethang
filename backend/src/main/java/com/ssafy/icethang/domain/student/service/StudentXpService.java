@@ -22,6 +22,7 @@ public class StudentXpService {
 
     // default 문장 수정 가능
     private static final String DEFAULT_TEACHER_REASON = "수업 good";
+    private static final String DEFAULT_SUBJECT_LABEL = "추가";
 
     // 학생 경험치 및 레벨 조회
     @Transactional(readOnly = true)
@@ -45,6 +46,13 @@ public class StudentXpService {
                 ? request.getReason()
                 : DEFAULT_TEACHER_REASON;
 
+        // 과목 결정
+        String finalSubject = DEFAULT_SUBJECT_LABEL;
+
+        // 교시 결정
+        Integer finalClassNo = 0;
+
+        // student의 currentXp 즉시 변경
         student.addXp(request.getAmount());
 
         // 새로운 경험치에 맞는 레벨 계산
@@ -55,9 +63,11 @@ public class StudentXpService {
 
         StudyLog log = StudyLog.builder()
                 .student(student)
-                .subject(null)      // timetable 만들면 연결시키기
-                .classNo(0)         // 수정 필요
+                .subject(finalSubject)
+                .classNo(finalClassNo)
                 .reason(finalReason)
+                .timetableId(null)
+                .focusRate(request.getAmount()) // 추가 경험치를 focusRate에 저장
                 .build();
 
         studyLogRepository.save(log);
@@ -81,7 +91,7 @@ public class StudentXpService {
         return StudentXpResponse.builder()
                 .currentLevel(student.getCurrentLevel())
                 .currentXp(student.getCurrentXp())
-                .reason(reason) // 파라미터로 받은 사유 사용
+                .reason(reason)
                 .build();
     }
 }
