@@ -1,144 +1,122 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
-import { router } from 'expo-router';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation, Platform, UIManager, Alert } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../../store/stores';
+import { startLesson, endLesson } from '../../store/slices/lessonSlice';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 interface HeaderProps {
+  classId: number;
   className: string;
   participantCount: number;
+  currentMode: 'NORMAL' | 'DIGITAL';
+  onToggleMode: () => void;
   onEndClass: () => void;
 }
 
-export const Header = ({ className, participantCount, onEndClass }: HeaderProps) => {
-  const [isTabletMode, setIsTabletMode] = useState<boolean>(true);
+export const Header = ({ 
+  classId, 
+  className, 
+  participantCount, 
+  currentMode, 
+  onToggleMode, 
+  onEndClass 
+}: HeaderProps) => {
+  const dispatch = useDispatch();
+  const { isLessonStarted } = useSelector((state: RootState) => state.lesson);
+  
+  const isTabletMode = currentMode === 'DIGITAL';
 
-  const toggleSwitch = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsTabletMode(!isTabletMode);
+  // 모드 변경 버튼 클릭 시
+  const handleToggleSwitch = () => {
+    if (!isLessonStarted) {
+      Alert.alert("알림", "수업 시작 후에만 모드를 변경할 수 있습니다.");
+      return;
+    }
+    onToggleMode();
+  };
+
+  // 2. 수업 시작/종료 버튼 클릭 시
+  const handleLessonButton = () => {
+    if (isLessonStarted) {
+      Alert.alert("수업 종료", "수업을 종료하시겠습니까?", [
+        { text: "취소", style: "cancel" },
+        { 
+          text: "종료", 
+          onPress: () => {
+            dispatch(endLesson());
+            onEndClass();
+          } 
+        }
+      ]);
+    } else {
+      dispatch(startLesson());
+      Alert.alert("알림", "수업이 시작되었습니다!");
+    }
   };
 
   return (
     <View style={styles.headerContainer}>
-
-      {/* 커스텀 토글 */}
+      {/* 모드 토글 스위치 */}
       <View style={styles.toggleWrapper}>
-        <Text style={[styles.toggleText, isTabletMode && styles.activeText]}>
-          태블릿 수업
-        </Text>
-
+        <Text style={[styles.toggleText, isTabletMode && styles.activeText]}>태블릿 수업</Text>
         <TouchableOpacity
-          style={styles.customSwitchTrack}
+          style={[styles.customSwitchTrack, !isTabletMode && styles.trackNormal]}
           activeOpacity={0.9}
-          onPress={toggleSwitch}
+          onPress={handleToggleSwitch}
         >
-          <View style={[
-            styles.customSwitchThumb,
-            { alignSelf: isTabletMode ? 'flex-start' : 'flex-end' }
-          ]} />
+          <View style={[styles.customSwitchThumb, { alignSelf: isTabletMode ? 'flex-start' : 'flex-end' }]} />
         </TouchableOpacity>
-
-        <Text style={[styles.toggleText, !isTabletMode && styles.activeText]}>
-          일반 수업
-        </Text>
+        <Text style={[styles.toggleText, !isTabletMode && styles.activeText]}>일반 수업</Text>
       </View>
 
-      {/* 반 정보 */}
-      <Text style={styles.infoText}>
-        {className} | 참여 : {participantCount}명
-      </Text>
+      {/* 중앙 정보 */}
+      <View style={styles.infoContainer}>
+        <Text style={styles.classNameText}>{className}</Text>
+        <Text style={styles.countText}>참여 학생: {participantCount}명</Text>
+      </View>
 
-      {/* 종료 버튼 */}
-      <TouchableOpacity
-        style={styles.endButton}
-        onPress={() => router.replace('/screens/Teacher_MainPage')}
-        activeOpacity={0.8}
+      {/* 수업 시작/종료 버튼 */}
+      <TouchableOpacity 
+        style={[styles.actionButton, isLessonStarted ? styles.btnEnd : styles.btnStart]} 
+        onPress={handleLessonButton}
       >
-        <Text style={styles.endButtonText}>수업 종료</Text>
+        <Text style={styles.actionButtonText}>
+          {isLessonStarted ? "수업 종료" : "수업 시작"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
-};
+}
 
+// 스타일 유지
 const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F3EFE9',
-    marginHorizontal: 15,
-    marginTop: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#8D7B68',
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  toggleWrapper: {
-    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F3EED4', // 배경색
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#D7CCC8',
   },
-  toggleText: {
-    fontSize: 14,
-    color: '#B0A090',
-    fontWeight: '500',
-    marginHorizontal: 4,
-  },
-  activeText: {
-    color: '#4A3B32',
-    fontWeight: 'bold',
-  },
-
+  toggleWrapper: { flexDirection: 'row', alignItems: 'center' },
+  toggleText: { fontSize: 16, color: '#8D6E63', fontWeight: '600', marginHorizontal: 8 },
+  activeText: { color: '#3E2723', fontWeight: 'bold' },
   customSwitchTrack: {
-    width: 46,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#7FA864',
-    borderWidth: 1,
-    borderColor: '#6E9255',
-    justifyContent: 'center',
-    padding: 2,
-    marginHorizontal: 4,
+    width: 50, height: 28, borderRadius: 14, backgroundColor: '#7FA864', justifyContent: 'center', padding: 2
   },
-  customSwitchThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 1,
-    elevation: 2,
-  },
-
-  infoText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#5D4037',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1,
-  },
-  endButton: {
-    backgroundColor: '#7FA864',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    elevation: 1,
-  },
-  endButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
+  trackNormal: { backgroundColor: '#FFB74D' },
+  customSwitchThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', elevation: 2 },
+  infoContainer: { alignItems: 'center' },
+  classNameText: { fontSize: 20, fontWeight: 'bold', color: '#3E2723' },
+  countText: { fontSize: 14, color: '#5D4037', marginTop: 2 },
+  actionButton: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 25, elevation: 3, minWidth: 110, alignItems: 'center' },
+  btnStart: { backgroundColor: '#7FA864' },
+  btnEnd: { backgroundColor: '#FF7043' },
+  actionButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });

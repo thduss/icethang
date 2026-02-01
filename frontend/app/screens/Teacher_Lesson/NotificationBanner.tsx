@@ -1,19 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
-import { Student } from './types';
+import { Student } from '../../store/slices/lessonSlice';
 
 interface NotificationBannerProps {
   leftStudents: Student[];
 }
 
 export const NotificationBanner = ({ leftStudents }: NotificationBannerProps) => {
-  // 이탈 학생이 없으면 아예 렌더링하지 않음
   if (leftStudents.length === 0) return null;
 
   return (
     <View style={styles.wrapper}>
-      
-      {/* 다람쥐 캐릭터 예정 */}
+      {/* 다람쥐 캐릭터 */}
       <View style={styles.characterContainer}>
         <Image 
           source={{ uri: 'https://cdn-icons-png.flaticon.com/512/235/235359.png' }} 
@@ -25,26 +23,31 @@ export const NotificationBanner = ({ leftStudents }: NotificationBannerProps) =>
       {/* 메세지 박스 */}
       <View style={styles.messageBackground}>
         <View style={styles.dashedBorder}>
-
           <ScrollView 
             style={styles.scrollArea}
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={true}
           >
-            {leftStudents.map((student, index) => (
-              <View key={student.id} style={[
-                styles.alertRow, 
-                index === leftStudents.length - 1 && { borderBottomWidth: 0 } 
-              ]}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <Text style={styles.messageText}>
-                  <Text style={styles.highlightText}>{student.name} 학생</Text>
-                  이 수업에서 이탈했습니다.
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
+            {leftStudents.map((student, index) => {
+              // 상태에 따라 메시지와 아이콘 변경
+              const isLeft = student.status === 'left';
+              const message = isLeft ? '수업에서 이탈했습니다.' : '딴짓 중입니다!';
+              const icon = isLeft ? '🏃' : '👀';
 
+              return (
+                <View key={student.id} style={[
+                  styles.alertRow, 
+                  index === leftStudents.length - 1 && { borderBottomWidth: 0 } 
+                ]}>
+                  <Text style={styles.warningIcon}>{icon}</Text>
+                  <Text style={styles.messageText}>
+                    <Text style={styles.highlightText}>{student.name} 학생</Text>
+                    이 {message}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
         </View>
       </View>
     </View>
