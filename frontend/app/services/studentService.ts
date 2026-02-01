@@ -24,6 +24,29 @@ export const getStudentDetail = async (
   return response.data
 }
 
+export const giveStudentXp = async (
+  classId: number,
+  studentId: number,
+  amount: number,
+  reason: string
+) => {
+  console.log('🚀 XP GIVE REQUEST', {
+    method: 'POST',
+    classId,
+    studentId,
+    amount,
+    reason,
+  });
+
+  const response = await client.patch(  
+    `/classes/${classId}/students/${studentId}/xp/give`,
+    {
+      amount,
+      reason,
+    }
+  );
+  return response.data;
+};
 
 export interface StudentXpResponse {
   currentLevel: number
