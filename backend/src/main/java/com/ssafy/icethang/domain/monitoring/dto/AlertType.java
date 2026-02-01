@@ -5,5 +5,7 @@ public enum AlertType {
     UNFOCUS,
     AWAY,
     ENTER,
-    EXIT
+    EXIT,
+    RESTROOM,
+    ACTIVITY
 }

@@ -117,6 +117,12 @@ public class MonitoringController {
         if (type == AlertType.AWAY) return name + " 학생이 수업에서 이탈했습니다.";
         if (type == AlertType.UNFOCUS) return name + " 학생이 집중하지 않고 있습니다.";
         if (type == AlertType.FOCUS) return name + " 학생이 집중을 잘 하고 있습니다.";
+
+        if (type == AlertType.RESTROOM) return name + " 학생이 화장실에 다녀옵니다.";
+        if (type == AlertType.ACTIVITY) return name + " 학생이 발표/외부 활동 중입니다.";
+
+        if (type == AlertType.FOCUS) return name + " 학생이 집중 모드로 복귀했습니다.";
+
         return name + " 학생에게 알림이 발생했습니다.";
     }
 
