@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
@@ -56,7 +55,8 @@ public class Student extends BaseEntity {
     private Theme equippedBackground;
 
     @Builder
-    public Student(String name, String deviceUuid, ClassGroup classGroup, Integer studentNumber, Integer schoolId) {
+    public Student(String name, String deviceUuid, ClassGroup classGroup, Integer studentNumber,
+                   Integer schoolId, Theme equippedCharacter, Theme equippedBackground) {
         this.name = name;
         this.deviceUuid = deviceUuid;
         this.classGroup = classGroup;
@@ -64,6 +64,8 @@ public class Student extends BaseEntity {
         this.schoolId = schoolId;
         this.currentXp = 0;
         this.currentLevel = 1;
+        this.equippedCharacter = equippedCharacter;
+        this.equippedBackground = equippedBackground;
     }
 
     // 학생 수정
