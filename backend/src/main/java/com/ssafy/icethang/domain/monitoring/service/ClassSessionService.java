@@ -90,8 +90,6 @@ public class ClassSessionService {
             studyLogsToSave.add(studyLog);
         }
         // 성적표 일괄 저장
-        studyLogRepository.saveAll(studyLogsToSave);
-
         List<StudyLog> savedLogs = studyLogRepository.saveAll(studyLogsToSave);
 
         // saveAll을 하면 studylog 객체들에 id가 생김 -> 그걸로 연결
