@@ -11,6 +11,8 @@ import com.ssafy.icethang.domain.student.entity.Student;
 import com.ssafy.icethang.domain.classgroup.repository.ClassGroupRepository;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
 import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
+import com.ssafy.icethang.domain.theme.entity.Theme;
+import com.ssafy.icethang.domain.theme.repository.ThemeRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import com.ssafy.icethang.global.security.UserPrincipal;
@@ -36,6 +38,10 @@ public class StudentService {
     private final TokenProvider tokenProvider;
     private final RedisService redisService;
     private final StudyLogRepository studyLogRepository;
+    private final ThemeRepository themeRepository;
+
+    private static final Long DEFAULT_BACKGROUND_ID = 1L;
+    private static final Long DEFAULT_CHARACTER_ID = 9L;
 
     // 최초 로그인
     @Transactional
@@ -53,6 +59,7 @@ public class StudentService {
             throw new IllegalArgumentException("해당 반의 선생님 정보가 유효하지 않습니다.");
         }
 
+        // 학교 정보 기입
         Integer schoolId = null;
         if (teacher.getSchool() != null) {
             schoolId = teacher.getSchool().getSchoolId();
@@ -61,12 +68,19 @@ public class StudentService {
             throw new IllegalStateException("선생님의 학교 정보가 설정되지 않았습니다.");
         }
 
+        Theme defaultBackground = themeRepository.findById(DEFAULT_BACKGROUND_ID)
+                .orElseThrow(() -> new IllegalArgumentException("기본 배경(ID:1)이 DB에 존재하지 않습니다."));
+        Theme defaultCharacter = themeRepository.findById(DEFAULT_CHARACTER_ID)
+                .orElseThrow(() -> new IllegalArgumentException("기본 캐릭터(ID:9)가 DB에 존재하지 않습니다."));
+
         Student student = Student.builder()
                 .name(request.getName())
                 .deviceUuid(request.getDeviceUuid())
                 .classGroup(classGroup)
                 .studentNumber(request.getStudentNumber())
                 .schoolId(schoolId)
+                .equippedBackground(defaultBackground)
+                .equippedCharacter(defaultCharacter)
                 .build();
 
         studentRepository.save(student);

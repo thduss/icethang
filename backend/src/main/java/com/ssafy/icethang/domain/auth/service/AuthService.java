@@ -12,17 +12,25 @@ import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
 import com.ssafy.icethang.global.security.TokenProvider;
+import com.ssafy.icethang.global.security.oauth2.auth.KakaoOAuth2UserInfo;
+import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfo;
 import com.ssafy.icethang.global.utill.NeisApiService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -160,4 +168,65 @@ public class AuthService {
         Long expiration = tokenProvider.getExpiration(accessToken);
         redisService.setValues(accessToken, "logout", Duration.ofMillis(expiration));
     }
+
+    @Transactional
+    public TokenResponseDto loginWithKakao(String kakaoAccessToken) {
+        // 1. 카카오 서버에서 유저 정보 가져오기
+        OAuth2UserInfo userInfo = getKakaoUserInfoFromKakao(kakaoAccessToken);
+
+        // 2. DB에 저장하거나 업데이트하기
+        Auth auth = saveOrUpdate("kakao", userInfo);
+
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(auth.getEmail());
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
+
+        // 3. 우리 서버 전용 JWT 만들기
+        String accessToken = tokenProvider.createToken(authentication);
+        String refreshToken = tokenProvider.createRefreshToken(authentication);
+
+        redisService.setValues(auth.getEmail(), refreshToken, Duration.ofDays(7));
+
+        return TokenResponseDto.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private OAuth2UserInfo getKakaoUserInfoFromKakao(String accessToken) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + accessToken);
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        var response = restTemplate.exchange(
+                "https://kapi.kakao.com/v2/user/me",
+                HttpMethod.GET, entity, Map.class
+        );
+
+        return new KakaoOAuth2UserInfo(response.getBody());
+    }
+
+    private Auth saveOrUpdate(String registrationId, OAuth2UserInfo userInfo) {
+        return authRepository.findByEmail(userInfo.getEmail())
+                .map(auth -> {
+                    auth.setTeacherName(userInfo.getName());
+                    return authRepository.save(auth);
+                })
+                .orElseGet(() -> {
+                    Schools defaultSchool = schoolsRepository.findById(1)
+                            .orElseThrow(() -> new RuntimeException("기본 학교(ID: 1)가 DB에 없어요! SQL 확인해주세요 힝구.."));
+                    Auth auth = new Auth();
+                    auth.setEmail(userInfo.getEmail());
+                    auth.setTeacherName(userInfo.getName());
+                    auth.setProvider(AuthProvider.valueOf(registrationId.toUpperCase()));
+                    auth.setSchool(defaultSchool);
+                    auth.setProviderId(userInfo.getId());
+                    return authRepository.save(auth);
+                });
+    }
+
 }
