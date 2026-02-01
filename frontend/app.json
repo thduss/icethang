@@ -13,7 +13,6 @@
     },
     "plugins": [
       "expo-router",
-      "./kakao-repo-plugin.js",
       [
         "expo-font",
         {
