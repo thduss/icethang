@@ -20,6 +20,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -81,6 +83,16 @@ public class AuthController {
         cookieUtil.addTokenCookies(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
 
         return ResponseEntity.ok(tokenDto);
+    }
+
+    // 선생님 소셜 로그인
+    @PostMapping("/{provider}")
+    public ResponseEntity<TokenResponseDto> socialLogin(
+            @PathVariable String provider,
+            @RequestBody Map<String, String> request) {
+
+        String socialToken = request.get("accessToken");
+        return ResponseEntity.ok(authService.processSocialLogin(provider, socialToken));
     }
 
     // 토큰 재발급

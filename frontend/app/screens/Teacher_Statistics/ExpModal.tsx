@@ -1,70 +1,227 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, Modal, TouchableOpacity, TextInput, ScrollView } from "react-native";
-import { Star, AlignJustify } from 'lucide-react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Modal,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+} from "react-native";
+import { Star } from "lucide-react-native";
+import { giveStudentXp, getStudentXp, getStudentLogs } from "../../services/studentService";
+
+const formatDateTime = (
+  createdAt?: string,
+  date?: string,
+  startTime?: string | null
+) => {
+  let d: Date;
+
+  if (createdAt) {
+    // "2026-01-30 15:36:44" → ISO 변환
+    d = new Date(createdAt.replace(" ", "T"));
+  } else if (date) {
+    d = new Date(`${date}T${startTime ?? "00:00:00"}`);
+  } else {
+    return "";
+  }
+
+  if (isNaN(d.getTime())) return "";
+
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const isToday = d.toDateString() === today.toDateString();
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+
+  const hour = d.getHours();
+  const minute = d.getMinutes().toString().padStart(2, "0");
+  const ampm = hour < 12 ? "오전" : "오후";
+  const displayHour = hour % 12 || 12;
+
+  if (isToday) return `오늘, ${ampm} ${displayHour}:${minute}`;
+  if (isYesterday) return `어제, ${ampm} ${displayHour}:${minute}`;
+
+  return `${d.getMonth() + 1}월 ${d.getDate()}일, ${ampm} ${displayHour}:${minute}`;
+};
+
 
 interface ExpModalProps {
-  visible: boolean
-  onClose: () => void
-  studentName: string
-  level?: number
-  xp?: number
-  reason?: string
+  visible: boolean;
+  onClose: () => void;
+  studentName: string;
+  studentId: number;
+  classId: number;
 }
 
-const historyData = [
-  { id: 1, date: '오늘, 오전 10:30', subject: '체육', desc: '수업 집중 보너스 | +50 경험치 (자동)' },
-  { id: 2, date: '어제, 오후 3:00', subject: '국어', desc: '과제 완료 | +100 경험치 (자동)' },
-  { id: 3, date: '10월 23일, 오후 4:00', subject: '국어', desc: '특별 보상 (교사) | +30 경험치 (수동 - 청소 도움)' },
-  { id: 4, date: '10월 22일, 오후 2:00', subject: '수학', desc: '퀴즈 만점 | +50 경험치 (자동)' },
-]
+interface StudentLogResponse {
+  logId: number;
+  createdAt?: string;
+  date?: string;
+  startTime?: string | null;
+  subject?: string | null;
+  classNo: number;
+  earnedXp?: number;
+  xp?: number;
+  focusRate?: number | null;
+  reason?: string | null;
+}
 
-const ExpModal = ({ visible, onClose, studentName, level = 0, xp = 0, reason }: ExpModalProps) => {
-  const [amount, setAmount] = useState('')
-  const [inputReason, setInputReason] = useState('')
+interface HistoryItem {
+  id: number;
+  dateText: string;
+  description: string;
+}
+
+const ExpModal = ({
+  visible,
+  onClose,
+  studentName,
+  studentId,
+  classId,
+}: ExpModalProps) => {
+  const [amount, setAmount] = useState("");
+  const [inputReason, setInputReason] = useState("");
+
+  const [currentXp, setCurrentXp] = useState(0);
+  const [currentLevel, setCurrentLevel] = useState(0);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  const maxExp = 3000;
+  const progressPercent = Math.min((currentXp / maxExp) * 100, 100);
+
+
+  const formatHistory = (logs: StudentLogResponse[]): HistoryItem[] =>
+    logs.map((log) => {
+      const timeText = formatDateTime(
+        log.createdAt,
+        log.date,
+        log.startTime
+      );
+
+      // 경험치 부여 로그
+      if (log.classNo === 0) {
+        const xpValue = log.earnedXp ?? log.xp ?? 0;
+
+        return {
+          id: log.logId,
+          dateText: timeText,
+          description: `특별 보상 (교사) | +${xpValue} 경험치 (수동${log.reason ? ` - ${log.reason}` : ""})`,
+        };
+      }
+
+      // 수업 로그
+      if (log.focusRate !== null && log.focusRate !== undefined) {
+        const bonus =
+          log.focusRate >= 90 ? "수업 집중 보너스" : "수업 집중도";
+
+        return {
+          id: log.logId,
+          dateText: timeText,
+          description: `${log.subject ?? "수업"} | ${bonus} ${log.focusRate
+            }%`,
+        };
+      }
+
+      return {
+        id: log.logId,
+        dateText: timeText,
+        description: "기록",
+      };
+    });
+
+
+  // 경험치 & 레벨 조회
+  const fetchXpInfo = async () => {
+    try {
+      const data = await getStudentXp(classId, studentId);
+      setCurrentXp(data.currentXp);
+      setCurrentLevel(data.currentLevel);
+    } catch (e) {
+      console.error("XP 조회 실패:", e);
+    }
+  };
 
   useEffect(() => {
-    if (visible) {
-      setAmount('')
-      setInputReason('')
-    }
-  }, [visible])
+    if (!visible) return;
 
-  // 테스트용
-  const maxExp = 3000
-  const progressPercent = Math.min((xp / maxExp) * 100, 100)
+    setAmount("");
+    setInputReason("");
+    fetchXpInfo();
+
+    const fetchHistory = async () => {
+      try {
+        const logs = await getStudentLogs(classId, studentId);
+        setHistory(formatHistory(logs));
+      } catch (e) {
+        console.error("학생 전체 기록 조회 실패:", e);
+      }
+    };
+
+    fetchHistory();
+  }, [visible]);
+
+
+  // 경험치 부여
+  const handleGiveXp = async () => {
+    const parsedAmount = Number(amount);
+
+    if (!parsedAmount || parsedAmount <= 0) {
+      alert("경험치는 1 이상 입력해주세요");
+      return;
+    }
+
+    if (!inputReason.trim()) {
+      alert("경험치 부여 사유를 입력해주세요");
+      return;
+    }
+
+    try {
+      await giveStudentXp(
+        classId,
+        studentId,
+        parsedAmount,
+        inputReason.trim()
+      );
+
+      await fetchXpInfo();
+      const logs = await getStudentLogs(classId, studentId);
+      setHistory(formatHistory(logs));
+
+      onClose();
+    } catch (e) {
+      console.error("XP 부여 실패:", e);
+      alert("경험치 부여 실패");
+    }
+  };
+
 
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="fade" transparent visible={visible}>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-
+          {/* 헤더 */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>경험치 관리</Text>
             <Star size={16} color="#FFF" fill="#FFF" />
           </View>
 
           <View style={styles.contentBody}>
+            {/* 좌측 */}
             <View style={styles.leftPanel}>
               <View style={styles.studentBadge}>
                 <Text style={styles.studentText}>
-                  학생 : {studentName} | Lv.{level}
+                  학생 : {studentName} | Lv.{currentLevel}
                 </Text>
               </View>
 
               <View style={styles.formBox}>
-                <Text style={styles.formLabel}>관리자 작업: 경험치 부여</Text>
-
-                {/* 최근 사유 (조회 API) */}
-                {reason && reason !== '기록된 사유가 없습니다.' && (
-                  <Text style={styles.lastReason}>
-                    최근 사유: {reason}
-                  </Text>
-                )}
+                <Text style={styles.formLabel}>
+                  관리자 작업: 경험치 부여
+                </Text>
 
                 <View style={styles.inputRow}>
                   <Text style={styles.inputLabel}>경험치 :</Text>
@@ -92,35 +249,62 @@ const ExpModal = ({ visible, onClose, studentName, level = 0, xp = 0, reason }: 
                 </View>
 
                 <View style={styles.formActions}>
-                  <TouchableOpacity style={styles.grantButton}>
-                    <Text style={styles.grantButtonText}>경험치 부여</Text>
+                  <TouchableOpacity
+                    style={styles.grantButton}
+                    onPress={handleGiveXp}
+                  >
+                    <Text style={styles.grantButtonText}>
+                      경험치 부여
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
 
+            {/* 우측 */}
             <View style={styles.rightPanel}>
               <View style={styles.progressBarContainer}>
                 <View style={styles.progressBarTracker}>
-                  <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                  <Text style={styles.progressText}>{xp} / {maxExp} 경험치</Text>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${progressPercent}%` },
+                    ]}
+                  />
+                  <Text style={styles.progressText}>
+                    {currentXp} / {maxExp} 경험치
+                  </Text>
                 </View>
-                <Star size={20} color="#7FA864" fill="#7FA864" style={{ marginLeft: 5 }} />
+                <Star
+                  size={20}
+                  color="#7FA864"
+                  fill="#7FA864"
+                  style={{ marginLeft: 5 }}
+                />
               </View>
 
               <View style={styles.historyContainer}>
                 <View style={styles.historyHeader}>
-                  <Text style={styles.historyTitle}>경험치 기록</Text>
-                  <AlignJustify size={16} color="#8D7B68" />
+                  <Text style={styles.historyTitle}>
+                    경험치 기록
+                  </Text>
                 </View>
 
-                <ScrollView style={styles.historyList} nestedScrollEnabled={true}>
-                  {historyData.map((item, index) => (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {history.length === 0 && (
+                    <Text style={styles.historyDesc}>
+                      기록이 없습니다.
+                    </Text>
+                  )}
+
+                  {history.map((item) => (
                     <View key={item.id} style={styles.historyItem}>
                       <Text style={styles.historyDate}>
-                        {item.date} | {item.subject}
+                        {item.dateText}
                       </Text>
-                      <Text style={styles.historyDesc}>{item.desc}</Text>
+                      <Text style={styles.historyDesc}>
+                        {item.description}
+                      </Text>
                     </View>
                   ))}
                 </ScrollView>
@@ -129,56 +313,58 @@ const ExpModal = ({ visible, onClose, studentName, level = 0, xp = 0, reason }: 
           </View>
 
 
+          {/* 푸터 */}
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.footerButton, styles.cancelButton]} onPress={onClose}>
+            <TouchableOpacity
+              style={[styles.footerButton, styles.cancelButton]}
+              onPress={onClose}
+            >
               <Text style={styles.footerButtonText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.footerButton, styles.confirmButton]} onPress={onClose}>
-              <Text style={styles.footerButtonText}>확인</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </View >
-    </Modal >
-  )
-}
+      </View>
+    </Modal>
+  );
+};
 
-export default ExpModal
+export default ExpModal;
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
+
   modalContainer: {
-    width: '85%',
+    width: "85%",
     maxWidth: 700,
-    backgroundColor: '#F7F3E6',
+    backgroundColor: "#F7F3E6",
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#D7C8B6',
-    overflow: 'hidden',
+    borderColor: "#D7C8B6",
+    overflow: "hidden",
     elevation: 10,
   },
 
-  // 헤더
   header: {
-    backgroundColor: '#8D7B68',
+    backgroundColor: "#8D7B68",
     paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
   },
+
   headerTitle: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 
   contentBody: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 20,
     gap: 15,
     height: 320,
@@ -188,82 +374,84 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 10,
   },
+
   studentBadge: {
-    backgroundColor: '#EAE0D5',
+    backgroundColor: "#EAE0D5",
     padding: 10,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 5,
   },
+
   studentText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#3E2723',
+    fontWeight: "bold",
+    color: "#3E2723",
   },
+
   formBox: {
     flex: 1,
-    backgroundColor: '#FDFBF8',
+    backgroundColor: "#FDFBF8",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     padding: 15,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
+
   formLabel: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#5D4037',
+    fontWeight: "bold",
+    color: "#5D4037",
     marginBottom: 15,
   },
+
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
+
   inputLabel: {
     width: 60,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#3E2723',
+    fontWeight: "600",
+    color: "#3E2723",
   },
+
   inputWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     height: 35,
     paddingHorizontal: 8,
+    justifyContent: "center",
   },
+
   textInput: {
-    flex: 1,
     fontSize: 13,
-    color: '#000',
+    color: "#000",
   },
+
   formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     marginTop: 10,
   },
+
   grantButton: {
-    backgroundColor: '#7FA864',
+    backgroundColor: "#7FA864",
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 8,
-    elevation: 2,
-  },
-  grantButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 13,
   },
 
-  lastReason: {
-    fontSize: 12,
-    color: '#6D6D6D',
-    marginBottom: 8,
+  grantButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 13,
   },
 
   rightPanel: {
@@ -272,102 +460,94 @@ const styles = StyleSheet.create({
   },
 
   progressBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
+
   progressBarTracker: {
     flex: 1,
     height: 24,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
     borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'center',
+    overflow: "hidden",
+    justifyContent: "center",
   },
+
   progressBarFill: {
-    height: '100%',
-    backgroundColor: '#7FA864',
+    height: "100%",
+    backgroundColor: "#7FA864",
   },
+
   progressText: {
-    position: 'absolute',
-    width: '100%',
-    textAlign: 'center',
-    color: '#FFF',
-    fontWeight: 'bold',
+    position: "absolute",
+    width: "100%",
+    textAlign: "center",
+    color: "#FFF",
+    fontWeight: "bold",
     fontSize: 12,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
   },
 
   historyContainer: {
     flex: 1,
-    backgroundColor: '#FDFBF8',
+    backgroundColor: "#FDFBF8",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     padding: 10,
   },
+
   historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 8,
     paddingBottom: 5,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: "#EEE",
   },
+
   historyTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#5D4037',
+    fontWeight: "bold",
+    color: "#5D4037",
   },
-  historyList: {
-    flex: 1,
-  },
+
   historyItem: {
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
+
   historyDate: {
     fontSize: 12,
-    color: '#555',
+    color: "#8D7B68",
     marginBottom: 2,
   },
+
   historyDesc: {
     fontSize: 13,
-    color: '#3E2723',
-    fontWeight: '500',
+    color: "#3E2723",
+    fontWeight: "500",
   },
 
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     padding: 15,
-    gap: 10,
     borderTopWidth: 1,
-    borderTopColor: '#D7C8B6',
+    borderTopColor: "#D7C8B6",
   },
+
   footerButton: {
     paddingVertical: 10,
     paddingHorizontal: 30,
     borderRadius: 20,
     minWidth: 100,
-    alignItems: 'center',
+    alignItems: "center",
   },
 
   cancelButton: {
-    backgroundColor: '#9fa1a6',
-  },
-
-  confirmButton: {
-    backgroundColor: '#7FA864',
+    backgroundColor: "#9fa1a6",
   },
 
   footerButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
+    color: "#FFF",
+    fontWeight: "bold",
     fontSize: 15,
   },
-})
+});

@@ -15,7 +15,7 @@ import timeReducer from './slices/timeSlice';
 import classReducer from './slices/classSlice'
 import scheduleReducer from './slices/scheduleSlice'
 import statisticsReducer from './slices/statisticsSlice';
-
+import lessonReducer from './slices/lessonSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,   
@@ -26,6 +26,7 @@ const rootReducer = combineReducers({
   class: classReducer,
   schedule: scheduleReducer,
   statistics: statisticsReducer,
+  lesson: lessonReducer,
 });
 
 

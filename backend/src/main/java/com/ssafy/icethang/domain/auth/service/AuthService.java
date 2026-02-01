@@ -12,17 +12,26 @@ import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
 import com.ssafy.icethang.global.security.TokenProvider;
+import com.ssafy.icethang.global.security.oauth2.auth.KakaoOAuth2UserInfo;
+import com.ssafy.icethang.global.security.oauth2.auth.NaverOAuth2UserInfo;
+import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfo;
 import com.ssafy.icethang.global.utill.NeisApiService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -159,5 +168,73 @@ public class AuthService {
 
         Long expiration = tokenProvider.getExpiration(accessToken);
         redisService.setValues(accessToken, "logout", Duration.ofMillis(expiration));
+    }
+
+    //소셜 로그인 처리 (카카오 & 네이버 공통)
+    @Transactional
+    public TokenResponseDto processSocialLogin(String registrationId, String socialAccessToken) {
+        OAuth2UserInfo userInfo = fetchUserInfoFromProvider(registrationId, socialAccessToken);
+
+        Auth auth = saveOrUpdate(registrationId, userInfo);
+        return createTokenResponse(auth);
+    }
+
+    // 제공자별 API 호출 및 파싱
+    private OAuth2UserInfo fetchUserInfoFromProvider(String registrationId, String token) {
+        String url = registrationId.equalsIgnoreCase("kakao")
+                ? "https://kapi.kakao.com/v2/user/me"
+                : "https://openapi.naver.com/v1/nid/me";
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + token);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), Map.class
+        );
+
+        if (registrationId.equalsIgnoreCase("kakao")) {
+            return new KakaoOAuth2UserInfo(response.getBody());
+        } else {
+            return new NaverOAuth2UserInfo(response.getBody());
+        }
+    }
+
+    // JWT 발급 및 인증 처리
+    private TokenResponseDto createTokenResponse(Auth auth) {
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(auth.getEmail());
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+        );
+
+        String accessToken = tokenProvider.createToken(authentication);
+        String refreshToken = tokenProvider.createRefreshToken(authentication);
+
+        redisService.setValues(auth.getEmail(), refreshToken, Duration.ofDays(7));
+
+        return TokenResponseDto.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private Auth saveOrUpdate(String registrationId, OAuth2UserInfo userInfo) {
+        return authRepository.findByEmail(userInfo.getEmail())
+                .map(auth -> {
+                    auth.setTeacherName(userInfo.getName());
+                    return authRepository.save(auth);
+                })
+                .orElseGet(() -> {
+                    Schools defaultSchool = schoolsRepository.findById(1)
+                            .orElseThrow(() -> new RuntimeException("기본 학교(ID: 1)가 DB에 없어요! SQL 확인해주세요"));
+
+                    Auth auth = new Auth();
+                    auth.setEmail(userInfo.getEmail());
+                    auth.setTeacherName(userInfo.getName());
+                    auth.setProvider(AuthProvider.valueOf(registrationId.toUpperCase()));
+                    auth.setSchool(defaultSchool);
+                    auth.setProviderId(userInfo.getId());
+                    return authRepository.save(auth);
+                });
     }
 }

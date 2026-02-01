@@ -1,5 +1,7 @@
-import { StyleSheet, Text, View, Pressable, Image, ImageBackground, ImageSourcePropType } from 'react-native'
+import { StyleSheet, Text, View, Pressable, Image, ImageBackground, ImageSourcePropType, Alert } from 'react-native'
 import { router } from 'expo-router'
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/stores';
 
 const CARD_OUTER_SIZE = 435;
 const CARD_INNER_SIZE = 420;
@@ -48,6 +50,25 @@ const ActionCard = ({ title, image, imageSize = 160, titleMarginTop = 0, imageMa
 }
 
 const MainArea = () => {
+  const { selectedClassId, items } = useSelector((state: RootState) => state.class || {});
+
+  const handleStartClass = () => {
+    if (!selectedClassId) {
+      Alert.alert("알림", "왼쪽 목록에서 수업을 시작할 반을 먼저 선택해주세요!");
+      return;
+    }
+
+    const selectedClass = items?.find((c: any) => c.classId === selectedClassId);
+    
+    router.push({
+      pathname: '/screens/Teacher_Lesson',
+      params: {
+        classId: selectedClassId,
+        className: selectedClass ? `${selectedClass.grade}학년 ${selectedClass.classNum}반` : ""
+      }
+    });
+  };
+
   return (
     <View style={styles.row}>
       <ActionCard
@@ -63,7 +84,7 @@ const MainArea = () => {
         imageSize={290}
         imageMarginTop={-10}
         titleMarginTop={-5}
-        onPress={() => router.push('/screens/Teacher_Lesson')}
+        onPress={handleStartClass}
       />
     </View>
   )
@@ -71,6 +92,7 @@ const MainArea = () => {
 
 export default MainArea
 
+// 스타일 유지
 const styles = StyleSheet.create({
   row: {
     flex: 1,
@@ -79,26 +101,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 40,
   },
-
   outerBackground: {
     width: CARD_OUTER_SIZE,
     height: CARD_OUTER_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   innerCardBackground: {
     width: CARD_INNER_SIZE,
     height: CARD_INNER_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   cardContent: {
     alignItems: "center",
     justifyContent: "center",
   },
-
   cardText: {
     fontSize: 35,
     fontWeight: "700",

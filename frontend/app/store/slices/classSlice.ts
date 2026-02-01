@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { createClass, getClasses, getSpecificClass, ClassDto } from '../../services/classService';
 
 interface ClassState {
@@ -19,7 +19,7 @@ const initialState: ClassState = {
   error: null,
 };
 
-// 1. 목록 조회 Thunk
+// 목록 조회 Thunk
 export const fetchClasses = createAsyncThunk(
   'class/fetchClasses',
   async (_, { rejectWithValue }) => {
@@ -34,22 +34,20 @@ export const fetchClasses = createAsyncThunk(
   }
 );
 
-// 2. 학급 생성 Thunk
+// 학급 생성 Thunk
 export const addClass = createAsyncThunk(
   'class/addClass',
   async (payload: { grade: number; classNum: number }, { rejectWithValue }) => {
     try {
       const newClassId = await createClass(payload);
-      console.log('✅ [Slice] 생성 성공, ID:', newClassId);
       return newClassId;
     } catch (error: any) {
-      console.error('❌ [Slice] 생성 실패:', error.message);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-// 3. 상세 조회 Thunk
+// 상세 조회 Thunk
 export const fetchClassDetail = createAsyncThunk(
   'class/fetchClassDetail',
   async (classId: number, { rejectWithValue }) => {
@@ -66,17 +64,19 @@ const classSlice = createSlice({
   name: 'class',
   initialState,
   reducers: {
+    selectClass: (state, action: PayloadAction<number>) => {
+      state.selectedClassId = action.payload;
+      console.log("💾 [Redux] 반 선택됨:", action.payload);
+    },
     resetStatus: (state) => {
+      state.loading = false;
       state.success = false;
       state.error = null;
-    },
-    setSelectedClassId: (state, action) => {
-      state.selectedClassId = action.payload;
     }
   },
   extraReducers: (builder) => {
     builder
-      // --- 목록 조회 ---
+      // 목록 조회
       .addCase(fetchClasses.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -89,8 +89,7 @@ const classSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-
-      // --- 학급 생성 ---
+      // 학급 생성
       .addCase(addClass.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -104,16 +103,14 @@ const classSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-
-      // --- 상세 조회 ---
+      // 상세 조회
       .addCase(fetchClassDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.selectedClassDetail = null;
       })
       .addCase(fetchClassDetail.fulfilled, (state, action) => {
         state.loading = false;
-        state.selectedClassId = action.payload.classId || action.meta.arg; 
+        state.selectedClassId = action.payload.classId; 
         state.selectedClassDetail = action.payload;
       })
       .addCase(fetchClassDetail.rejected, (state, action) => {
@@ -123,5 +120,5 @@ const classSlice = createSlice({
   },
 });
 
-export const { resetStatus, setSelectedClassId } = classSlice.actions;
+export const { selectClass, resetStatus } = classSlice.actions;
 export default classSlice.reducer;

@@ -8,7 +8,7 @@ import { login } from '@react-native-seoul/kakao-login';
 import NaverLogin from '@react-native-seoul/naver-login';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../store/stores';
-import { loginTeacher } from '../../store/slices/authSlice';
+import { loginTeacher, loginTeacherKakao, loginTeacherNaver } from '../../store/slices/authSlice';
 
 const CONFIG = {
   colors: {
@@ -66,16 +66,22 @@ export default function TeacherLoginScreen() {
     }
   }, [isLoggedIn]);
 
-  //  카카오 로그인
+  // 카카오 로그인
   const handleKakaoLogin = async () => {
     try {
       const token = await login();
-      console.log('카카오 토큰:', token);
-      Alert.alert("성공", "카카오 로그인이 완료되었습니다!");
-      router.replace('/screens/Teacher_MainPage');
+      console.log('✅ 카카오 토큰 획득:', token.accessToken);
+
+      const resultAction = await dispatch(loginTeacherKakao({ kakaoAccessToken: token.accessToken }));
+
+      if (loginTeacherKakao.fulfilled.match(resultAction)) {
+        console.log('🚀 서비스 로그인 성공!');
+        router.replace('/screens/Teacher_MainPage');
+      } else {
+        Alert.alert("실패", resultAction.payload as string);
+      }
     } catch (err) {
-      console.error("카카오 로그인 에러:", err);
-      Alert.alert("실패", "카카오 로그인 중 오류가 발생했습니다.");
+      console.error("로그인 에러:", err);
     }
   };
 
@@ -84,11 +90,16 @@ export default function TeacherLoginScreen() {
     try {
       const { successResponse, failureResponse } = await NaverLogin.login();
       if (successResponse) {
-        console.log("네이버 토큰:", successResponse.accessToken);
-        Alert.alert("성공", "네이버 로그인 성공!");
-        router.replace('/screens/Teacher_MainPage');
-      } else {
-        console.log("네이버 로그인 실패", failureResponse);
+        console.log("✅ 네이버 SDK 토큰 획득:", successResponse.accessToken);
+
+        const resultAction = await dispatch(loginTeacherNaver({ naverAccessToken: successResponse.accessToken }));
+
+        if (loginTeacherNaver.fulfilled.match(resultAction)) {
+          console.log('🚀 네이버로 서비스 로그인 성공!');
+          router.replace('/screens/Teacher_MainPage');
+        } else {
+          Alert.alert("로그인 실패", resultAction.payload as string);
+        }
       }
     } catch (err) {
       console.error("네이버 로그인 에러:", err);
