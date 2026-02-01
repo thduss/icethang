@@ -5,6 +5,7 @@ import com.ssafy.icethang.domain.classgroup.repository.ClassGroupRepository;
 import com.ssafy.icethang.domain.monitoring.dto.AlertType;
 import com.ssafy.icethang.domain.monitoring.entity.ClassEventLog;
 import com.ssafy.icethang.domain.monitoring.repository.ClassEventLogRepository;
+import com.ssafy.icethang.domain.student.dto.response.StudyLogResponse;
 import com.ssafy.icethang.domain.student.entity.Student;
 import com.ssafy.icethang.domain.student.entity.StudyLog;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
@@ -16,7 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,58 +41,71 @@ public class ClassSessionService {
     }
 
     @Transactional
-    public void endClass(Long classId, ClassSessionEndRequest request) {
-        // 테스트 코드
+    public List<StudyLogResponse> endClass(Long classId, ClassSessionEndRequest request) {
         log.info("========== [수업 종료 정산 시작] ==========");
         log.info("요청 정보: 날짜={}, 시간={} ~ {}", request.getDate(), request.getStartTime(), request.getEndTime());
+
+        // 해당 반 전체 조회
         List<Student> students = studentRepository.findAllByClassGroupId(classId);
+        if (students.isEmpty()) return Collections.emptyList();
+
+        List<ClassEventLog> allEvents = classEventLogRepository.findAllByStudentInAndStudyLogIsNullOrderByDetectedAtAsc(students);
+
+        // 이벤트들을 학생별로 그룹핑
+        Map<Student, List<ClassEventLog>> eventsByStudent = allEvents.stream()
+                .collect(Collectors.groupingBy(ClassEventLog::getStudent));
+
+        List<StudyLog> studyLogsToSave = new ArrayList<>();
+
+        // 학생별 계산
+        long totalSeconds = Math.max(1, Duration.between(request.getStartTime(), request.getEndTime()).getSeconds());
 
         for (Student student : students) {
-            // 테스트 코드
-            log.info("--------------------------------------------------");
-            log.info(">> 학생: {} (ID: {}) 계산 시작", student.getName(), student.getId());
 
-            // 미처리 이벤트 로그 조회
-            List<ClassEventLog> events = classEventLogRepository.findAllByStudentAndStudyLogIsNullOrderByDetectedAtAsc(student);
-            log.info("   -> DB에서 가져온 미처리 이벤트 개수: {}개", events.size());
+            // 맵에서 지금 학생것만 꺼내옴
+            List<ClassEventLog> myEvents = eventsByStudent.getOrDefault(student, new ArrayList<>());
 
-            if (events.isEmpty()) {
-                log.warn("   -> ⚠️ 이벤트가 0개입니다. (집중도 100% 확정)");
-            }
+            // 수업에 집중하지 않은 총 시간 계산
+            long lossSeconds = calculateLossTime(myEvents, request);
 
-            // 집중도 계산
-            long totalSeconds = Duration.between(request.getStartTime(), request.getEndTime()).getSeconds();
-            if (totalSeconds <= 0) totalSeconds = 1;
-
-            long lossSeconds = calculateLossTime(events, request);
+            // 집중도 공식
             int focusRate = (int) (((double)(totalSeconds - lossSeconds) / totalSeconds) * 100);
             focusRate = Math.max(0, Math.min(100, focusRate));
 
-            log.info("   -> 📊 최종 결과: 총 수업 {}초, 비집중 {}초, 집중도 {}%", totalSeconds, lossSeconds, focusRate);
+            // 자리이탈 횟수 계산
+            int awayCount = (int) myEvents.stream().filter(e -> e.getEventType() == AlertType.AWAY).count();
 
-            int awayCount = (int) events.stream().filter(e -> e.getEventType() == AlertType.AWAY).count();
-
-            // StudyLog 생성
+            // StudyLog 객체 생성
             StudyLog studyLog = StudyLog.builder()
                     .student(student)
                     .date(request.getDate())
                     .startTime(request.getStartTime())
                     .endTime(request.getEndTime())
                     .subject(request.getSubject())
-                    .classNo(0)    // 후 처리 필요
+                    .classNo(request.getClassNo())
                     .focusRate(focusRate)
                     .outofseatCount(awayCount)
                     .build();
 
-            studyLogRepository.save(studyLog);
-            log.info("   -> StudyLog 저장 완료 (ID: {})", studyLog.getId());
+            studyLogsToSave.add(studyLog);
+        }
+        // 성적표 일괄 저장
+        List<StudyLog> savedLogs = studyLogRepository.saveAll(studyLogsToSave);
 
-            // 이벤트 로그에 부모 연결
-            for (ClassEventLog event : events) {
-                event.updateStudyLog(studyLog);
+        // saveAll을 하면 studylog 객체들에 id가 생김 -> 그걸로 연결
+        for (StudyLog savedLog : studyLogsToSave) {
+            List<ClassEventLog> connectedEvents = eventsByStudent.get(savedLog.getStudent());
+            if (connectedEvents != null) {
+                for (ClassEventLog event : connectedEvents) {
+                    event.updateStudyLog(savedLog);
+                }
             }
         }
-        log.info("========== [수업 종료 정산 끝] ==========");
+        log.info("========== [수업 종료 정산 완료] ==========");
+
+        return savedLogs.stream()
+                .map(StudyLogResponse::from)
+                .collect(Collectors.toList());
     }
 
     private long calculateLossTime(List<ClassEventLog> events, ClassSessionEndRequest request) {
@@ -111,10 +129,6 @@ public class ClassSessionService {
             }
             if (time.isAfter(classEndDateTime)) {
                 log.info("      ❌ [Skip] 수업 후 이벤트: {} ({})", time, type);
-                continue;
-            }
-
-            if (event.getDetectedAt().isBefore(classStartDateTime) || event.getDetectedAt().isAfter(classEndDateTime)) {
                 continue;
             }
 

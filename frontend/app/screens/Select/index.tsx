@@ -1,6 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { useDispatch } from 'react-redux';
+import { restoreAuth, loginStudent } from '../../store/slices/authSlice';
+import { AppDispatch } from 'app/store/stores';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +20,65 @@ const scale = cardWidth / 320;
 
 export default function SelectRoleScreen() {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+
+  const handleTeacherStart = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        // 저장된 토큰 확인
+        const accessToken = await SecureStore.getItemAsync('accessToken');
+        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const userRole = await SecureStore.getItemAsync('userRole');
+
+        // 자동 로그인 조건: 토큰 O + 역할 선생님
+        if (accessToken && refreshToken && userRole === 'teacher') {
+          console.log("🔄 자동 로그인: 저장된 교사 세션 확인됨");
+          
+          dispatch(restoreAuth({ 
+            accessToken: accessToken, 
+            userRole: 'teacher' 
+          }));
+
+          // 메인 페이지로 바로 이동
+          router.replace('/screens/Teacher_MainPage');
+          return;
+        }
+      }
+    } catch (e) {
+      console.log("세션 확인 중 오류 (로그인 화면으로 이동):", e);
+    }
+
+    // 조건 불만족 -> 로그인 화면으로 이동
+    router.push('/screens/Teacher_Login');
+  };
+
+  const handleStudentStart = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const accessToken = await SecureStore.getItemAsync('accessToken');
+        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const userRole = await SecureStore.getItemAsync('userRole');
+
+        if (accessToken && refreshToken && userRole === 'student') {
+          console.log("🔄 [학생] 저장된 토큰으로 자동 로그인");
+          dispatch(restoreAuth({ accessToken, userRole: 'student' }));
+          router.replace('/screens/Student_Home');
+          return;
+        }
+      }
+    } catch (e) { console.log("토큰 확인 실패:", e); }
+
+    console.log("📡 [학생] 토큰 없음 -> UUID로 자동 로그인 시도 중...");
+    try {
+      await dispatch(loginStudent()).unwrap();
+
+      console.log("✅ [학생] UUID 로그인 성공!");
+      router.replace('/screens/Student_Home');
+    } catch (error) {
+      console.log("👋 [학생] 처음 방문이거나 기기 정보 없음 -> 로그인 화면으로 이동");
+      router.push('/screens/Student_Login');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -42,7 +105,7 @@ export default function SelectRoleScreen() {
           
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
-            onPress={() => router.push('/screens/Teacher_Login')}
+            onPress={handleTeacherStart}
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { fontSize: 16 * scale }]}>선생님으로 시작하기</Text>
@@ -70,7 +133,7 @@ export default function SelectRoleScreen() {
           
           <TouchableOpacity
             style={[styles.button, { borderRadius: 25 * scale }]}
-            onPress={() => router.push('/screens/Student_Login')}
+            onPress={handleStudentStart}
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { fontSize: 16 * scale }]}>학생으로 시작하기</Text>

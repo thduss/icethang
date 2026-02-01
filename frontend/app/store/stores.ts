@@ -14,6 +14,7 @@ import signupReducer from './slices/signupSlice';
 import timeReducer from './slices/timeSlice';
 import classReducer from './slices/classSlice'
 import scheduleReducer from './slices/scheduleSlice'
+import statisticsReducer from './slices/statisticsSlice';
 
 
 const rootReducer = combineReducers({
@@ -24,13 +25,14 @@ const rootReducer = combineReducers({
   time: timeReducer,
   class: classReducer,
   schedule: scheduleReducer,
+  statistics: statisticsReducer,
 });
 
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth','theme']
+  whitelist: ['theme']
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

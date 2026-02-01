@@ -10,6 +10,7 @@ import com.ssafy.icethang.domain.auth.entity.Schools;
 import com.ssafy.icethang.domain.auth.repository.AuthRepository;
 import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
 import com.ssafy.icethang.global.redis.RedisService;
+import com.ssafy.icethang.global.security.CustomUserDetailsService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import com.ssafy.icethang.global.utill.NeisApiService;
 import jakarta.transaction.Transactional;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,7 @@ public class AuthService {
     private final RedisService redisService;
     private final NeisApiService niceApiService;
     private final SchoolsRepository schoolsRepository;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Transactional
     public String signup(SignupRequest request){
@@ -93,16 +96,20 @@ public class AuthService {
         }
 
         // Refresh Token에서 이메일 가져오기
-        Authentication authentication = tokenProvider.getAuthentication(refreshToken);
-        String email = authentication.getName();
+        String email = tokenProvider.getEmailFromToken(refreshToken);
 
         // Redis에서 저장된 Refresh Token 가져오기
         String redisRefreshToken = redisService.getValues(email);
-
-        // 검사: Redis에 없거나, 요청온 토큰과 다르면 에러
         if (redisRefreshToken == null || !redisRefreshToken.equals(refreshToken)) {
             throw new RuntimeException("토큰의 유저 정보가 일치하지 않습니다.");
         }
+
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
 
         // 새로운 토큰 생성
         String newAccessToken = tokenProvider.createToken(authentication);

@@ -6,9 +6,11 @@ import com.ssafy.icethang.domain.student.dto.request.StudentJoinRequest;
 import com.ssafy.icethang.domain.student.dto.request.StudentLoginRequest;
 import com.ssafy.icethang.domain.student.dto.response.StudentLoginResponse;
 import com.ssafy.icethang.domain.classgroup.entity.ClassGroup;
+import com.ssafy.icethang.domain.student.dto.response.StudyLogResponse;
 import com.ssafy.icethang.domain.student.entity.Student;
 import com.ssafy.icethang.domain.classgroup.repository.ClassGroupRepository;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
+import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import com.ssafy.icethang.global.security.UserPrincipal;
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class StudentService {
     private final ClassGroupRepository classGroupRepository;
     private final TokenProvider tokenProvider;
     private final RedisService redisService;
+    private final StudyLogRepository studyLogRepository;
 
     // 최초 로그인
     @Transactional
@@ -134,9 +139,20 @@ public class StudentService {
                 .build();
     }
 
+    public List<StudyLogResponse> getStudentStudyLogs(Long studentId) {
+
+        // 학생 조회
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 학생을 찾을 수 없습니다."));
+
+        return studyLogRepository.findAllByStudentOrderByCreatedAtDesc(student)
+                .stream()
+                .map(StudyLogResponse::from)
+                .collect(Collectors.toList());
+    }
+
     //--------------------------------------------
     // 소켓
-    // monitoring controller에서 받은거 studylog 엔티티로 변환해서 저장 로직 필요
 
     // 속도 -> 비동기 처리 고민
 }
