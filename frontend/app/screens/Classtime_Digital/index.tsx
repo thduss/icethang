@@ -1,102 +1,138 @@
-import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, AppState, Platform, NativeModules } from "react-native";
-import { useSelector } from 'react-redux'; 
-import { CameraView } from "expo-camera";
+import React, { useEffect, useState, useRef } from "react";
+import { View, StyleSheet, AppState, Platform, NativeModules, Text } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import PipHandler, { usePipModeListener } from 'react-native-pip-android';
+import { Client } from "@stomp/stompjs";
 import TrafficLight from "../../components/TrafficLight";
-import { RootState } from '../../store/stores'; // 프로젝트 경로에 맞게 수정 필요
-import itemData from '../../../assets/themes/itemData';
+import ClassResultModal from "../../components/ClassResultModal";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 const { OverlayModule } = NativeModules;
 
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const SOCKET_URL = BASE_URL?.replace('http', 'ws') + '/ws';
+
+const SOCKET_CONFIG = {
+  BROKER_URL: SOCKET_URL,
+  PUBLISH: {
+    CLASS_TOPIC: (classId: string) => `/topic/class/${classId}`,
+  },
+  SUBSCRIBE: {
+    ALERT: "/app/alert",
+    MODE_STATUS: (classId: string) => `/topic/class/${classId}/mode`,
+    STUDENT_COUNT: (classId: string) => `/topic/class/${classId}/count`,
+  },
+  RECONNECT_DELAY: 5000,
+  HEARTBEAT: 4000,
+};
+
 export default function DigitalClassScreen() {
+  const router = useRouter();
+  const { classId } = useLocalSearchParams<{ classId: string }>(); 
   const inPipMode = usePipModeListener();
   const appState = useRef(AppState.currentState);
+  const stompClient = useRef<Client | null>(null);
+  
+  const [isResultVisible, setIsResultVisible] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
-  // Redux에서 현재 장착된 아이템 ID 가져오기
-  const { equippedCharacterId, equippedBackgroundId } = useSelector(
-    (state: RootState) => state.theme
-  );
+  useEffect(() => {
+    if (!permission?.granted) requestPermission();
+  }, [permission]);
 
-  // 🚀 한글 이름을 안드로이드 리소스 파일명(영문)으로 매핑하는 함수
-  const getCharResName = (name: string) => {
-    switch(name) {
-      case '기차': return 'char_1';
-      case '오토바이': return 'char_2';
-      case '트럭': return 'char_3';
-      case '배': return 'char_4';
-      default: return 'char_1';
-    }
-  };
+  //  소켓 연결 및 종료 신호 수신
+  useEffect(() => {
+    if (!classId) return;
 
-  const getBgResName = (name: string) => {
-    switch(name) {
-      case '도시': return 'city';
-      case '숲길': return 'jungle';
-      case '우주': return 'universe';
-      case '바다': return 'sea';
-      default: return 'city';
-    }
+    const client = new Client({
+      brokerURL: SOCKET_CONFIG.BROKER_URL,
+      reconnectDelay: SOCKET_CONFIG.RECONNECT_DELAY,
+      heartbeatIncoming: SOCKET_CONFIG.HEARTBEAT,
+      heartbeatOutgoing: SOCKET_CONFIG.HEARTBEAT,
+      // React Native 호환성 설정
+      forceBinaryWSFrames: true,
+      appendMissingNULLonIncoming: true,
+      
+      onConnect: () => {
+        console.log("✅ [SOCKET] 연결 성공");
+        client.subscribe(SOCKET_CONFIG.SUBSCRIBE.MODE_STATUS(classId), (message) => {
+          const payload = JSON.parse(message.body);
+          console.log("📩 [SOCKET] 모드 변경:", payload);
+
+          if (payload.status === "END" || payload.type === "FINISHED") {
+            handleClassEndByTeacher();
+          }
+        });
+      },
+      onStompError: (frame) => {
+        console.error("❌ [SOCKET] 에러:", frame.headers['message']);
+      },
+    });
+
+    client.activate();
+    stompClient.current = client;
+
+    return () => {
+      if (stompClient.current) stompClient.current.deactivate();
+    };
+  }, [classId]);
+
+  const handleClassEndByTeacher = () => {
+    if (OverlayModule) OverlayModule.hideOverlay();
+    if (Platform.OS === 'android') OverlayModule.relaunchApp();
+
+    setTimeout(() => {
+      setIsResultVisible(true);
+    }, 800);
   };
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
-      // 앱이 백그라운드로 전환될 때 실행
       if (appState.current === "active" && nextAppState.match(/inactive|background/)) {
-        console.log("🔔 배경 진입 감지 - PIP 및 오버레이 실행");
-
-        if (Platform.OS === 'android' && !inPipMode) {
-          // 1. PIP 모드 진입
-          PipHandler.enterPipMode(300, 300);
-          
-          // 2. 현재 장착된 아이템 찾기
-          const charItem = itemData.find(t => t.id === equippedCharacterId);
-          const bgItem = itemData.find(t => t.id === equippedBackgroundId);
-          
-          // 3. 파일명 매핑 적용
-          const charRes = charItem ? getCharResName(charItem.name) : "char_1";
-          const bgRes = bgItem ? getBgResName(bgItem.name) : "city";
-
-          console.log(`🚀 오버레이 호출 데이터: 캐릭터(${charRes}), 배경(${bgRes})`);
-
-          // 4. 오버레이 실행
-          OverlayModule.showOverlay(
-            "수업 진행 중", 
-            false, 
-            charRes, 
-            bgRes, 
-            0, 
-            0
-          );
+        if (Platform.OS === 'android' && !inPipMode && !isResultVisible) {
+          if (OverlayModule) {
+            OverlayModule.showOverlay("수업에 집중하고 있어요!", false, "char_1", "city", 0, 0);
+          }
+          PipHandler.enterPipMode(500, 500);
         }
-      } 
-      // 앱으로 다시 돌아올 때 오버레이 제거
-      else if (nextAppState === "active") {
-        OverlayModule.hideOverlay();
+      } else if (nextAppState === "active") {
+        if (OverlayModule) OverlayModule.hideOverlay();
       }
       appState.current = nextAppState;
     });
 
     return () => {
       subscription.remove();
-      OverlayModule.hideOverlay();
+      if (OverlayModule) OverlayModule.hideOverlay();
     };
-  }, [inPipMode, equippedCharacterId, equippedBackgroundId]);
+  }, [inPipMode, isResultVisible]);
 
   return (
     <View style={styles.container}>
-      {/* 백그라운드 구동 유지를 위한 더미 카메라 (이미 구현되어 있다면 유지) */}
-      <View style={styles.hiddenCamera}><CameraView style={{ flex: 1 }} /></View>
+      {permission?.granted && (
+        <View style={styles.hiddenCamera}>
+          <CameraView style={{ flex: 1 }} facing="front" active={!isResultVisible} />
+        </View>
+      )}
       
       <View style={styles.content}>
         <TrafficLight size={inPipMode ? "small" : "large"} />
       </View>
+
+      <ClassResultModal 
+        visible={isResultVisible} 
+        onClose={() => {
+          setIsResultVisible(false);
+          router.replace('/screens/Student_Home');
+        }}
+        gainedXP={100} 
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F5F5" },
-  hiddenCamera: { position: "absolute", width: 1, height: 1, opacity: 0 },
+  hiddenCamera: { position: "absolute", width: 10, height: 10, opacity: 0.02, zIndex: -1 },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
