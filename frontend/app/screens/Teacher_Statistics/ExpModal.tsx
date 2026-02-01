@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Modal, TouchableOpacity, TextInput, ScrollView } from "react-native";
 import { Star, AlignJustify } from 'lucide-react-native';
 
@@ -21,6 +21,13 @@ const historyData = [
 const ExpModal = ({ visible, onClose, studentName, level = 0, xp = 0, reason }: ExpModalProps) => {
   const [amount, setAmount] = useState('')
   const [inputReason, setInputReason] = useState('')
+
+  useEffect(() => {
+    if (visible) {
+      setAmount('')
+      setInputReason('')
+    }
+  }, [visible])
 
   // 테스트용
   const maxExp = 3000
@@ -51,6 +58,13 @@ const ExpModal = ({ visible, onClose, studentName, level = 0, xp = 0, reason }: 
 
               <View style={styles.formBox}>
                 <Text style={styles.formLabel}>관리자 작업: 경험치 부여</Text>
+
+                {/* 최근 사유 (조회 API) */}
+                {reason && reason !== '기록된 사유가 없습니다.' && (
+                  <Text style={styles.lastReason}>
+                    최근 사유: {reason}
+                  </Text>
+                )}
 
                 <View style={styles.inputRow}>
                   <Text style={styles.inputLabel}>경험치 :</Text>
@@ -246,6 +260,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
+  lastReason: {
+    fontSize: 12,
+    color: '#6D6D6D',
+    marginBottom: 8,
+  },
+
   rightPanel: {
     flex: 1.2,
     gap: 10,
@@ -336,12 +356,15 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: 'center',
   },
+
   cancelButton: {
     backgroundColor: '#9fa1a6',
   },
+
   confirmButton: {
     backgroundColor: '#7FA864',
   },
+
   footerButtonText: {
     color: '#FFF',
     fontWeight: 'bold',
