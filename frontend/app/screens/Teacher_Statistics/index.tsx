@@ -43,6 +43,8 @@ const index = () => {
     classId: string
   }>()
 
+  const parsedStudentId = Number(studentId)
+  const parsedClassId = Number(classId)
 
   console.log('📍 현재 파라미터 상태:', { studentId, classId });
 
@@ -70,8 +72,8 @@ const index = () => {
 
   /** 학생 상세 조회 */
   useEffect(() => {
+    if (!studentId || !classId) return
     const fetchStudent = async () => {
-      if (!studentId || !classId) return
 
       console.log('📡 [학생 상세 조회 요청]', {
         classId,
@@ -97,8 +99,8 @@ const index = () => {
 
   /** XP / 레벨 조회 */
   useEffect(() => {
+    if (!studentId || !classId) return
     const fetchXp = async () => {
-      if (!studentId || !classId) return
       try {
         const data = await getStudentXp(Number(classId), Number(studentId))
         console.log('🎯 학생 XP 조회 응답:', data)
@@ -187,7 +189,6 @@ const index = () => {
     }
   }, [view, year, month])
 
-  /** ================= UI ================= */
   if (studentLoading) {
     return (
       <View style={styles.center}>
@@ -269,9 +270,8 @@ const index = () => {
           visible={isExpModalVisible}
           onClose={() => setExpModalVisible(false)}
           studentName={student.name}
-          level={xpInfo?.currentLevel}
-          xp={xpInfo?.currentXp}
-          reason={xpInfo?.reason}
+          studentId={parsedStudentId}
+          classId={parsedClassId}
         />
 
         <WeeklyCalendar
