@@ -107,7 +107,12 @@ public class ClassGroupService {
         if (!classGroup.getTeacher().getId().equals(teacherId)) {
             throw new IllegalArgumentException("삭제 권한이 없습니다.");
         }
-        classGroupRepository.deleteById(classId);
+
+        // 해당 반에 속한 학생들도 모두 찾아서 삭제(soft delete)
+        List<Student> students = studentRepository.findAllByClassGroupId(classId);
+        studentRepository.deleteAll(students);
+
+        classGroupRepository.delete(classGroup);
     }
 
     //---------------------------------------------------------------------------
@@ -150,5 +155,4 @@ public class ClassGroupService {
 
         studentRepository.delete(student);
     }
-
 }
