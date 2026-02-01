@@ -1,24 +1,26 @@
 package com.ssafy.icethang.domain.monitoring.controller;
 
 import com.ssafy.icethang.domain.monitoring.dto.AlertType;
+import com.ssafy.icethang.domain.monitoring.dto.ConnectedStudentDto;
 import com.ssafy.icethang.domain.monitoring.dto.request.AlertRequest;
 import com.ssafy.icethang.domain.monitoring.dto.request.ModeChangeRequest;
 import com.ssafy.icethang.domain.monitoring.dto.response.MonitoringAlertResponse;
 import com.ssafy.icethang.domain.monitoring.entity.ClassEventLog;
+import com.ssafy.icethang.domain.monitoring.service.SocketSessionService;
 import com.ssafy.icethang.domain.student.entity.Student;
-import com.ssafy.icethang.domain.student.entity.StudyLog;
 import com.ssafy.icethang.domain.monitoring.repository.ClassEventLogRepository;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
-import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Map;
 
 @Slf4j
 @Controller
@@ -26,8 +28,38 @@ import java.time.LocalTime;
 public class MonitoringController {
     private final SimpMessagingTemplate messagingTemplate;
     private final StudentRepository studentRepository;
-    private final StudyLogRepository studyLogRepository;
     private final ClassEventLogRepository classEventLogRepository;
+    private final SocketSessionService socketSessionService;
+
+
+    @MessageMapping("/enter")
+    public void enterClass(AlertRequest request, StompHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+
+        // 1. 메모리에 접속 정보 저장
+        ConnectedStudentDto studentInfo = ConnectedStudentDto.builder()
+                .studentId(request.getStudentId())
+                .studentName(request.getStudentName())
+                .studentNumber(0)
+                .build();
+
+        socketSessionService.addStudent(sessionId, request.getClassId(), studentInfo);
+
+        log.info("🚪 입장 등록: 반={}, 학생={}", request.getClassId(), request.getStudentName());
+
+        // 2. 선생님에게 "누가 들어왔다"고 알림 전송 (ENTER)
+        MonitoringAlertResponse response = MonitoringAlertResponse.builder()
+                .type(AlertType.ENTER)
+                .studentId(request.getStudentId())
+                .studentName(request.getStudentName())
+                .message(request.getStudentName() + " 학생이 입장했습니다.")
+                .alertTime(LocalDateTime.now())
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/class/" + request.getClassId(), response);
+
+        sendUserCount(request.getClassId());
+    }
 
     // 학생 -> 선생님 : 선생님이 학생을 구독하여 학생쪽에서 선생님에게 발행 함
     // 선생님한테 보낼 소켓 주소 : /app/alert
@@ -40,14 +72,8 @@ public class MonitoringController {
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("학생 없음"));
 
-        // 임시 저장
-//        StudyLog parentLog = studyLogRepository.findTopByStudentAndDateOrderByCreatedAtDesc(student, LocalDate.now())
-//                .orElseGet(() -> createPlaceholderLog(student));
-
         // 프론트에서 넘어온시간이 없다면 서버 시간 쓰기
-        LocalDateTime eventTime = (request.getDetectedAt() != null)
-                ? request.getDetectedAt()
-                : LocalDateTime.now();
+        LocalDateTime eventTime = (request.getDetectedAt() != null) ? request.getDetectedAt() : LocalDateTime.now();
 
         // 상세 이벤트 로그 저장
         ClassEventLog eventLog = ClassEventLog.builder()
@@ -62,9 +88,11 @@ public class MonitoringController {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
 
-        long awayCount = classEventLogRepository.countByStudentAndEventTypeToday(
+        // 이탈 횟수
+        long awayCount = classEventLogRepository.countCurrentSessionLogs(
                 student, AlertType.AWAY, startOfDay, endOfDay);
-        long unfocusCount = classEventLogRepository.countByStudentAndEventTypeToday(
+        // 딴짓 횟수
+        long unfocusCount = classEventLogRepository.countCurrentSessionLogs(
                 student, AlertType.UNFOCUS, startOfDay, endOfDay);
 
         // 응답 생성
@@ -76,24 +104,13 @@ public class MonitoringController {
                 .studentNumber(student.getStudentNumber())
                 .type(request.getType())
                 .message(alertMsg)
-                .alertTime(eventTime) //
+                .alertTime(eventTime)
                 .totalAwayCount(awayCount)
                 .totalUnfocusCount(unfocusCount)
                 .build();
 
         // 구독 중인 선생님에게 바로 전송 (DB 저장 X)
         messagingTemplate.convertAndSend("/topic/class/" + request.getClassId(), response);
-
-    }
-
-    // 수업 로그가 없을 때 임시로 생성하는 헬퍼 메서드
-    private StudyLog createPlaceholderLog(Student student) {
-        StudyLog newLog = StudyLog.builder()
-                .student(student)
-                .subject("임시")
-                .classNo(0)      // 0교시로 처리
-                .build();
-        return studyLogRepository.save(newLog); // DB에 저장하고 객체 반환
     }
 
     private String makeAlertMessage(String name, AlertType type) {
@@ -101,6 +118,14 @@ public class MonitoringController {
         if (type == AlertType.UNFOCUS) return name + " 학생이 집중하지 않고 있습니다.";
         if (type == AlertType.FOCUS) return name + " 학생이 집중을 잘 하고 있습니다.";
         return name + " 학생에게 알림이 발생했습니다.";
+    }
+
+    private void sendUserCount(Long classId) {
+        int count = socketSessionService.getClassUserCount(classId);
+        messagingTemplate.convertAndSend("/topic/class/" + classId + "/count", Map.of(
+                "type", "USER_COUNT",
+                "count", count
+        ));
     }
 
     // 선생님 -> 학생들 : 학생들이 선생님을 구독하여 선생님쪽에서 반 학생들에게 발행함

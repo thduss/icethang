@@ -52,8 +52,8 @@ public class ClassSessionService {
         List<ClassEventLog> allEvents = classEventLogRepository.findAllByStudentInAndStudyLogIsNullOrderByDetectedAtAsc(students);
 
         // 이벤트들을 학생별로 그룹핑
-        Map<Student, List<ClassEventLog>> eventsByStudent = allEvents.stream()
-                .collect(Collectors.groupingBy(ClassEventLog::getStudent));
+        Map<Long, List<ClassEventLog>> eventsByStudentId = allEvents.stream()
+                .collect(Collectors.groupingBy(e -> e.getStudent().getId()));
 
         List<StudyLog> studyLogsToSave = new ArrayList<>();
 
@@ -63,7 +63,7 @@ public class ClassSessionService {
         for (Student student : students) {
 
             // 맵에서 지금 학생것만 꺼내옴
-            List<ClassEventLog> myEvents = eventsByStudent.getOrDefault(student, new ArrayList<>());
+            List<ClassEventLog> myEvents = eventsByStudentId.getOrDefault(student.getId(), new ArrayList<>());
 
             // 수업에 집중하지 않은 총 시간 계산
             long lossSeconds = calculateLossTime(myEvents, request);
@@ -94,7 +94,7 @@ public class ClassSessionService {
 
         // saveAll을 하면 studylog 객체들에 id가 생김 -> 그걸로 연결
         for (StudyLog savedLog : studyLogsToSave) {
-            List<ClassEventLog> connectedEvents = eventsByStudent.get(savedLog.getStudent());
+            List<ClassEventLog> connectedEvents = eventsByStudentId.get(savedLog.getStudent().getId());
             if (connectedEvents != null) {
                 for (ClassEventLog event : connectedEvents) {
                     event.updateStudyLog(savedLog);
