@@ -6,9 +6,48 @@ import {
   Modal,
   TouchableOpacity,
   TextInput,
+  ScrollView,
 } from "react-native";
 import { Star } from "lucide-react-native";
-import { giveStudentXp, getStudentXp } from "../../services/studentService";
+import { giveStudentXp, getStudentXp, getStudentLogs } from "../../services/studentService";
+
+const formatDateTime = (
+  createdAt?: string,
+  date?: string,
+  startTime?: string | null
+) => {
+  let d: Date;
+
+  if (createdAt) {
+    // "2026-01-30 15:36:44" → ISO 변환
+    d = new Date(createdAt.replace(" ", "T"));
+  } else if (date) {
+    d = new Date(`${date}T${startTime ?? "00:00:00"}`);
+  } else {
+    return "";
+  }
+
+  if (isNaN(d.getTime())) return "";
+
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const isToday = d.toDateString() === today.toDateString();
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+
+  const hour = d.getHours();
+  const minute = d.getMinutes().toString().padStart(2, "0");
+  const ampm = hour < 12 ? "오전" : "오후";
+  const displayHour = hour % 12 || 12;
+
+  if (isToday) return `오늘, ${ampm} ${displayHour}:${minute}`;
+  if (isYesterday) return `어제, ${ampm} ${displayHour}:${minute}`;
+
+  return `${d.getMonth() + 1}월 ${d.getDate()}일, ${ampm} ${displayHour}:${minute}`;
+};
+
 
 interface ExpModalProps {
   visible: boolean;
@@ -16,6 +55,25 @@ interface ExpModalProps {
   studentName: string;
   studentId: number;
   classId: number;
+}
+
+interface StudentLogResponse {
+  logId: number;
+  createdAt?: string;
+  date?: string;
+  startTime?: string | null;
+  subject?: string | null;
+  classNo: number;
+  earnedXp?: number;
+  xp?: number;
+  focusRate?: number | null;
+  reason?: string | null;
+}
+
+interface HistoryItem {
+  id: number;
+  dateText: string;
+  description: string;
 }
 
 const ExpModal = ({
@@ -30,32 +88,82 @@ const ExpModal = ({
 
   const [currentXp, setCurrentXp] = useState(0);
   const [currentLevel, setCurrentLevel] = useState(0);
-  const [lastReason, setLastReason] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const maxExp = 3000;
   const progressPercent = Math.min((currentXp / maxExp) * 100, 100);
 
+
+  const formatHistory = (logs: StudentLogResponse[]): HistoryItem[] =>
+    logs.map((log) => {
+      const timeText = formatDateTime(
+        log.createdAt,
+        log.date,
+        log.startTime
+      );
+
+      // 경험치 부여 로그
+      if (log.classNo === 0) {
+        const xpValue = log.earnedXp ?? log.xp ?? 0;
+
+        return {
+          id: log.logId,
+          dateText: timeText,
+          description: `특별 보상 (교사) | +${xpValue} 경험치 (수동${log.reason ? ` - ${log.reason}` : ""})`,
+        };
+      }
+
+      // 수업 로그
+      if (log.focusRate !== null && log.focusRate !== undefined) {
+        const bonus =
+          log.focusRate >= 90 ? "수업 집중 보너스" : "수업 집중도";
+
+        return {
+          id: log.logId,
+          dateText: timeText,
+          description: `${log.subject ?? "수업"} | ${bonus} ${log.focusRate
+            }%`,
+        };
+      }
+
+      return {
+        id: log.logId,
+        dateText: timeText,
+        description: "기록",
+      };
+    });
+
+
   // 경험치 & 레벨 조회
   const fetchXpInfo = async () => {
-    if (!classId || !studentId) return;
-
     try {
       const data = await getStudentXp(classId, studentId);
       setCurrentXp(data.currentXp);
       setCurrentLevel(data.currentLevel);
-      setLastReason(data.reason);
     } catch (e) {
       console.error("XP 조회 실패:", e);
     }
   };
 
   useEffect(() => {
-    if (!visible || !classId || !studentId) return;
+    if (!visible) return;
 
     setAmount("");
     setInputReason("");
     fetchXpInfo();
-  }, [visible, classId, studentId]);
+
+    const fetchHistory = async () => {
+      try {
+        const logs = await getStudentLogs(classId, studentId);
+        setHistory(formatHistory(logs));
+      } catch (e) {
+        console.error("학생 전체 기록 조회 실패:", e);
+      }
+    };
+
+    fetchHistory();
+  }, [visible]);
+
 
   // 경험치 부여
   const handleGiveXp = async () => {
@@ -80,12 +188,16 @@ const ExpModal = ({
       );
 
       await fetchXpInfo();
+      const logs = await getStudentLogs(classId, studentId);
+      setHistory(formatHistory(logs));
+
       onClose();
     } catch (e) {
       console.error("XP 부여 실패:", e);
       alert("경험치 부여 실패");
     }
   };
+
 
   return (
     <Modal animationType="fade" transparent visible={visible}>
@@ -174,18 +286,32 @@ const ExpModal = ({
               <View style={styles.historyContainer}>
                 <View style={styles.historyHeader}>
                   <Text style={styles.historyTitle}>
-                    최근 경험치 사유
+                    경험치 기록
                   </Text>
                 </View>
 
-                <View style={styles.historyItem}>
-                  <Text style={styles.historyDesc}>
-                    {lastReason ?? "기록된 사유가 없습니다."}
-                  </Text>
-                </View>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {history.length === 0 && (
+                    <Text style={styles.historyDesc}>
+                      기록이 없습니다.
+                    </Text>
+                  )}
+
+                  {history.map((item) => (
+                    <View key={item.id} style={styles.historyItem}>
+                      <Text style={styles.historyDate}>
+                        {item.dateText}
+                      </Text>
+                      <Text style={styles.historyDesc}>
+                        {item.description}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
             </View>
           </View>
+
 
           {/* 푸터 */}
           <View style={styles.footer}>
@@ -387,6 +513,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 
+  historyDate: {
+    fontSize: 12,
+    color: "#8D7B68",
+    marginBottom: 2,
+  },
+
   historyDesc: {
     fontSize: 13,
     color: "#3E2723",
@@ -400,6 +532,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#D7C8B6",
   },
+
   footerButton: {
     paddingVertical: 10,
     paddingHorizontal: 30,
