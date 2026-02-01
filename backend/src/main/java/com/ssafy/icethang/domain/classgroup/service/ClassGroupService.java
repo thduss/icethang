@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +29,8 @@ public class ClassGroupService {
     private final StudentRepository studentRepository;
     private final AuthRepository teacherRepository;
 
+    private final Random random = new Random();
+
     // 반 생성
     @Transactional
     public Long createClass(ClassCreateRequest request, Long teacherId) {
@@ -37,8 +39,11 @@ public class ClassGroupService {
 
         // 초대코드 중복 안 나올 때까지 돌리기
         do {
-            // 8자리 랜덤 코드
-            inviteCode = UUID.randomUUID().toString().substring(0, 8);
+            // 영어 대문자 1개 + 숫자 4자리 생성 (예 A1234)
+            char letter = (char) ('A' + random.nextInt(26));
+            int number = random.nextInt(10000);
+
+            inviteCode = String.format("%c%04d", letter, number);
         } while (classGroupRepository.existsByInviteCode(inviteCode));
 
         // 저장
