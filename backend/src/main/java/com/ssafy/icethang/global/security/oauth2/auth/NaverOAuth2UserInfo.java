@@ -7,18 +7,19 @@ public class NaverOAuth2UserInfo extends OAuth2UserInfo{
 
     @Override
     public String getId() {
-        // yml에서 user-name-attribute: response로 설정했기 때문에
-        // attributes 맵에 바로 id, email 등이 들어있습니다.
-        return (String) attributes.get("id");
+        Map<String, Object> response = (Map<String, Object>) attributes.get("response");
+        return response == null ? null : (String) response.get("id");
     }
 
     @Override
     public String getName() {
-        return (String) attributes.get("name");
+        Map<String, Object> response = (Map<String, Object>) attributes.get("response");
+        return response == null ? null : (String) response.get("name");
     }
 
     @Override
     public String getEmail() {
-        return (String) attributes.get("email");
+        Map<String, Object> response = (Map<String, Object>) attributes.get("response");
+        return response == null ? null : (String) response.get("email");
     }
 }

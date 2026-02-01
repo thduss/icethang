@@ -85,14 +85,14 @@ public class AuthController {
         return ResponseEntity.ok(tokenDto);
     }
 
-    // 선생님 카카오 로그인
-    @PostMapping("/kakao")
-    public ResponseEntity<TokenResponseDto> kakaoLoginFromApp(@RequestBody Map<String, String> request) {
-        String kakaoAccessToken = request.get("accessToken");
+    // 선생님 소셜 로그인
+    @PostMapping("/{provider}")
+    public ResponseEntity<TokenResponseDto> socialLogin(
+            @PathVariable String provider,
+            @RequestBody Map<String, String> request) {
 
-        // 2. 서비스에 넘겨서 모든 처리(카카오 확인 + DB저장 + 우리 토큰 생성)를 시킴
-        TokenResponseDto response = authService.loginWithKakao(kakaoAccessToken);
-        return ResponseEntity.ok(response);
+        String socialToken = request.get("accessToken");
+        return ResponseEntity.ok(authService.processSocialLogin(provider, socialToken));
     }
 
     // 토큰 재발급

@@ -13,6 +13,7 @@ import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import com.ssafy.icethang.global.security.oauth2.auth.KakaoOAuth2UserInfo;
+import com.ssafy.icethang.global.security.oauth2.auth.NaverOAuth2UserInfo;
 import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfo;
 import com.ssafy.icethang.global.utill.NeisApiService;
 import jakarta.transaction.Transactional;
@@ -169,22 +170,43 @@ public class AuthService {
         redisService.setValues(accessToken, "logout", Duration.ofMillis(expiration));
     }
 
+    //소셜 로그인 처리 (카카오 & 네이버 공통)
     @Transactional
-    public TokenResponseDto loginWithKakao(String kakaoAccessToken) {
-        // 1. 카카오 서버에서 유저 정보 가져오기
-        OAuth2UserInfo userInfo = getKakaoUserInfoFromKakao(kakaoAccessToken);
+    public TokenResponseDto processSocialLogin(String registrationId, String socialAccessToken) {
+        OAuth2UserInfo userInfo = fetchUserInfoFromProvider(registrationId, socialAccessToken);
 
-        // 2. DB에 저장하거나 업데이트하기
-        Auth auth = saveOrUpdate("kakao", userInfo);
+        Auth auth = saveOrUpdate(registrationId, userInfo);
+        return createTokenResponse(auth);
+    }
 
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(auth.getEmail());
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
+    // 제공자별 API 호출 및 파싱
+    private OAuth2UserInfo fetchUserInfoFromProvider(String registrationId, String token) {
+        String url = registrationId.equalsIgnoreCase("kakao")
+                ? "https://kapi.kakao.com/v2/user/me"
+                : "https://openapi.naver.com/v1/nid/me";
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + token);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), Map.class
         );
 
-        // 3. 우리 서버 전용 JWT 만들기
+        if (registrationId.equalsIgnoreCase("kakao")) {
+            return new KakaoOAuth2UserInfo(response.getBody());
+        } else {
+            return new NaverOAuth2UserInfo(response.getBody());
+        }
+    }
+
+    // JWT 발급 및 인증 처리
+    private TokenResponseDto createTokenResponse(Auth auth) {
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(auth.getEmail());
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+        );
+
         String accessToken = tokenProvider.createToken(authentication);
         String refreshToken = tokenProvider.createRefreshToken(authentication);
 
@@ -196,20 +218,6 @@ public class AuthService {
                 .build();
     }
 
-    private OAuth2UserInfo getKakaoUserInfoFromKakao(String accessToken) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Bearer " + accessToken);
-
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        var response = restTemplate.exchange(
-                "https://kapi.kakao.com/v2/user/me",
-                HttpMethod.GET, entity, Map.class
-        );
-
-        return new KakaoOAuth2UserInfo(response.getBody());
-    }
-
     private Auth saveOrUpdate(String registrationId, OAuth2UserInfo userInfo) {
         return authRepository.findByEmail(userInfo.getEmail())
                 .map(auth -> {
@@ -218,7 +226,8 @@ public class AuthService {
                 })
                 .orElseGet(() -> {
                     Schools defaultSchool = schoolsRepository.findById(1)
-                            .orElseThrow(() -> new RuntimeException("기본 학교(ID: 1)가 DB에 없어요! SQL 확인해주세요 힝구.."));
+                            .orElseThrow(() -> new RuntimeException("기본 학교(ID: 1)가 DB에 없어요! SQL 확인해주세요"));
+
                     Auth auth = new Auth();
                     auth.setEmail(userInfo.getEmail());
                     auth.setTeacherName(userInfo.getName());
@@ -228,5 +237,4 @@ public class AuthService {
                     return authRepository.save(auth);
                 });
     }
-
 }
