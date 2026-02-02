@@ -65,10 +65,20 @@ export const fetchAllBackgrounds = createAsyncThunk<
 
 export const equipTheme = createAsyncThunk<
   { id: number; category: ThemeCategory },
-  { id: number; category: ThemeCategory }
->('theme/equipTheme', async ({ id, category }) => {
+  { id: number; category: ThemeCategory; studentId: number }
+>('theme/equipTheme', async ({ id, category, studentId }) => {
   const type = category === 'CHARACTER' ? 'characters' : 'backgrounds';
-  await api.patch(`/themes/${type}/${id}/equip`);
+
+  await api.patch(
+    `/themes/${type}/${id}/equip`,
+    null,
+    {
+      params: category === 'BACKGROUND'
+        ? { studentId }
+        : undefined,
+    }
+  );
+
   return { id, category };
 });
 

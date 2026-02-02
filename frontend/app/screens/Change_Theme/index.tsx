@@ -46,6 +46,9 @@ export default function ReusableGridScreen() {
     useState<TabType>('character');
 
 
+  const [previewBackgroundId, setPreviewBackgroundId] =
+    useState<number | null>(null);
+
   const scrollRefs = {
     character: useRef<ScrollView>(null),
     theme: useRef<ScrollView>(null),
@@ -55,7 +58,6 @@ export default function ReusableGridScreen() {
     character: 0,
     theme: 0,
   });
-
 
   const {
     allCharacters,
@@ -80,12 +82,17 @@ export default function ReusableGridScreen() {
   }, [dispatch, studentId, activeTab]);
 
 
+  useEffect(() => {
+    if (activeTab !== 'theme') {
+      setPreviewBackgroundId(null);
+    }
+  }, [activeTab]);
+
   const currentItems: ThemeItem[] = useMemo(() => {
     return activeTab === 'character'
       ? allCharacters
       : allBackgrounds;
   }, [activeTab, allCharacters, allBackgrounds]);
-
 
   const maxOffset = useMemo(() => {
     const total =
@@ -96,7 +103,6 @@ export default function ReusableGridScreen() {
       GAP * (VISIBLE_ITEMS - 1);
     return Math.max(0, total - visible);
   }, [currentItems]);
-
 
   const handleScrollEnd =
     (tab: TabType) =>
@@ -134,7 +140,6 @@ export default function ReusableGridScreen() {
     }));
   };
 
-
   const getImageSource = (
     item: ThemeItem,
     isSelected: boolean,
@@ -143,9 +148,7 @@ export default function ReusableGridScreen() {
     const localItem = itemData[item.id];
     if (!localItem) return null;
 
-    if (isLocked) {
-      return localItem.imageInactive;
-    }
+    if (isLocked) return localItem.imageInactive;
 
     return isSelected
       ? localItem.imageActive
@@ -154,24 +157,24 @@ export default function ReusableGridScreen() {
 
 
   const handleSelect = async (item: ThemeItem) => {
-    try {
-      await dispatch(
-        equipTheme({ id: item.id, category: item.category })
-      ).unwrap();
+  if (!studentId) return;
 
-      if (item.category === 'BACKGROUND') {
-        const map: Record<number, any> = {
-          1: 'city',
-          2: 'jungle',
-          3: 'universe',
-          4: 'sea',
-        };
-        setTheme(map[item.id] ?? 'jungle');
-      }
-    } catch (e) {
-      console.error('장착 실패', e);
+  try {
+    if (item.category === 'BACKGROUND') {
+      setPreviewBackgroundId(item.id);
     }
-  };
+
+    await dispatch(
+      equipTheme({
+        id: item.id,
+        category: item.category,
+        studentId,
+      })
+    ).unwrap();
+  } catch (e) {
+    console.error('장착 실패', e);
+  }
+};
 
 
   const previewCharacter = allCharacters.find(
@@ -184,7 +187,6 @@ export default function ReusableGridScreen() {
 
   return (
     <ImageBackground source={background} style={styles.container}>
-      {/* 탭 버튼 */}
       <View style={styles.toggleWrapper}>
         <Pressable
           onPress={() => setActiveTab('character')}
@@ -209,7 +211,6 @@ export default function ReusableGridScreen() {
         </Pressable>
       </View>
 
-      {/* 선택 패널 */}
       <View style={styles.panel}>
         <View style={styles.headerBox}>
           <Text style={styles.headerTitle}>
@@ -231,7 +232,7 @@ export default function ReusableGridScreen() {
 
           <View style={styles.scrollViewContainer}>
             <ScrollView
-              key={activeTab} 
+              key={activeTab}
               horizontal
               ref={scrollRefs[activeTab]}
               showsHorizontalScrollIndicator={false}
@@ -285,9 +286,7 @@ export default function ReusableGridScreen() {
 
                       {isLocked && (
                         <View style={styles.lockOverlay}>
-                          <Text style={styles.lockText}>
-                            🔒
-                          </Text>
+                          <Text style={styles.lockText}>🔒</Text>
                         </View>
                       )}
                     </View>
@@ -318,7 +317,7 @@ export default function ReusableGridScreen() {
         </View>
       </View>
 
-      {/* 하단 미리보기 */}
+
       <View style={styles.previewArea}>
         {activeTab === 'character' && previewItem && (
           <Image
@@ -327,9 +326,11 @@ export default function ReusableGridScreen() {
             resizeMode="contain"
           />
         )}
+
         <ClassProgressBar
-          showSubImages={false}
           targetMinutes={1}
+          showSubImages={false}
+          previewBackgroundId={previewBackgroundId}
         />
       </View>
     </ImageBackground>

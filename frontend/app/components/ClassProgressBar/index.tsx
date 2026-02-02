@@ -18,38 +18,39 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface Props {
   targetMinutes: number;
   showSubImages?: boolean;
+  previewBackgroundId?: number | null;
 }
 
 export default function ClassProgressBar({
   targetMinutes,
   showSubImages = true,
+  previewBackgroundId,
 }: Props) {
   const { equippedCharacterId, equippedBackgroundId } = useSelector(
     (state: RootState) => state.theme
   );
   const { theme } = useAppTheme();
 
-
   const currentBackground = useMemo(() => {
+    if (previewBackgroundId && itemData[previewBackgroundId]) {
+      return itemData[previewBackgroundId];
+    }
+
     if (equippedBackgroundId && itemData[equippedBackgroundId]) {
       return itemData[equippedBackgroundId];
     }
 
- 
     return Object.values(itemData).find(
       item => item.category === 'BACKGROUND'
     );
-  }, [equippedBackgroundId]);
+  }, [previewBackgroundId, equippedBackgroundId]);
 
   const mainCharacter = useMemo(() => {
     if (equippedCharacterId && itemData[equippedCharacterId]) {
       return itemData[equippedCharacterId];
     }
-
-
     return itemData[5];
   }, [equippedCharacterId]);
-
 
   const subCharacters = useMemo(() => {
     if (!showSubImages) return [];
@@ -63,7 +64,6 @@ export default function ClassProgressBar({
       .sort(() => 0.5 - Math.random())
       .slice(0, 2);
   }, [equippedCharacterId, showSubImages]);
-
 
   const progress = useRef(new Animated.Value(0)).current;
 

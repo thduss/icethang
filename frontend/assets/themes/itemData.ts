@@ -1,5 +1,3 @@
-// assets/themes/itemData.ts
-
 export interface LocalThemeItem {
   id: number;
   imageActive: any;
