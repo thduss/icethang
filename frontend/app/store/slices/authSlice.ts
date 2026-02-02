@@ -18,6 +18,7 @@ export interface StudentInfo {
   currentLevel: number;
   schoolId: number;
   groupId: number | null;
+  classId: number;
   className?: string;
 }
 
