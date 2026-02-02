@@ -1,11 +1,11 @@
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-const SOCKET_URL = BASE_URL?.replace('http', 'ws') + '/ws/websocket';
+const SOCKET_URL = BASE_URL + '/ws';
 
 export const SOCKET_CONFIG = {
   BROKER_URL: SOCKET_URL,
 
   PUBLISH: {
-    ALERT: "/app/alert", 
+    ALERT: "/app/alert",
   },
 
   SUBSCRIBE: {

@@ -18,6 +18,7 @@ export interface StudentInfo {
   currentLevel: number;
   schoolId: number;
   groupId: number | null;
+  classId: number;        
   className?: string;
 }
 
@@ -85,7 +86,7 @@ export const loginTeacher = createAsyncThunk(
   }
 );
 
-// 2. 학생 로그인 (재입장)
+
 export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
   async (_, { rejectWithValue }) => {
@@ -109,7 +110,6 @@ export const loginStudent = createAsyncThunk(
   }
 );
 
-// 3. 학생 최초 로그인
 export const joinStudent = createAsyncThunk(
   'auth/joinStudent',
   async (studentData: { name: string; studentNumber: number; inviteCode: string }, { rejectWithValue }) => {
@@ -132,7 +132,6 @@ export const joinStudent = createAsyncThunk(
   }
 );
 
-// 4. 로그아웃
 export const logout = createAsyncThunk('auth/logout', async () => {
   try {
     await api.post('/auth/logout');
@@ -161,7 +160,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // 학생 관련 성공 처리
       .addMatcher(
         isAnyOf(joinStudent.fulfilled, loginStudent.fulfilled),
         (state, action) => {
@@ -173,7 +171,6 @@ const authSlice = createSlice({
           state.isRegistered = true;
         }
       )
-      // 선생님 관련 성공 처리
       .addMatcher(
         isAnyOf(loginTeacher.fulfilled),
         (state, action) => {

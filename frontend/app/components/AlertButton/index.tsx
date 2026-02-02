@@ -1,72 +1,45 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 
+// 1. Props & Ref 타입 정의
 export interface AlertButtonRef {
   triggerAlert: (type: string) => void;
 }
 
-interface AlertButtonProps {}
+interface AlertButtonProps {
+  onStatusChange?: (status: string) => void; // 부모에게 알릴 함수
+}
 
 const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [myStatus, setMyStatus] = useState('정상');
-
+  
+  // 2. 부모가 호출하는 함수 (선생님이 경고 보낼 때 등)
   useImperativeHandle(ref, () => ({
     triggerAlert: (type: string) => {
-      console.log("🔔 AlertButton.triggerAlert 호출됨! type:", type);
-      
-      if (type === 'AWAY' || type === 'UNFOCUS' || type === 'SLEEPING' || type === 'GAZE OFF') {
-        setFeedbackMessage("⚠️ 경고! 집중요망: 화면을 확인하세요!");
-        setMyStatus(type);
-        console.log("✅ 팝업 메시지 설정 완료!");
-      } else {
-        console.log("❌ 조건 미충족, type:", type);
-      }
+      // 학생 화면에 띄울 게 없다면 콘솔만 찍음
+      console.log(`🔔 [경고 수신] 선생님으로부터 ${type} 경고가 왔습니다.`);
     }
   }));
 
-  useEffect(() => {
-    if (feedbackMessage) {
-      console.log("📢 팝업 표시 중:", feedbackMessage);
-      const timer = setTimeout(() => {
-        setFeedbackMessage(null);
-        console.log("📢 팝업 숨김");
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedbackMessage]);
-
+  // 3. 학생이 버튼 눌러서 상태 보고할 때
   const reportStatus = (status: string) => {
-    setMyStatus(status);
+    // (1) 모달 닫기
     setModalVisible(false);
-    setFeedbackMessage(`선생님께 "${status}" 라고 말했어요! 😊`);
 
-    if (status !== '정상') {
-      setTimeout(() => {
-        setMyStatus('정상');
-      }, 10000);
+    // (2) 콘솔 로그 (요청하신 대로)
+    console.log(`📢 [학생 요청] 상태 선택됨: "${status}" -> 부모에게 전달합니다.`);
+
+    // (3) 부모(NormalClassScreen)에게 전달 -> 여기서 소켓 쏠 예정
+    if (props.onStatusChange) {
+      props.onStatusChange(status);
     }
   };
 
+  
+
   return (
     <View style={styles.container}>
-
-      {feedbackMessage && (
-        <View style={[
-          styles.balloon,
-
-          feedbackMessage.includes("경고") && { backgroundColor: '#FFF9C4', borderColor: '#FBC02D', borderWidth: 1 }
-        ]}>
-          <Text style={styles.balloonText}>❗ {feedbackMessage}</Text>
-          <View style={[
-            styles.balloonArrow,
-            feedbackMessage.includes("경고") && { borderLeftColor: '#FFF9C4' }
-          ]} />
-        </View>
-      )}
-
- 
+      {/* 메인 버튼 */}
       <TouchableOpacity
         style={styles.mainButton}
         onPress={() => setModalVisible(true)}
@@ -76,8 +49,7 @@ const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) =>
         <Text style={styles.mainButtonLabel}>알려주기</Text>
       </TouchableOpacity>
 
-      
-
+      {/* 선택 모달창 */}
       <Modal
         animationType="fade"
         transparent
@@ -90,21 +62,22 @@ const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) =>
 
             <TouchableOpacity
               style={[styles.statusBtn, { backgroundColor: '#feeeb4' }]}
-              onPress={() => reportStatus('화장실 갈래요')
-                // 참고로 화장실이랑 발표는 아직 서버 전송 미구현
-              }
+              onPress={() => reportStatus('RESTROOM')}
             >
               <Text style={styles.statusBtnText}>🚽 화장실 갈래요!</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.statusBtn, { backgroundColor: '#caebfb' }]}
-              onPress={() => reportStatus('발표 할래요')}
+              onPress={() => reportStatus('ACTIVITY')}
             >
               <Text style={styles.statusBtnText}>✋ 발표 할래요!</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity 
+              style={styles.closeBtn} 
+              onPress={() => setModalVisible(false)}
+            >
               <Text style={styles.closeBtnText}>닫기</Text>
             </TouchableOpacity>
           </View>
@@ -115,97 +88,21 @@ const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) =>
 });
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    right: 20,
-    top: '12%', 
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 999,
-  },
-  balloon: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    top: 20, 
-  },
-  balloonText: {
-    color: '#333',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  balloonArrow: {
-    position: 'absolute',
-    right: -10,
-    top: 12,
-    width: 0,
-    height: 0,
-    borderTopWidth: 6,
-    borderBottomWidth: 6,
-    borderLeftWidth: 10,
-    borderStyle: 'solid',
-    backgroundColor: 'transparent',
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: '#ffffff',
-  },
+  container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   mainButton: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#FFE066',
-    borderRadius: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    top: 20, 
+    width: 80, height: 80, backgroundColor: '#FFE066', borderRadius: 40,
+    justifyContent: 'center', alignItems: 'center', elevation: 5,
   },
   mainButtonText: { fontSize: 28 },
-  mainButtonLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 2,
-    color: '#5A4A2F',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalView: {
-    width: '80%',
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 25,
-    fontWeight: '800',
-    marginBottom: 18,
-  },
-  statusBtn: {
-    width: '100%',
-    paddingVertical: 18,
-    borderRadius: 26,
-    marginBottom: 14,
-    alignItems: 'center',
-    elevation: 4,
-  },
+  mainButtonLabel: { fontSize: 15, fontWeight: '700', marginTop: 2, color: '#5A4A2F' },
+  
+  // 모달 스타일
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalView: { width: '80%', backgroundColor: '#ffffff', borderRadius: 24, padding: 24, alignItems: 'center' },
+  modalTitle: { fontSize: 25, fontWeight: '800', marginBottom: 18 },
+  statusBtn: { width: '100%', paddingVertical: 18, borderRadius: 26, marginBottom: 14, alignItems: 'center', elevation: 4 },
   statusBtnText: { fontSize: 20, fontWeight: '700', color: '#333' },
-  closeBtn: {
-    marginTop: 10,
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-    backgroundColor: '#d9d8d7'
-  },
+  closeBtn: { marginTop: 10, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 40, backgroundColor: '#d9d8d7' },
   closeBtnText: { color: '#070101', fontWeight: '700' },
 });
 
