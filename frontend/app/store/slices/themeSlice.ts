@@ -1,18 +1,22 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
 
-/* ================= 타입 ================= */
+/* ================= 공통 타입 ================= */
 export type ThemeCategory = 'CHARACTER' | 'BACKGROUND';
 
-export type ThemeItem = {
+export interface ThemeItem {
   id: number;
   name: string;
-  assetUrl: string;
   category: ThemeCategory;
   unlocked: boolean;
   equipped: boolean;
-};
+}
 
+/* ================= 기본 캐릭터 ID ================= */
+// 🔥 DB 기준 기본 캐릭터 (기차)
+const DEFAULT_CHARACTER_ID = 5;
+
+/* ================= 상태 ================= */
 interface ThemeState {
   allCharacters: ThemeItem[];
   allBackgrounds: ThemeItem[];
@@ -41,9 +45,8 @@ export const fetchAllCharacters = createAsyncThunk<
   });
 
   return res.data.map((item: any) => ({
-    id: item.themeId,    
+    id: item.themeId,
     name: item.name,
-    assetUrl: item.assetUrl,
     category: 'CHARACTER' as const,
     unlocked: Boolean(item.isOwned),
     equipped: Boolean(item.isEquipped),
@@ -57,16 +60,15 @@ export const fetchAllBackgrounds = createAsyncThunk<
   const res = await api.get('/themes/backgrounds');
 
   return res.data.map((item: any) => ({
-    id: item.id,
+    id: item.themeId,
     name: item.name,
-    assetUrl: item.assetUrl,
     category: 'BACKGROUND' as const,
-    unlocked: Boolean(item.isOwned),
-    equipped: Boolean(item.isEquipped),
+    unlocked: Boolean(item.unlocked),
+    equipped: Boolean(item.equipped),
   }));
 });
 
-/* ================= 장착 ================= */
+/* ================= 테마 장착 ================= */
 export const equipTheme = createAsyncThunk<
   { id: number; category: ThemeCategory },
   { id: number; category: ThemeCategory }
@@ -92,23 +94,34 @@ const themeSlice = createSlice({
       .addCase(fetchAllCharacters.fulfilled, (state, action) => {
         state.loading = false;
 
-        state.allCharacters = action.payload.map((item, index) => ({
-          ...item,
-          unlocked: index === 0 ? true : item.unlocked,
+        // 1️⃣ 기본 캐릭터는 항상 unlocked
+        const characters = action.payload.map(c => ({
+          ...c,
+          unlocked:
+            c.id === DEFAULT_CHARACTER_ID ? true : c.unlocked,
         }));
 
-        const equipped = state.allCharacters.find(c => c.equipped);
+        // 2️⃣ 서버에서 equipped 내려오면 그걸 우선
+        let equipped = characters.find(c => c.equipped);
 
-        if (equipped) {
-          state.equippedCharacterId = equipped.id;
-        } else if (state.allCharacters.length > 0) {
-          state.allCharacters[0].equipped = true;
-          state.equippedCharacterId = state.allCharacters[0].id;
+        // 3️⃣ 없으면 기본 캐릭터를 강제 장착
+        if (!equipped) {
+          characters.forEach(c => {
+            c.equipped = c.id === DEFAULT_CHARACTER_ID;
+          });
+          equipped = characters.find(
+            c => c.id === DEFAULT_CHARACTER_ID
+          );
         }
+
+        state.allCharacters = characters;
+        state.equippedCharacterId =
+          equipped?.id ?? DEFAULT_CHARACTER_ID;
       })
       .addCase(fetchAllCharacters.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? '캐릭터 조회 실패';
+        state.error =
+          action.error.message ?? '캐릭터 조회 실패';
       })
 
       /* ---------- 전체 배경 ---------- */
@@ -125,7 +138,8 @@ const themeSlice = createSlice({
       })
       .addCase(fetchAllBackgrounds.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? '배경 조회 실패';
+        state.error =
+          action.error.message ?? '배경 조회 실패';
       })
 
       /* ---------- 장착 ---------- */

@@ -19,35 +19,44 @@ import {
   equipTheme,
 } from '../../store/slices/themeSlice';
 import type { ThemeItem } from '../../store/slices/themeSlice';
-
-
 import itemData from '../../../assets/themes/itemData';
 
 const background = require('../../../assets/theme_background.png');
-
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_MARGIN = 30;
 const GAP = 12;
 const VISIBLE_ITEMS = 4;
 
-const CONTAINER_INNER_WIDTH = SCREEN_WIDTH - PANEL_MARGIN * 2 - 100;
+const CONTAINER_INNER_WIDTH =
+  SCREEN_WIDTH - PANEL_MARGIN * 2 - 100;
 const CARD_WIDTH = Math.floor(
-  (CONTAINER_INNER_WIDTH - GAP * (VISIBLE_ITEMS - 1)) / VISIBLE_ITEMS
+  (CONTAINER_INNER_WIDTH - GAP * (VISIBLE_ITEMS - 1)) /
+    VISIBLE_ITEMS
 );
 const PAGE_WIDTH = CARD_WIDTH + GAP;
 
-type ThemeType = 'blue' | 'jungle' | 'universe' | 'city' | 'sea';
+type TabType = 'character' | 'theme';
 
 export default function ReusableGridScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { setTheme } = useAppTheme();
-  const scrollRef = useRef<ScrollView>(null);
 
   const [activeTab, setActiveTab] =
-    useState<'theme' | 'character'>('character');
-  const [currentOffset, setCurrentOffset] = useState(0);
+    useState<TabType>('character');
 
+  /* ===== Scroll refs (탭별 분리) ===== */
+  const scrollRefs = {
+    character: useRef<ScrollView>(null),
+    theme: useRef<ScrollView>(null),
+  };
+
+  const [offsets, setOffsets] = useState<Record<TabType, number>>({
+    character: 0,
+    theme: 0,
+  });
+
+  /* ===== Redux ===== */
   const {
     allCharacters,
     allBackgrounds,
@@ -59,58 +68,91 @@ export default function ReusableGridScreen() {
     (state: RootState) => state.auth.studentData?.studentId
   );
 
-
+  /* ===== API ===== */
   useEffect(() => {
     if (!studentId) return;
-    dispatch(fetchAllCharacters(studentId));
-    dispatch(fetchAllBackgrounds());
-  }, [dispatch, studentId]);
 
+    if (activeTab === 'character') {
+      dispatch(fetchAllCharacters(studentId));
+    } else {
+      dispatch(fetchAllBackgrounds());
+    }
+  }, [dispatch, studentId, activeTab]);
 
+  /* ===== 현재 탭 아이템 ===== */
   const currentItems: ThemeItem[] = useMemo(() => {
     return activeTab === 'character'
       ? allCharacters
       : allBackgrounds;
   }, [activeTab, allCharacters, allBackgrounds]);
 
-
+  /* ===== max offset ===== */
   const maxOffset = useMemo(() => {
     const total =
       currentItems.length * CARD_WIDTH +
       (currentItems.length - 1) * GAP;
     const visible =
-      CARD_WIDTH * VISIBLE_ITEMS + GAP * (VISIBLE_ITEMS - 1);
+      CARD_WIDTH * VISIBLE_ITEMS +
+      GAP * (VISIBLE_ITEMS - 1);
     return Math.max(0, total - visible);
   }, [currentItems]);
 
-  const moveScroll = (direction: 'left' | 'right') => {
+  /* ===== scroll handlers ===== */
+  const handleScrollEnd =
+    (tab: TabType) =>
+    (e: any) => {
+      const x = e?.nativeEvent?.contentOffset?.x;
+      if (typeof x !== 'number') return;
+
+      setOffsets(prev => ({
+        ...prev,
+        [tab]: x,
+      }));
+    };
+
+  const moveScroll = (
+    tab: TabType,
+    direction: 'left' | 'right'
+  ) => {
+    const current = offsets[tab];
+
     let next =
       direction === 'left'
-        ? currentOffset - PAGE_WIDTH
-        : currentOffset + PAGE_WIDTH;
+        ? current - PAGE_WIDTH
+        : current + PAGE_WIDTH;
 
     next = Math.max(0, Math.min(next, maxOffset));
-    scrollRef.current?.scrollTo({ x: next, animated: true });
-    setCurrentOffset(next);
+
+    scrollRefs[tab].current?.scrollTo({
+      x: next,
+      animated: true,
+    });
+
+    setOffsets(prev => ({
+      ...prev,
+      [tab]: next,
+    }));
   };
 
-
+  /* ===== 이미지 선택 ===== */
   const getImageSource = (
     item: ThemeItem,
-    isSelected: boolean
+    isSelected: boolean,
+    isLocked: boolean
   ) => {
-    const localItem = itemData.find(
-      d => d.name === item.name && d.category === item.category
-    );
-
+    const localItem = itemData[item.id];
     if (!localItem) return null;
+
+    if (isLocked) {
+      return localItem.imageInactive;
+    }
 
     return isSelected
       ? localItem.imageActive
       : localItem.imageInactive;
   };
 
-
+  /* ===== 선택 ===== */
   const handleSelect = async (item: ThemeItem) => {
     try {
       await dispatch(
@@ -118,43 +160,38 @@ export default function ReusableGridScreen() {
       ).unwrap();
 
       if (item.category === 'BACKGROUND') {
-        const themeKey = item.name.split('_')[0] as ThemeType;
-        const valid: ThemeType[] = [
-          'blue',
-          'jungle',
-          'universe',
-          'city',
-          'sea',
-        ];
-        setTheme(valid.includes(themeKey) ? themeKey : 'jungle');
+        const map: Record<number, any> = {
+          1: 'city',
+          2: 'jungle',
+          3: 'universe',
+          4: 'sea',
+        };
+        setTheme(map[item.id] ?? 'jungle');
       }
     } catch (e) {
       console.error('장착 실패', e);
     }
   };
 
+  /* ===== 미리보기 ===== */
   const previewCharacter = allCharacters.find(
     c => c.id === equippedCharacterId
   );
 
   const previewItem = previewCharacter
-    ? itemData.find(
-      d =>
-        d.name === previewCharacter.name &&
-        d.category === 'CHARACTER'
-    )
+    ? itemData[previewCharacter.id]
     : null;
-
 
   return (
     <ImageBackground source={background} style={styles.container}>
-      {/* 탭 */}
+      {/* 탭 버튼 */}
       <View style={styles.toggleWrapper}>
         <Pressable
           onPress={() => setActiveTab('character')}
           style={[
             styles.topBtn,
-            activeTab !== 'character' && styles.topBtnInactive,
+            activeTab !== 'character' &&
+              styles.topBtnInactive,
           ]}
         >
           <Text style={styles.topBtnText}>캐릭터</Text>
@@ -164,36 +201,44 @@ export default function ReusableGridScreen() {
           onPress={() => setActiveTab('theme')}
           style={[
             styles.topBtn,
-            activeTab !== 'theme' && styles.topBtnInactive,
+            activeTab !== 'theme' &&
+              styles.topBtnInactive,
           ]}
         >
           <Text style={styles.topBtnText}>테마</Text>
         </Pressable>
       </View>
 
+      {/* 선택 패널 */}
       <View style={styles.panel}>
         <View style={styles.headerBox}>
           <Text style={styles.headerTitle}>
-            {activeTab === 'theme' ? '테마 선택' : '캐릭터 선택'}
+            {activeTab === 'theme'
+              ? '테마 선택'
+              : '캐릭터 선택'}
           </Text>
         </View>
 
         <View style={styles.carouselWrapper}>
-          <Pressable style={styles.arrowBtn} onPress={() => moveScroll('left')}>
+          <Pressable
+            style={styles.arrowBtn}
+            onPress={() =>
+              moveScroll(activeTab, 'left')
+            }
+          >
             <Text style={styles.arrowText}>◀</Text>
           </Pressable>
 
           <View style={styles.scrollViewContainer}>
             <ScrollView
+              key={activeTab}  // ⭐️ 핵심: 탭별 ScrollView 완전 분리
               horizontal
-              ref={scrollRef}
+              ref={scrollRefs[activeTab]}
               showsHorizontalScrollIndicator={false}
               snapToInterval={PAGE_WIDTH}
               decelerationRate="fast"
               contentContainerStyle={styles.scrollContent}
-              onMomentumScrollEnd={e =>
-                setCurrentOffset(e.nativeEvent.contentOffset.x)
-              }
+              onMomentumScrollEnd={handleScrollEnd(activeTab)}
             >
               {currentItems.map((item, index) => {
                 const isSelected =
@@ -202,27 +247,35 @@ export default function ReusableGridScreen() {
                     : equippedBackgroundId === item.id;
 
                 const isLocked =
-                  item.category === 'CHARACTER' && !item.unlocked;
+                  item.category === 'CHARACTER' &&
+                  !item.unlocked;
 
                 return (
                   <Pressable
                     key={`${item.category}-${item.id}-${index}`}
                     disabled={isLocked}
-                    onPress={() => !isLocked && handleSelect(item)}
+                    onPress={() =>
+                      !isLocked && handleSelect(item)
+                    }
                     style={[
                       styles.card,
                       isSelected && styles.selectedCard,
-                      isLocked && styles.lockedCard,
                     ]}
                   >
                     <View style={styles.imageWrapper}>
                       <Image
-                        source={getImageSource(item, isSelected)}
-                        style={
+                        source={getImageSource(
+                          item,
+                          isSelected,
+                          isLocked
+                        )}
+                        style={[
                           item.category === 'CHARACTER'
                             ? styles.charImage
-                            : styles.bgFullImage
-                        }
+                            : styles.bgFullImage,
+                          isLocked &&
+                            styles.silhouetteImage,
+                        ]}
                         resizeMode={
                           item.category === 'BACKGROUND'
                             ? 'cover'
@@ -230,10 +283,11 @@ export default function ReusableGridScreen() {
                         }
                       />
 
-
                       {isLocked && (
                         <View style={styles.lockOverlay}>
-                          <Text style={styles.lockText}>🔒</Text>
+                          <Text style={styles.lockText}>
+                            🔒
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -241,9 +295,11 @@ export default function ReusableGridScreen() {
                     <Text
                       style={[
                         styles.cardText,
-                        isSelected && styles.selectedText,
+                        isSelected &&
+                          styles.selectedText,
                       ]}
-                    >{item.name}
+                    >
+                      {item.name}
                     </Text>
                   </Pressable>
                 );
@@ -251,13 +307,18 @@ export default function ReusableGridScreen() {
             </ScrollView>
           </View>
 
-          <Pressable style={styles.arrowBtn} onPress={() => moveScroll('right')}>
+          <Pressable
+            style={styles.arrowBtn}
+            onPress={() =>
+              moveScroll(activeTab, 'right')
+            }
+          >
             <Text style={styles.arrowText}>▶</Text>
           </Pressable>
         </View>
       </View>
 
-      {/* 미리보기 */}
+      {/* 하단 미리보기 */}
       <View style={styles.previewArea}>
         {activeTab === 'character' && previewItem && (
           <Image
@@ -266,11 +327,16 @@ export default function ReusableGridScreen() {
             resizeMode="contain"
           />
         )}
-        <ClassProgressBar showSubImages={false} targetMinutes={1} />
+        <ClassProgressBar
+          showSubImages={false}
+          targetMinutes={1}
+        />
       </View>
     </ImageBackground>
   );
 }
+
+/* ================= styles ================= */
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -326,14 +392,20 @@ const styles = StyleSheet.create({
   },
 
   scrollViewContainer: {
-    width: CARD_WIDTH * VISIBLE_ITEMS + GAP * (VISIBLE_ITEMS - 1),
+    width:
+      CARD_WIDTH * VISIBLE_ITEMS +
+      GAP * (VISIBLE_ITEMS - 1),
     overflow: 'hidden',
   },
 
   scrollContent: { paddingVertical: 6 },
 
   arrowBtn: { width: 45, alignItems: 'center' },
-  arrowText: { fontSize: 24, color: '#D6C29A', fontWeight: 'bold' },
+  arrowText: {
+    fontSize: 24,
+    color: '#D6C29A',
+    fontWeight: 'bold',
+  },
 
   card: {
     width: CARD_WIDTH,
@@ -347,8 +419,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  selectedCard: { borderWidth: 4, borderColor: '#FFD86B' },
-  lockedCard: { opacity: 0.45 },
+  selectedCard: {
+    borderWidth: 4,
+    borderColor: '#FFD86B',
+  },
 
   imageWrapper: {
     width: '100%',
@@ -359,6 +433,11 @@ const styles = StyleSheet.create({
 
   charImage: { width: '80%', height: '80%' },
   bgFullImage: { width: '100%', height: '100%' },
+
+  silhouetteImage: {
+    tintColor: '#BDBDBD',
+    opacity: 0.9,
+  },
 
   cardText: {
     marginTop: 6,
@@ -374,10 +453,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.15)',
   },
 
-  lockText: { fontSize: 30 },
+  lockText: { fontSize: 28 },
 
   previewArea: {
     flex: 1,

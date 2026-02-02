@@ -1,36 +1,79 @@
-import React, { useEffect, useRef, useMemo } from "react";
-import { View, Text, StyleSheet, Animated, Easing, Image, Dimensions } from "react-native";
-import { useSelector } from "react-redux";
-import { useAppTheme } from "../../context/ThemeContext";
-import { RootState } from "../../store/stores";
-import itemData from "../../../assets/themes/itemData";
+import React, { useEffect, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Easing,
+  Image,
+  Dimensions,
+} from 'react-native';
+import { useSelector } from 'react-redux';
+import { useAppTheme } from '../../context/ThemeContext';
+import { RootState } from '../../store/stores';
+import itemData from '../../../assets/themes/itemData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function ClassProgressBar({ 
-  targetMinutes, 
-  showSubImages = true 
-}: { targetMinutes: number; showSubImages?: boolean }) {
-  
-  const { equippedCharacterId, equippedBackgroundId } = useSelector((state: RootState) => state.theme);
+interface Props {
+  targetMinutes: number;
+  showSubImages?: boolean;
+}
+
+export default function ClassProgressBar({
+  targetMinutes,
+  showSubImages = true,
+}: Props) {
+  const { equippedCharacterId, equippedBackgroundId } = useSelector(
+    (state: RootState) => state.theme
+  );
   const { theme } = useAppTheme();
 
+  /**
+   * ✅ 현재 배경 (Record 구조 대응)
+   */
   const currentBackground = useMemo(() => {
-    return itemData.find(t => t.id === equippedBackgroundId && t.category === 'BACKGROUND') 
-           || itemData.find(t => t.category === 'BACKGROUND'); 
+    if (equippedBackgroundId && itemData[equippedBackgroundId]) {
+      return itemData[equippedBackgroundId];
+    }
+
+    // fallback: 첫 번째 BACKGROUND
+    return Object.values(itemData).find(
+      item => item.category === 'BACKGROUND'
+    );
   }, [equippedBackgroundId]);
 
+  /**
+   * ✅ 메인 캐릭터
+   */
   const mainCharacter = useMemo(() => {
-    return itemData.find(t => t.id === equippedCharacterId && t.category === 'CHARACTER')
-           || itemData.find(t => t.id === 5); 
+    if (equippedCharacterId && itemData[equippedCharacterId]) {
+      return itemData[equippedCharacterId];
+    }
+
+    // fallback: 기본 캐릭터 (id: 5)
+    return itemData[5];
   }, [equippedCharacterId]);
 
+  /**
+   * ✅ 서브 캐릭터 (랜덤 2개)
+   */
   const subCharacters = useMemo(() => {
     if (!showSubImages) return [];
-    const otherCharacters = itemData.filter(t => t.category === 'CHARACTER' && t.id !== equippedCharacterId);
-    return [...otherCharacters].sort(() => 0.5 - Math.random()).slice(0, 2);
+
+    return Object.values(itemData)
+      .filter(
+        item =>
+          item.category === 'CHARACTER' &&
+          item.id !== equippedCharacterId
+      )
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 2);
   }, [equippedCharacterId, showSubImages]);
 
+  /**
+   * 진행 애니메이션
+   */
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -56,13 +99,16 @@ export default function ClassProgressBar({
       </View>
 
       <View style={styles.barContainer}>
+        {/* 배경 */}
         {currentBackground && (
-          <Image 
-            source={currentBackground.imageActive} 
-            style={styles.backgroundImage} 
-            resizeMode="stretch" 
+          <Image
+            source={currentBackground.imageActive}
+            style={styles.backgroundImage}
+            resizeMode="stretch"
           />
         )}
+
+        {/* 프로그레스 바 */}
         <View style={styles.progressBarTrack}>
           <Animated.View
             style={[
@@ -71,18 +117,38 @@ export default function ClassProgressBar({
                 backgroundColor: theme.primary || '#FFD86B',
                 width: progress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ['0%', '100%']
-                })
-              }
+                  outputRange: ['0%', '100%'],
+                }),
+              },
             ]}
           />
         </View>
+
+        {/* 캐릭터 레이어 */}
         <View style={styles.characterLayer} pointerEvents="none">
-          <Animated.View style={[styles.imageGroup, { transform: [{ translateX }] }]}>
-            <Image source={mainCharacter?.imageActive} resizeMode="contain" style={styles.mainCharImg} />
-            {showSubImages && subCharacters.map((char, index) => (
-              <Image key={`sub-${char.id}`} source={char.imageActive} resizeMode="contain" style={[styles.subCharImg, { zIndex: -index }]} />
-            ))}
+          <Animated.View
+            style={[styles.imageGroup, { transform: [{ translateX }] }]}
+          >
+            {mainCharacter && (
+              <Image
+                source={mainCharacter.imageActive}
+                resizeMode="contain"
+                style={styles.mainCharImg}
+              />
+            )}
+
+            {showSubImages &&
+              subCharacters.map((char, index) => (
+                <Image
+                  key={`sub-${char.id}`}
+                  source={char.imageActive}
+                  resizeMode="contain"
+                  style={[
+                    styles.subCharImg,
+                    { zIndex: -index },
+                  ]}
+                />
+              ))}
           </Animated.View>
         </View>
       </View>
@@ -98,8 +164,8 @@ const styles = StyleSheet.create({
     height: 100,
     justifyContent: 'flex-end',
     backgroundColor: 'transparent',
-    elevation: 10, 
-    zIndex: 999,   
+    elevation: 10,
+    zIndex: 999,
   },
   infoRow: {
     flexDirection: 'row',
@@ -109,7 +175,7 @@ const styles = StyleSheet.create({
   },
   barContainer: {
     width: '100%',
-    height: 35, 
+    height: 35,
     justifyContent: 'center',
     overflow: 'visible',
   },
@@ -117,15 +183,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    zIndex: -1, 
+    zIndex: -1,
   },
   progressBarTrack: {
-    height: 16, 
+    height: 16,
     marginHorizontal: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -135,7 +201,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    top: -40, 
+    top: -40,
     height: 45,
     overflow: 'visible',
   },
@@ -145,8 +211,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -20,
   },
-  mainCharImg: { width: 65, height: 65 },
-  subCharImg: { width: 25, height: 25, marginLeft: -6 },
-  loadingText: { fontSize: 13, fontWeight: '700', color: '#333' },
-  timeText: { fontSize: 13, fontWeight: 'bold', color: '#333' },
+  mainCharImg: {
+    width: 65,
+    height: 65,
+  },
+  subCharImg: {
+    width: 25,
+    height: 25,
+    marginLeft: -6,
+  },
+  loadingText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#333',
+  },
+  timeText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#333',
+  },
 });
