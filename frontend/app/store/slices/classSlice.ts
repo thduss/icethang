@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { createClass, getClasses, getSpecificClass, ClassDto } from '../../services/classService';
+import { createClass, getClasses, getSpecificClass, deleteClassAPI, ClassDto } from '../../services/classService';
 
 interface ClassState {
   items: ClassDto[];
@@ -60,6 +60,20 @@ export const fetchClassDetail = createAsyncThunk(
   }
 );
 
+// 학급 삭제 Thunk
+export const deleteClass = createAsyncThunk(
+  'class/deleteClass',
+  async (classId: number, { rejectWithValue }) => {
+    try {
+      await deleteClassAPI(classId); 
+      return classId; 
+    } catch (error: any) {
+      console.error('❌ [Slice] 삭제 실패:', error.message);
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const classSlice = createSlice({
   name: 'class',
   initialState,
@@ -114,6 +128,19 @@ const classSlice = createSlice({
         state.selectedClassDetail = action.payload;
       })
       .addCase(fetchClassDetail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(deleteClass.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteClass.fulfilled, (state, action) => {
+        state.loading = false;
+        // 삭제 성공 시 목록에서 해당 ID를 가진 반을 즉시 제거
+        state.items = state.items.filter((item) => item.classId !== action.payload);
+      })
+      .addCase(deleteClass.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

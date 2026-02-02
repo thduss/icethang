@@ -28,7 +28,7 @@ export default function StudentTitleScreen() {
       <View style={styles.cardRow}>
         <Pressable
           style={styles.card}
-          onPress={() => router.push('/screens/Login')}
+          onPress={() => router.push('/screens/Student')}
         >
           <ImageBackground
             source={require('../../../assets/Student_Home3.png')}
