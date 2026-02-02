@@ -73,7 +73,7 @@ export const equipTheme = createAsyncThunk<
     `/themes/${type}/${id}/equip`,
     null,
     {
-      params: category === 'BACKGROUND'
+      params: category === 'BACKGROUND' || category === 'CHARACTER'
         ? { studentId }
         : undefined,
     }
