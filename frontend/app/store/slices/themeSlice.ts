@@ -41,7 +41,7 @@ export const fetchAllCharacters = createAsyncThunk<
   });
 
   return res.data.map((item: any) => ({
-    id: item.id,
+    id: item.themeId,    
     name: item.name,
     assetUrl: item.assetUrl,
     category: 'CHARACTER' as const,
@@ -92,21 +92,16 @@ const themeSlice = createSlice({
       .addCase(fetchAllCharacters.fulfilled, (state, action) => {
         state.loading = false;
 
-        // 1️⃣ 캐릭터 목록 세팅
         state.allCharacters = action.payload.map((item, index) => ({
           ...item,
-          // 🔥 첫 번째 캐릭터는 기본 무료 캐릭터
           unlocked: index === 0 ? true : item.unlocked,
         }));
 
-        // 2️⃣ 서버에서 장착된 캐릭터가 있는지 확인
         const equipped = state.allCharacters.find(c => c.equipped);
 
         if (equipped) {
-          // 서버 기준 장착 캐릭터 사용
           state.equippedCharacterId = equipped.id;
         } else if (state.allCharacters.length > 0) {
-          // 🔥 아무도 장착 안 돼 있으면 기본 캐릭터 강제 장착
           state.allCharacters[0].equipped = true;
           state.equippedCharacterId = state.allCharacters[0].id;
         }

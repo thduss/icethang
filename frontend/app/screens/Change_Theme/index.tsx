@@ -215,25 +215,36 @@ export default function ReusableGridScreen() {
                       isLocked && styles.lockedCard,
                     ]}
                   >
-                    <Image
-                      source={getImageSource(item, isSelected)}
+                    <View style={styles.imageWrapper}>
+                      <Image
+                        source={getImageSource(item, isSelected)}
+                        style={
+                          item.category === 'CHARACTER'
+                            ? styles.charImage
+                            : styles.bgFullImage
+                        }
+                        resizeMode={
+                          item.category === 'BACKGROUND'
+                            ? 'cover'
+                            : 'contain'
+                        }
+                      />
+
+
+                      {isLocked && (
+                        <View style={styles.lockOverlay}>
+                          <Text style={styles.lockText}>🔒</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text
                       style={[
-                        item.category === 'CHARACTER'
-                          ? styles.charImage
-                          : styles.bgFullImage,
-                        isLocked && styles.lockedImage,
+                        styles.cardText,
+                        isSelected && styles.selectedText,
                       ]}
-                      resizeMode="contain"
-                    />
-
-
-                    {isLocked && (
-                      <View style={styles.lockOverlay}>
-                        <Text style={styles.lockText}>🔒</Text>
-                      </View>
-                    )}
-
-                    <Text style={styles.cardText}>{item.name}</Text>
+                    >{item.name}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -285,7 +296,6 @@ const styles = StyleSheet.create({
   },
 
   topBtnInactive: { backgroundColor: '#FFFFFF' },
-
   topBtnText: { fontWeight: '600', fontSize: 14 },
 
   panel: {
@@ -300,7 +310,6 @@ const styles = StyleSheet.create({
   },
 
   headerBox: {
-    width: '100%',
     height: 60,
     backgroundColor: '#E8DCC3',
     justifyContent: 'center',
@@ -314,7 +323,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 25,
-    paddingHorizontal: 5,
   },
 
   scrollViewContainer: {
@@ -324,8 +332,7 @@ const styles = StyleSheet.create({
 
   scrollContent: { paddingVertical: 6 },
 
-  arrowBtn: { width: 45, alignItems: 'center', justifyContent: 'center' },
-
+  arrowBtn: { width: 45, alignItems: 'center' },
   arrowText: { fontSize: 24, color: '#D6C29A', fontWeight: 'bold' },
 
   card: {
@@ -334,7 +341,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#DDD',
     marginRight: GAP,
@@ -342,29 +348,27 @@ const styles = StyleSheet.create({
   },
 
   selectedCard: { borderWidth: 4, borderColor: '#FFD86B' },
-
   lockedCard: { opacity: 0.45 },
 
-  charImage: { width: '80%', height: '60%' },
-
-  bgFullImage: {
-    position: 'absolute',
+  imageWrapper: {
     width: '100%',
-    height: '100%',
+    height: '75%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  charImage: { width: '80%', height: '80%' },
+  bgFullImage: { width: '100%', height: '100%' },
 
   cardText: {
     marginTop: 6,
-    fontSize: 11,
+    fontSize: 30,
     fontWeight: '700',
-    color: '#333',
+    color: '#3c2c19',
     textAlign: 'center',
   },
 
-  lockedImage: {
-    opacity: 0.25,
-    tintColor: '#000',
-  },
+  selectedText: { color: '#C9A227' },
 
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -373,11 +377,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
 
-  lockText: {
-    fontSize: 30,
-    color: '#333',
-    marginTop: 4,
-  },
+  lockText: { fontSize: 30 },
 
   previewArea: {
     flex: 1,
