@@ -18,6 +18,7 @@ export interface StudentInfo {
   currentLevel: number;
   schoolId: number;
   groupId: number | null;
+  classId: number;        
   className?: string;
 }
 
@@ -54,13 +55,14 @@ const extractToken = (response: any) => {
   const setCookie = response.headers['set-cookie'] || response.headers['Set-Cookie'];
   if (setCookie) {
     const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
-    const tokenCookie = cookieArray.find((c: any) => c.toLowerCase().includes('accesstoken'));
+    const tokenCookie = cookieArray.find(c => c.toLowerCase().includes('accesstoken'));
     if (tokenCookie) {
       return tokenCookie.split(';')[0].split('=')[1];
     }
   }
   return response.data?.accessToken || null;
 };
+
 
 // 1. 선생님 로그인
 export const loginTeacher = createAsyncThunk(
@@ -84,7 +86,7 @@ export const loginTeacher = createAsyncThunk(
   }
 );
 
-// 2. 학생 로그인 (재입장)
+
 export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
   async (_, { rejectWithValue }) => {
@@ -108,7 +110,6 @@ export const loginStudent = createAsyncThunk(
   }
 );
 
-// 3. 학생 최초 가입
 export const joinStudent = createAsyncThunk(
   'auth/joinStudent',
   async (studentData: { name: string; studentNumber: number; inviteCode: string }, { rejectWithValue }) => {
@@ -131,14 +132,12 @@ export const joinStudent = createAsyncThunk(
   }
 );
 
-// 4. 로그아웃
-export const logoutUser = createAsyncThunk('auth/logout', async () => {
+export const logout = createAsyncThunk('auth/logout', async () => {
   try {
     await api.post('/auth/logout');
   } finally {
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
       await SecureStore.deleteItemAsync('userRole');
     }
   }
@@ -148,12 +147,6 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    // 앱 실행 시 스토리지에 토큰이 있다면 Redux 상태 복구
-    restoreAuth: (state, action: PayloadAction<{ accessToken: string; userRole: 'student' | 'teacher' }>) => {
-      state.isLoggedIn = true;
-      state.accessToken = action.payload.accessToken;
-      state.userRole = action.payload.userRole;
-    },
     clearAuth: (state) => {
       state.isLoggedIn = false;
       state.userRole = null;
@@ -167,14 +160,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(logoutUser.fulfilled, (state) => {
-         // 로그아웃 시 상태 초기화
-         state.isLoggedIn = false;
-         state.userRole = null;
-         state.accessToken = null;
-         state.studentData = null;
-         state.teacherData = null;
-      })
       .addMatcher(
         isAnyOf(joinStudent.fulfilled, loginStudent.fulfilled),
         (state, action) => {
@@ -217,5 +202,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearAuth, resetRegistrationStatus, restoreAuth } = authSlice.actions;
+export const { clearAuth, resetRegistrationStatus } = authSlice.actions;
 export default authSlice.reducer;
