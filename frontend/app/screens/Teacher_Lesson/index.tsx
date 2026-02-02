@@ -52,7 +52,7 @@ const TeacherLessonScreen = () => {
           console.log(`✅ [반 ${classId}] 실시간 소켓 구독 시작`);
 
           // 통합 알림 구독 (입장, 딴짓, 이탈)
-          stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
+          stompClient.subscribe(`/topic/class/${classId}/mode`, (msg) => {
             const body = JSON.parse(msg.body);
             console.log('📦 소켓 수신:', body.type, body);
 
