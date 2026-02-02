@@ -46,4 +46,9 @@ export const getSpecificClass = async (classId: number) => {
   return response.data;
 };
 
-
+// 4. 학급 삭제 API (DELETE /classes/{classId})
+export const deleteClassAPI = async (classId: number) => {
+  console.log(`🗑️ [Service] 반 삭제 요청: ID ${classId}`);
+  const response = await api.delete(`/classes/${classId}`);
+  return response.data;
+};
