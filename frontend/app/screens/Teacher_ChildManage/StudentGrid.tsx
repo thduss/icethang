@@ -1,35 +1,45 @@
 ﻿import { StyleSheet, View, Text, ActivityIndicator } from 'react-native'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import StudentCard from './StudentCard'
 import { getStudentsByClass, StudentItem } from '../../services/studentService'
-import { RootState } from '../../store/stores'
-
+import { RootState, AppDispatch } from '../../store/stores'
+import { setStudents, clearStudents } from '../../store/slices/memberSlice'
 
 const StudentGrid = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
   const selectedClassId = useSelector(
     (state: RootState) => state.class.selectedClassId
   )
-  const [students, setStudents] = useState<StudentItem[]>([])
+
+  const students = useSelector((state: RootState) => state.member.students);
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchStudents = async (classId: number) => {
+      // 새 학급을 불러오기 전에 기존 목록을 먼저 비워줍니다.
+      dispatch(clearStudents());
+      
       setLoading(true)
       setError(null)
       console.log("📍 현재 요청하는 classId:", classId);
 
       try {
         const data = await getStudentsByClass(classId)
-        setStudents(data)
+
+        dispatch(setStudents(data)); 
+        
       } catch (err: any) {
         console.error("❌ 학생 목록 조회 에러:", err);
         setError(
           err?.message || '학생 목록을 불러오지 못했습니다.'
         )
-        setStudents([])
+        // 에러 시에도 목록 비우기
+        dispatch(clearStudents());
       } finally {
         setLoading(false)
       }
@@ -38,10 +48,10 @@ const StudentGrid = () => {
     if (selectedClassId) {
       fetchStudents(selectedClassId)
     } else {
-      setStudents([])
-      setError(null)
+      // 학급 선택이 해제되거나 삭제된 경우 목록 비우기
+      dispatch(clearStudents());
     }
-  }, [selectedClassId])
+  }, [selectedClassId, dispatch])
 
   if (!selectedClassId) {
     return (
@@ -97,20 +107,20 @@ export default StudentGrid
 const styles = StyleSheet.create({
   grid: {
     flex: 1,
-    padding: 24,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'flex-start',
+    padding: 20,
+    justifyContent: 'flex-start',
   },
   centerState: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    alignItems: 'center',
   },
   stateText: {
-    marginTop: 12,
-    fontSize: 40,
+    marginTop: 10,
+    fontSize: 16,
     color: '#8D7B68',
+    fontFamily: 'Jua-Regular',
   },
 })

@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-// 학생 목록 관리용
 
 interface StudentMember {
   studentId: number;
@@ -27,6 +26,10 @@ const memberSlice = createSlice({
     setStudents: (state, action: PayloadAction<StudentMember[]>) => {
       state.students = action.payload;
     },
+    // 학급 삭제 시 학생 목록을 비워주는 기능
+    clearStudents: (state) => {
+      state.students = [];
+    },
     addStudent: (state, action: PayloadAction<StudentMember>) => {
       state.students.push(action.payload);
     },
@@ -42,5 +45,5 @@ const memberSlice = createSlice({
   },
 });
 
-export const { setStudents, addStudent, updateStudentInfo, removeStudent } = memberSlice.actions;
+export const { setStudents, clearStudents, addStudent, updateStudentInfo, removeStudent } = memberSlice.actions;
 export default memberSlice.reducer;
