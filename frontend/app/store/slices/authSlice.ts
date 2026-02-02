@@ -85,7 +85,7 @@ export const loginTeacher = createAsyncThunk(
   }
 );
 
-// 2. 학생 로그인 (재입장)
+
 export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
   async (_, { rejectWithValue }) => {
