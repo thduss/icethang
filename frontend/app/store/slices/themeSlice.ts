@@ -1,17 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
 
-/* ================= 타입 ================= */
 export type ThemeCategory = 'CHARACTER' | 'BACKGROUND';
 
-export type ThemeItem = {
+export interface ThemeItem {
   id: number;
   name: string;
-  assetUrl: string;
   category: ThemeCategory;
   unlocked: boolean;
   equipped: boolean;
-};
+}
+
+
+const DEFAULT_CHARACTER_ID = 5;
 
 interface ThemeState {
   allCharacters: ThemeItem[];
@@ -31,7 +32,6 @@ const initialState: ThemeState = {
   error: null,
 };
 
-/* ================= 전체 캐릭터 조회 ================= */
 export const fetchAllCharacters = createAsyncThunk<
   ThemeItem[],
   number
@@ -41,32 +41,28 @@ export const fetchAllCharacters = createAsyncThunk<
   });
 
   return res.data.map((item: any) => ({
-    id: item.themeId,    
+    id: item.themeId,
     name: item.name,
-    assetUrl: item.assetUrl,
     category: 'CHARACTER' as const,
     unlocked: Boolean(item.isOwned),
     equipped: Boolean(item.isEquipped),
   }));
 });
 
-/* ================= 전체 배경 조회 ================= */
 export const fetchAllBackgrounds = createAsyncThunk<
   ThemeItem[]
 >('theme/fetchAllBackgrounds', async () => {
   const res = await api.get('/themes/backgrounds');
 
   return res.data.map((item: any) => ({
-    id: item.id,
+    id: item.themeId,
     name: item.name,
-    assetUrl: item.assetUrl,
     category: 'BACKGROUND' as const,
-    unlocked: Boolean(item.isOwned),
-    equipped: Boolean(item.isEquipped),
+    unlocked: Boolean(item.unlocked),
+    equipped: Boolean(item.equipped),
   }));
 });
 
-/* ================= 장착 ================= */
 export const equipTheme = createAsyncThunk<
   { id: number; category: ThemeCategory },
   { id: number; category: ThemeCategory }
@@ -76,7 +72,6 @@ export const equipTheme = createAsyncThunk<
   return { id, category };
 });
 
-/* ================= slice ================= */
 const themeSlice = createSlice({
   name: 'theme',
   initialState,
@@ -84,7 +79,7 @@ const themeSlice = createSlice({
   extraReducers: (builder) => {
     builder
 
-      /* ---------- 전체 캐릭터 ---------- */
+      /* 전체 캐릭터 */
       .addCase(fetchAllCharacters.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -92,26 +87,34 @@ const themeSlice = createSlice({
       .addCase(fetchAllCharacters.fulfilled, (state, action) => {
         state.loading = false;
 
-        state.allCharacters = action.payload.map((item, index) => ({
-          ...item,
-          unlocked: index === 0 ? true : item.unlocked,
+        const characters = action.payload.map(c => ({
+          ...c,
+          unlocked:
+            c.id === DEFAULT_CHARACTER_ID ? true : c.unlocked,
         }));
 
-        const equipped = state.allCharacters.find(c => c.equipped);
+        let equipped = characters.find(c => c.equipped);
 
-        if (equipped) {
-          state.equippedCharacterId = equipped.id;
-        } else if (state.allCharacters.length > 0) {
-          state.allCharacters[0].equipped = true;
-          state.equippedCharacterId = state.allCharacters[0].id;
+        if (!equipped) {
+          characters.forEach(c => {
+            c.equipped = c.id === DEFAULT_CHARACTER_ID;
+          });
+          equipped = characters.find(
+            c => c.id === DEFAULT_CHARACTER_ID
+          );
         }
+
+        state.allCharacters = characters;
+        state.equippedCharacterId =
+          equipped?.id ?? DEFAULT_CHARACTER_ID;
       })
       .addCase(fetchAllCharacters.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? '캐릭터 조회 실패';
+        state.error =
+          action.error.message ?? '캐릭터 조회 실패';
       })
 
-      /* ---------- 전체 배경 ---------- */
+      /* 전체 배경 */
       .addCase(fetchAllBackgrounds.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -125,10 +128,11 @@ const themeSlice = createSlice({
       })
       .addCase(fetchAllBackgrounds.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? '배경 조회 실패';
+        state.error =
+          action.error.message ?? '배경 조회 실패';
       })
 
-      /* ---------- 장착 ---------- */
+      /* 장착 */
       .addCase(equipTheme.fulfilled, (state, action) => {
         const { id, category } = action.payload;
 
