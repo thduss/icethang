@@ -45,7 +45,7 @@ export default function ReusableGridScreen() {
   const [activeTab, setActiveTab] =
     useState<TabType>('character');
 
-  /* ===== Scroll refs (탭별 분리) ===== */
+
   const scrollRefs = {
     character: useRef<ScrollView>(null),
     theme: useRef<ScrollView>(null),
@@ -56,7 +56,7 @@ export default function ReusableGridScreen() {
     theme: 0,
   });
 
-  /* ===== Redux ===== */
+
   const {
     allCharacters,
     allBackgrounds,
@@ -68,7 +68,7 @@ export default function ReusableGridScreen() {
     (state: RootState) => state.auth.studentData?.studentId
   );
 
-  /* ===== API ===== */
+
   useEffect(() => {
     if (!studentId) return;
 
@@ -79,14 +79,14 @@ export default function ReusableGridScreen() {
     }
   }, [dispatch, studentId, activeTab]);
 
-  /* ===== 현재 탭 아이템 ===== */
+
   const currentItems: ThemeItem[] = useMemo(() => {
     return activeTab === 'character'
       ? allCharacters
       : allBackgrounds;
   }, [activeTab, allCharacters, allBackgrounds]);
 
-  /* ===== max offset ===== */
+
   const maxOffset = useMemo(() => {
     const total =
       currentItems.length * CARD_WIDTH +
@@ -97,7 +97,7 @@ export default function ReusableGridScreen() {
     return Math.max(0, total - visible);
   }, [currentItems]);
 
-  /* ===== scroll handlers ===== */
+
   const handleScrollEnd =
     (tab: TabType) =>
     (e: any) => {
@@ -134,7 +134,7 @@ export default function ReusableGridScreen() {
     }));
   };
 
-  /* ===== 이미지 선택 ===== */
+
   const getImageSource = (
     item: ThemeItem,
     isSelected: boolean,
@@ -152,7 +152,7 @@ export default function ReusableGridScreen() {
       : localItem.imageInactive;
   };
 
-  /* ===== 선택 ===== */
+
   const handleSelect = async (item: ThemeItem) => {
     try {
       await dispatch(
@@ -173,7 +173,7 @@ export default function ReusableGridScreen() {
     }
   };
 
-  /* ===== 미리보기 ===== */
+
   const previewCharacter = allCharacters.find(
     c => c.id === equippedCharacterId
   );
@@ -231,7 +231,7 @@ export default function ReusableGridScreen() {
 
           <View style={styles.scrollViewContainer}>
             <ScrollView
-              key={activeTab}  // ⭐️ 핵심: 탭별 ScrollView 완전 분리
+              key={activeTab} 
               horizontal
               ref={scrollRefs[activeTab]}
               showsHorizontalScrollIndicator={false}
@@ -336,7 +336,6 @@ export default function ReusableGridScreen() {
   );
 }
 
-/* ================= styles ================= */
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

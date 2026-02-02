@@ -7,12 +7,9 @@ export interface LocalThemeItem {
   category: 'CHARACTER' | 'BACKGROUND';
 }
 
-/**
- * 🔥 DB theme_id 기준 매핑
- * DB / API / FE 공통 키 = themeId
- */
+
 const itemData: Record<number, LocalThemeItem> = {
-  // ---------- BACKGROUND ----------
+  // BACKGROUND 
   1: {
     id: 1,
     imageActive: require('./background3.png'),
@@ -38,7 +35,7 @@ const itemData: Record<number, LocalThemeItem> = {
     category: 'BACKGROUND',
   },
 
-  // ---------- CHARACTER ----------
+  // CHARACTER
   5: {
     id: 5,
     imageActive: require('../characters/1.gif'),

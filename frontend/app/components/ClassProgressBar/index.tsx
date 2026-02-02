@@ -29,35 +29,28 @@ export default function ClassProgressBar({
   );
   const { theme } = useAppTheme();
 
-  /**
-   * ✅ 현재 배경 (Record 구조 대응)
-   */
+
   const currentBackground = useMemo(() => {
     if (equippedBackgroundId && itemData[equippedBackgroundId]) {
       return itemData[equippedBackgroundId];
     }
 
-    // fallback: 첫 번째 BACKGROUND
+ 
     return Object.values(itemData).find(
       item => item.category === 'BACKGROUND'
     );
   }, [equippedBackgroundId]);
 
-  /**
-   * ✅ 메인 캐릭터
-   */
   const mainCharacter = useMemo(() => {
     if (equippedCharacterId && itemData[equippedCharacterId]) {
       return itemData[equippedCharacterId];
     }
 
-    // fallback: 기본 캐릭터 (id: 5)
+
     return itemData[5];
   }, [equippedCharacterId]);
 
-  /**
-   * ✅ 서브 캐릭터 (랜덤 2개)
-   */
+
   const subCharacters = useMemo(() => {
     if (!showSubImages) return [];
 
@@ -71,9 +64,7 @@ export default function ClassProgressBar({
       .slice(0, 2);
   }, [equippedCharacterId, showSubImages]);
 
-  /**
-   * 진행 애니메이션
-   */
+
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {

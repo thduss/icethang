@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
 
-/* ================= 공통 타입 ================= */
 export type ThemeCategory = 'CHARACTER' | 'BACKGROUND';
 
 export interface ThemeItem {
@@ -12,11 +11,9 @@ export interface ThemeItem {
   equipped: boolean;
 }
 
-/* ================= 기본 캐릭터 ID ================= */
-// 🔥 DB 기준 기본 캐릭터 (기차)
+
 const DEFAULT_CHARACTER_ID = 5;
 
-/* ================= 상태 ================= */
 interface ThemeState {
   allCharacters: ThemeItem[];
   allBackgrounds: ThemeItem[];
@@ -35,7 +32,6 @@ const initialState: ThemeState = {
   error: null,
 };
 
-/* ================= 전체 캐릭터 조회 ================= */
 export const fetchAllCharacters = createAsyncThunk<
   ThemeItem[],
   number
@@ -53,7 +49,6 @@ export const fetchAllCharacters = createAsyncThunk<
   }));
 });
 
-/* ================= 전체 배경 조회 ================= */
 export const fetchAllBackgrounds = createAsyncThunk<
   ThemeItem[]
 >('theme/fetchAllBackgrounds', async () => {
@@ -68,7 +63,6 @@ export const fetchAllBackgrounds = createAsyncThunk<
   }));
 });
 
-/* ================= 테마 장착 ================= */
 export const equipTheme = createAsyncThunk<
   { id: number; category: ThemeCategory },
   { id: number; category: ThemeCategory }
@@ -78,7 +72,6 @@ export const equipTheme = createAsyncThunk<
   return { id, category };
 });
 
-/* ================= slice ================= */
 const themeSlice = createSlice({
   name: 'theme',
   initialState,
@@ -86,7 +79,7 @@ const themeSlice = createSlice({
   extraReducers: (builder) => {
     builder
 
-      /* ---------- 전체 캐릭터 ---------- */
+      /* 전체 캐릭터 */
       .addCase(fetchAllCharacters.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -94,17 +87,14 @@ const themeSlice = createSlice({
       .addCase(fetchAllCharacters.fulfilled, (state, action) => {
         state.loading = false;
 
-        // 1️⃣ 기본 캐릭터는 항상 unlocked
         const characters = action.payload.map(c => ({
           ...c,
           unlocked:
             c.id === DEFAULT_CHARACTER_ID ? true : c.unlocked,
         }));
 
-        // 2️⃣ 서버에서 equipped 내려오면 그걸 우선
         let equipped = characters.find(c => c.equipped);
 
-        // 3️⃣ 없으면 기본 캐릭터를 강제 장착
         if (!equipped) {
           characters.forEach(c => {
             c.equipped = c.id === DEFAULT_CHARACTER_ID;
@@ -124,7 +114,7 @@ const themeSlice = createSlice({
           action.error.message ?? '캐릭터 조회 실패';
       })
 
-      /* ---------- 전체 배경 ---------- */
+      /* 전체 배경 */
       .addCase(fetchAllBackgrounds.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -142,7 +132,7 @@ const themeSlice = createSlice({
           action.error.message ?? '배경 조회 실패';
       })
 
-      /* ---------- 장착 ---------- */
+      /* 장착 */
       .addCase(equipTheme.fulfilled, (state, action) => {
         const { id, category } = action.payload;
 
