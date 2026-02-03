@@ -3,9 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Platform }
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
-import { restoreAuth, loginStudent } from '../../store/slices/authSlice';
-import { AppDispatch } from 'app/store/stores';
-
+import { restoreAuth, loginStudent, clearAuth } from '../../store/slices/authSlice';
+import { AppDispatch } from '../../store/stores';
 const { width } = Dimensions.get('window');
 
 const MAX_CARD_WIDTH = 500;
@@ -25,30 +24,36 @@ export default function SelectRoleScreen() {
   const handleTeacherStart = async () => {
     try {
       if (Platform.OS !== 'web') {
-        // 저장된 토큰 확인
         const accessToken = await SecureStore.getItemAsync('accessToken');
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
         const userRole = await SecureStore.getItemAsync('userRole');
 
-        // 자동 로그인 조건: 토큰 O + 역할 선생님
+        // 1. 진짜 선생님이면 -> 자동 로그인
         if (accessToken && refreshToken && userRole === 'teacher') {
           console.log("🔄 자동 로그인: 저장된 교사 세션 확인됨");
-          
           dispatch(restoreAuth({ 
             accessToken: accessToken, 
             userRole: 'teacher' 
           }));
-
-          // 메인 페이지로 바로 이동
           router.replace('/screens/Teacher_MainPage');
           return;
+        }
+
+        // 토큰은 있는데 선생님이 아니다? (학생 토큰) -> 삭제
+        if (accessToken && userRole !== 'teacher') {
+          console.log("🧹 학생 토큰 제거 후 교사 로그인 이동");
+          await SecureStore.deleteItemAsync('accessToken');
+          await SecureStore.deleteItemAsync('refreshToken');
+          await SecureStore.deleteItemAsync('userRole');
+          // Redux 상태도 비워줌
+          dispatch(clearAuth());
         }
       }
     } catch (e) {
       console.log("세션 확인 중 오류 (로그인 화면으로 이동):", e);
     }
 
-    // 조건 불만족 -> 로그인 화면으로 이동
+    // 3. 깨끗한 상태로 로그인 화면 이동
     router.push('/screens/Teacher_Login');
   };
 
@@ -59,17 +64,28 @@ export default function SelectRoleScreen() {
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
         const userRole = await SecureStore.getItemAsync('userRole');
 
+        // 1. 학생이면 -> 자동 로그인
         if (accessToken && refreshToken && userRole === 'student') {
           console.log("🔄 [학생] 저장된 토큰으로 자동 로그인");
           dispatch(restoreAuth({ accessToken, userRole: 'student' }));
           router.replace('/screens/Student_Home');
           return;
         }
+
+        // 2. 선생님 토큰이 남아있다면 삭제
+        if (accessToken && userRole !== 'student') {
+           console.log("🧹 교사 토큰 제거 후 학생 로직 진행");
+           await SecureStore.deleteItemAsync('accessToken');
+           await SecureStore.deleteItemAsync('refreshToken');
+           await SecureStore.deleteItemAsync('userRole');
+           dispatch(clearAuth());
+        }
       }
     } catch (e) { console.log("토큰 확인 실패:", e); }
 
     console.log("📡 [학생] 토큰 없음 -> UUID로 자동 로그인 시도 중...");
     try {
+      // 3. UUID 자동 로그인 시도
       await dispatch(loginStudent()).unwrap();
 
       console.log("✅ [학생] UUID 로그인 성공!");
@@ -164,7 +180,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // 배경 이미지
   cardBackground: {
     position: 'absolute',
     width: '150%',
@@ -173,7 +188,6 @@ const styles = StyleSheet.create({
     left: '-25%', 
     borderRadius: 30,
   },
-  // 캐릭터 영역
   characterArea: {
     position: 'absolute',
     top: '18%', 
@@ -187,7 +201,6 @@ const styles = StyleSheet.create({
     width: '80%',
     height: '80%',
   },
-  // 텍스트 영역 
   textArea: {
     position: 'absolute',
     bottom: '30%',
@@ -206,8 +219,7 @@ const styles = StyleSheet.create({
     textShadowColor: '#000000',
     textShadowOffset: { width: 1.5, height: 1.5 },
     textShadowRadius: 3,
-  },
-  // 버튼 영역 
+  }, 
   button: {
     position: 'absolute',
     bottom: '18%', 

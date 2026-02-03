@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import DraggableFlatList from 'react-native-draggable-flatlist'
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../store/stores';
-import { addClass, resetStatus, fetchClasses, fetchClassDetail } from '../../store/slices/classSlice';
+import { addClass, resetStatus, fetchClasses, fetchClassDetail, deleteClass } from '../../store/slices/classSlice';
+import { clearStudents } from '../../store/slices/memberSlice'; 
 
 const LeftSidebar = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -31,7 +32,7 @@ const LeftSidebar = () => {
   // 3. 성공/실패 처리
   useEffect(() => {
     if (success) {
-      Alert.alert('성공', '새로운 반이 생성되었습니다!');
+      Alert.alert('성공', '작업이 완료되었습니다!');
       dispatch(fetchClasses()); 
       setGrade('');
       setClassNum('');
@@ -56,21 +57,45 @@ const LeftSidebar = () => {
     }));
   };
 
+  // 학급 삭제 시 학생 목록도 즉시 비움
+  const handleDeleteClass = (classId: number, className: string) => {
+    Alert.alert(
+      "반 삭제",
+      `'${className}' 반을 정말 삭제하시겠습니까?\n삭제 시 소속 학생 데이터도 화면에서 제거됩니다.`,
+      [
+        { text: "취소", style: "cancel" },
+        { 
+          text: "삭제", 
+          style: "destructive", 
+          onPress: () => {
+            // 1. 백엔드에 학급 삭제 요청
+            dispatch(deleteClass(classId));
+            // 2. 프론트엔드 학생 목록 상태 즉시 초기화
+            dispatch(clearStudents());
+          }
+        }
+      ]
+    );
+  };
+
   const renderItem = ({ item, drag, isActive }: any) => {
     const itemId = item.classId;    
     const isSelected = selectedClassId === itemId;
+    const className = `${item.grade}-${item.classNum}`;
 
     return (
       <View style={[styles.shadowWrapper, isActive && styles.dragging]}>
         <Pressable
-          onLongPress={drag}
+          // 길게 누르면 삭제 확인창 호출
+          onLongPress={() => handleDeleteClass(itemId, className)}
+          onPressIn={drag}
           onPress={() => {            
             dispatch(fetchClassDetail(itemId))
           }}
           style={[styles.innerButton, isSelected && styles.selectedInner]}
         >
           <Text style={styles.classText}>
-            {item.grade}-{item.classNum}
+            {className}
           </Text>
         </Pressable>
       </View>

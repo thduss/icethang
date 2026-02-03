@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, Image, 
   KeyboardAvoidingView, Platform, ScrollView, 
@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../store/stores'; 
-import { joinStudent } from '../../store/slices/authSlice'; 
+import { joinStudent, loginStudent } from '../../store/slices/authSlice'; 
 
 export default function StudentLoginScreen() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function StudentLoginScreen() {
   const [classNum, setClassNum] = useState(''); 
   const [number, setNumber] = useState('');     
   const [name, setName] = useState('');         
-  const [authCode, setAuthCode] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
 
   const numberRef = useRef<TextInput>(null);
   const nameRef = useRef<TextInput>(null);
@@ -37,33 +37,37 @@ export default function StudentLoginScreen() {
   const paddingH = cardWidth * 0.14; 
   const paddingV = cardHeight * 0.12; 
 
+  // 화면 진입 시 기기 번호로 자동 로그인(재입장) 시도
+  useEffect(() => {
+    const tryAutoLogin = async () => {
+      const result = await dispatch(loginStudent());
+      if (loginStudent.fulfilled.match(result)) {
+        // 성공 시 바로 홈으로 (디자인 렌더링 전 이동)
+        router.replace('/screens/Student_Home');
+      }
+    };
+    tryAutoLogin();
+  }, []);
+
+  // 입장 버튼 로직 (최초 가입용)
   const handleEnter = async () => {
-    if (!classNum || !number || !name || !authCode) {
+    if (!classNum || !number || !name || !inviteCode) {
       Alert.alert("알림", "모든 정보를 입력해주세요.");
       return;
     }
 
-    const resultAction = await dispatch(joinStudent({
-      code: authCode,
-      name: name,
-      number: Number(number)
+    const studentNum = parseInt(number.replace(/[^0-9]/g, ''), 10);
+
+    const result = await dispatch(joinStudent({
+      inviteCode: inviteCode.trim(),
+      name: name.trim(),
+      studentNumber: studentNum
     }));
 
-    if (joinStudent.fulfilled.match(resultAction)) {
-      Alert.alert("환영합니다!", `${name} 학생 입장 성공!`, [
-        { text: "확인", onPress: () => router.replace('/screens/Student_Home') }
-      ]);
+    if (joinStudent.fulfilled.match(result)) {
+      router.replace('/screens/Student_Home');
     } else {
-      const errorMsg = resultAction.payload as string || "입장에 실패했습니다.";
-      Alert.alert("입장 실패", errorMsg, [
-        { 
-          text: "다시 입력", 
-          onPress: () => {
-              setAuthCode(''); 
-              codeRef.current?.focus(); 
-          }
-        }
-      ]);
+      Alert.alert("입장 실패", result.payload as string || "입력 정보를 다시 확인해주세요.");
     }
   };
 
@@ -79,6 +83,7 @@ export default function StudentLoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ width: cardWidth, height: cardHeight, justifyContent: 'center', alignItems: 'center' }}>
+            
             <Image
               source={require('../../../assets/login_background.png')} 
               style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}
@@ -99,10 +104,9 @@ export default function StudentLoginScreen() {
                    <Ionicons name="school" size={18} color="#D4A373" style={{ marginRight: 5 }} /> 
                    <TextInput
                     style={{ flex: 1, fontSize: fontSizeInput, color: '#455A64', fontWeight: 'bold', textAlign: 'center' }}
-                    placeholder="입력"
+                    placeholder="반"
                     placeholderTextColor="#CFD8DC"
                     keyboardType="number-pad"
-                    returnKeyType="next"
                     value={classNum}
                     onChangeText={setClassNum}
                     onSubmitEditing={() => numberRef.current?.focus()}
@@ -118,10 +122,9 @@ export default function StudentLoginScreen() {
                    <TextInput
                     ref={numberRef}
                     style={{ flex: 1, fontSize: fontSizeInput, color: '#455A64', fontWeight: 'bold', textAlign: 'center' }}
-                    placeholder="입력"
+                    placeholder="번호"
                     placeholderTextColor="#CFD8DC"
                     keyboardType="number-pad"
-                    returnKeyType="next"
                     value={number}
                     onChangeText={setNumber}
                     onSubmitEditing={() => nameRef.current?.focus()}
@@ -136,7 +139,6 @@ export default function StudentLoginScreen() {
                   style={{ width: '100%', fontSize: fontSizeInput, color: '#5D4037', fontWeight: 'bold', textAlign: 'left' }}
                   placeholder="이름을 입력하세요"
                   placeholderTextColor="#BCAAA4"
-                  returnKeyType="next"
                   value={name}
                   onChangeText={setName}
                   onSubmitEditing={() => codeRef.current?.focus()}
@@ -149,19 +151,16 @@ export default function StudentLoginScreen() {
                 <TextInput
                   ref={codeRef}
                   style={{ flex: 1, fontSize: fontSizeInput, color: '#5D4037', fontWeight: 'bold', textAlign: 'right', marginRight: 10, letterSpacing: 2 }}
-                  placeholder="4자리"
+                  placeholder="선생님께 문의하세요"
                   placeholderTextColor="#F9E79F"
-                  keyboardType="default" 
-                  maxLength={8} 
                   autoCapitalize="characters"
-                  returnKeyType="done"
-                  value={authCode}
-                  onChangeText={setAuthCode}
+                  value={inviteCode}
+                  onChangeText={setInviteCode}
                   onSubmitEditing={handleEnter}
                 />
                  <View style={{ backgroundColor: '#FBC02D', borderRadius: 6, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
                      <Ionicons name="key" size={12} color="white" />
-                   </View>
+                 </View>
               </View>
 
               <TouchableOpacity 
@@ -195,7 +194,7 @@ export default function StudentLoginScreen() {
             <View pointerEvents="none" style={{ position: 'absolute', zIndex: 20, width: robotSize, height: robotSize, bottom: -cardHeight * 0.05, left: -cardWidth * 0.18, transform: [{ rotate: '-10deg' }] }}>
               <Image source={require('../../../assets/common_Enter.png')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
             </View>
-            
+
             <Ionicons name="sparkles" size={24} color="#FFF59D" style={{ position: 'absolute', top: '10%', right: '15%' }} />
             <Ionicons name="star" size={18} color="#FFCC80" style={{ position: 'absolute', bottom: '20%', left: '8%' }} />
 
