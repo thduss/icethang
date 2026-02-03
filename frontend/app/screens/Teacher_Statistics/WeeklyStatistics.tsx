@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native'
 import { WeeklyStat } from 'app/store/slices/statisticsSlice'
 
+const CHART_HEIGHT = 200
+
 interface WeekRange {
   start: Date
   end: Date
@@ -76,19 +78,21 @@ const WeeklyStatistics = ({
                 <View key={item.dayOfWeek} style={styles.barWrap}>
                   <Text style={styles.percentText}>{item.averageFocusRate.toFixed(0)}%</Text>
 
-                  <View
-                    style={[
-                      styles.bar,
-                      {
+                  <View style={styles.barContainer}>
+                    <View
+                      style={[
+                        styles.bar,
+                        {
 
-                        height: item.averageFocusRate > 0
-                          ? item.averageFocusRate * 1.2
-                          : 2,
-                        backgroundColor:
-                          item.averageFocusRate > 70 ? '#5E79A8' : '#A89B5E'
-                      },
-                    ]}
-                  />
+                          height: item.averageFocusRate > 0
+                            ? (item.averageFocusRate / 100) * CHART_HEIGHT
+                            : 2,
+                          backgroundColor:
+                            item.averageFocusRate > 70 ? '#5E79A8' : '#A89B5E'
+                        },
+                      ]}
+                    />
+                  </View>
 
                   <Text style={styles.dayLabel}>
                     {mapDayToKorean(item.dayOfWeek)}
@@ -129,99 +133,106 @@ const formatDate = (date: Date) => {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { 
-    marginTop: 8 
+  wrapper: {
+    marginTop: 8
   },
 
-  emptyWrap: { 
+  emptyWrap: {
     alignItems: 'center',
-    marginVertical: 32 
+    marginVertical: 32
   },
 
-  emptyText: { 
-    color: '#999' 
+  emptyText: {
+    color: '#999'
   },
 
-  header: { 
-    alignItems: 'center', 
-    marginBottom: 12 
-  },
-
-  titleRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 10 
-  },
-
-  headerText: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    textAlign: 'center' 
-  },
-
-  calendarIcon: { 
-    fontSize: 20 
-  },
-
-  chartCard: { 
-    backgroundColor: '#FFFFFF', 
-    borderRadius: 16, 
-    padding: 16, 
-    borderWidth: 1, 
-    borderColor: '#DDD' 
-  },
-
-  chart: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end', 
-    height: 160 
-  },
-
-  barWrap: { 
+  header: {
     alignItems: 'center',
-    width: 42 
+    marginBottom: 12
   },
 
-  percentText: { 
-    fontSize: 12, 
-    marginBottom: 8, 
-    fontWeight: '600' 
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
   },
 
-  bar: { 
-    width: 30, 
-    backgroundColor: '#5E79A8', 
-    borderRadius: 4 
+  headerText: {
+    fontSize: 25,
+    fontWeight: '700',
+    textAlign: 'center'
   },
 
-  dayLabel: { 
-    fontSize: 12, 
-    marginTop: 6 
+  calendarIcon: {
+    fontSize: 30
   },
 
-  summaryRow: { 
-    flexDirection: 'row', 
-    gap: 12, 
-    marginTop: 16 
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    height: 430,
   },
 
-  summaryBox: { 
-    flex: 1, 
-    backgroundColor: '#F6F3DC', 
-    borderRadius: 16, 
-    padding: 16, 
-    alignItems: 'center' 
+  chart: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: CHART_HEIGHT,
   },
 
-  summaryLabel: { 
-    fontSize: 14, 
-    color: '#555' 
+  barWrap: {
+    alignItems: 'center',
+    width: 100,
+    height: 100,
   },
 
-  summaryValue: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    marginTop: 4 
+  barContainer: {
+    height: CHART_HEIGHT,     
+    justifyContent: 'flex-end', 
+  },
+
+  percentText: {
+    fontSize: 25,
+    marginBottom: 8,
+    fontWeight: '600'
+  },
+
+  bar: {
+    width: 45,
+    backgroundColor: '#5E79A8',
+    borderRadius: 4
+  },
+
+  dayLabel: {
+    fontSize: 25,
+    marginTop: 10
+  },
+
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+
+  summaryBox: {
+    flex: 1,
+    backgroundColor: '#F6F3DC',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center'
+  },
+
+  summaryLabel: {
+    fontSize: 14,
+    color: '#555'
+  },
+
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 4
   },
 })
