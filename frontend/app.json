@@ -14,6 +14,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "학습 모니터링 및 얼굴 감지를 위해 카메라 권한이 필요합니다.",
+          "faceDetector": true
+        }
+      ],
+      [
         "expo-font",
         {
           "fonts": [
@@ -58,9 +65,11 @@
       },
       "package": "com.my.icethang",
       "usesCleartextTraffic": true,
-    "permissions": [
+      "permissions": [
         "android.permission.CAMERA",
-        "android.permission.SYSTEM_ALERT_WINDOW"
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
       ]
     }
   }
