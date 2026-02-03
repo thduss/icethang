@@ -29,11 +29,9 @@ const PANEL_MARGIN = 30;
 const GAP = 12;
 const VISIBLE_ITEMS = 4;
 
-const CONTAINER_INNER_WIDTH =
-  SCREEN_WIDTH - PANEL_MARGIN * 2 - 100;
+const CONTAINER_INNER_WIDTH = SCREEN_WIDTH - PANEL_MARGIN * 2 - 100;
 const CARD_WIDTH = Math.floor(
-  (CONTAINER_INNER_WIDTH - GAP * (VISIBLE_ITEMS - 1)) /
-    VISIBLE_ITEMS
+  (CONTAINER_INNER_WIDTH - GAP * (VISIBLE_ITEMS - 1)) / VISIBLE_ITEMS
 );
 const PAGE_WIDTH = CARD_WIDTH + GAP;
 
@@ -190,19 +188,7 @@ export default function ReusableGridScreen() {
         setPreviewBackgroundId(equippedBackgroundId);
       }
     }
-
-    await dispatch(
-      equipTheme({
-        id: item.id,
-        category: item.category,
-        studentId,
-      })
-    ).unwrap();
-  } catch (e) {
-    console.error('장착 실패', e);
-  }
-};
-
+  };
 
   if (loading || currentItems.length === 0) {
     return (
@@ -241,9 +227,7 @@ export default function ReusableGridScreen() {
       <View style={styles.panel}>
         <View style={styles.headerBox}>
           <Text style={styles.headerTitle}>
-            {activeTab === 'theme'
-              ? '테마 선택'
-              : '캐릭터 선택'}
+            {activeTab === 'theme' ? '테마 선택' : '캐릭터 선택'}
           </Text>
         </View>
 
@@ -331,7 +315,6 @@ export default function ReusableGridScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
@@ -399,9 +382,7 @@ const styles = StyleSheet.create({
   },
 
   scrollViewContainer: {
-    width:
-      CARD_WIDTH * VISIBLE_ITEMS +
-      GAP * (VISIBLE_ITEMS - 1),
+    width: CARD_WIDTH * VISIBLE_ITEMS + GAP * (VISIBLE_ITEMS - 1),
     overflow: 'hidden',
   },
 
