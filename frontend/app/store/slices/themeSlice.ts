@@ -1,17 +1,19 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../api/api';
 
-/* ================= 타입 ================= */
 export type ThemeCategory = 'CHARACTER' | 'BACKGROUND';
 
-export type ThemeItem = {
+export interface ThemeItem {
   id: number;
   name: string;
-  assetUrl: string;
   category: ThemeCategory;
   unlocked: boolean;
   equipped: boolean;
-};
+  assetUrl: string;
+}
+
+const DEFAULT_CHARACTER_ASSET_URL = 5;
+const DEFAULT_BACKGROUND_ASSET_URL = 1;
 
 interface ThemeState {
   allCharacters: ThemeItem[];
@@ -25,131 +27,193 @@ interface ThemeState {
 const initialState: ThemeState = {
   allCharacters: [],
   allBackgrounds: [],
-  equippedCharacterId: null,
-  equippedBackgroundId: null,
+  equippedCharacterId: null,  
+  equippedBackgroundId: null, 
   loading: false,
   error: null,
 };
 
-/* ================= 전체 캐릭터 조회 ================= */
-export const fetchAllCharacters = createAsyncThunk<
-  ThemeItem[],
-  number
->('theme/fetchAllCharacters', async (studentId) => {
-  const res = await api.get('/themes/characters', {
-    params: { studentId },
-  });
+export const fetchAllCharacters = createAsyncThunk<ThemeItem[], number>(
+  'theme/fetchAllCharacters',
+  async (studentId) => {
+    const res = await api.get('/themes/characters', { params: { studentId } });
+    return res.data.map((item: any) => {
+      const themeId = item.themeId || Number(item.assetUrl);
+      const assetUrl = item.assetUrl ? String(item.assetUrl) : String(themeId || 5);
+      
+      return {
+        id: themeId,
+        name: item.name,
+        category: 'CHARACTER' as const,
+        unlocked: assetUrl === '5' ? true : Boolean(item.unlocked || item.isOwned),
+        equipped: Boolean(item.isEquipped || item.equipped),
+        assetUrl: assetUrl,
+      };
+    });
+  }
+);
 
-  return res.data.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    assetUrl: item.assetUrl,
-    category: 'CHARACTER' as const,
-    unlocked: Boolean(item.isOwned),
-    equipped: Boolean(item.isEquipped),
-  }));
-});
+export const fetchAllBackgrounds = createAsyncThunk<ThemeItem[]>(
+  'theme/fetchAllBackgrounds',
+  async () => {
+    const res = await api.get('/themes/backgrounds');
+    return res.data.map((item: any) => ({
+      id: item.themeId || Number(item.assetUrl),
+      name: item.name,
+      category: 'BACKGROUND' as const,
+      unlocked: Boolean(item.unlocked || item.isOwned),
+      equipped: Boolean(item.equipped || item.isEquipped),
+      assetUrl: item.assetUrl ? String(item.assetUrl) : String(item.themeId || 1),
+    }));
+  }
+);
 
-/* ================= 전체 배경 조회 ================= */
-export const fetchAllBackgrounds = createAsyncThunk<
-  ThemeItem[]
->('theme/fetchAllBackgrounds', async () => {
-  const res = await api.get('/themes/backgrounds');
-
-  return res.data.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    assetUrl: item.assetUrl,
-    category: 'BACKGROUND' as const,
-    unlocked: Boolean(item.isOwned),
-    equipped: Boolean(item.isEquipped),
-  }));
-});
-
-/* ================= 장착 ================= */
 export const equipTheme = createAsyncThunk<
   { id: number; category: ThemeCategory },
-  { id: number; category: ThemeCategory }
->('theme/equipTheme', async ({ id, category }) => {
+  { id: number; category: ThemeCategory; studentId: number }
+>('theme/equipTheme', async ({ id, category, studentId }) => {
   const type = category === 'CHARACTER' ? 'characters' : 'backgrounds';
-  await api.patch(`/themes/${type}/${id}/equip`);
+  
+  await api.patch(
+    `/themes/${type}/${id}/equip`,
+    null,
+    {
+      params: { studentId },
+    }
+  );
+
   return { id, category };
 });
 
-/* ================= slice ================= */
 const themeSlice = createSlice({
   name: 'theme',
   initialState,
-  reducers: {},
+  reducers: {
+    setEquippedTheme: (state, action: { payload: { id: number; category: ThemeCategory } }) => {
+      const { id, category } = action.payload;
+      if (category === 'CHARACTER') {
+        state.equippedCharacterId = id;
+        state.allCharacters.forEach(c => c.equipped = Number(c.assetUrl) === id);
+      } else {
+        state.equippedBackgroundId = id;
+        state.allBackgrounds.forEach(b => b.equipped = Number(b.assetUrl) === id);
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchAllCharacters.fulfilled, (state, action) => {
+        state.allCharacters = action.payload;
 
-      /* ---------- 전체 캐릭터 ---------- */
+        const equipped = action.payload.find((c) => c.equipped);
+        
+        if (equipped && equipped.assetUrl) {
+          state.equippedCharacterId = Number(equipped.assetUrl);
+          console.log(`✅ [서버 응답] 장착된 캐릭터 ID: ${state.equippedCharacterId}`);
+        } else {
+          const firstUnlocked = action.payload.find(c => c.unlocked);
+          
+          if (firstUnlocked) {
+            state.equippedCharacterId = Number(firstUnlocked.assetUrl);
+            firstUnlocked.equipped = true;
+            console.log(`⚠️ [자동 설정] 첫 번째 unlocked 캐릭터 ID: ${state.equippedCharacterId}`);
+          } else {
+            state.equippedCharacterId = DEFAULT_CHARACTER_ASSET_URL;
+            const defaultChar = action.payload.find(c => Number(c.assetUrl) === DEFAULT_CHARACTER_ASSET_URL);
+            if (defaultChar) {
+              defaultChar.equipped = true;
+              defaultChar.unlocked = true; 
+            }
+            console.log(`⚠️ [기본값 설정] 기본 캐릭터 ID: ${state.equippedCharacterId}`);
+          }
+        }
+        state.loading = false;
+      })
       .addCase(fetchAllCharacters.pending, (state) => {
         state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchAllCharacters.fulfilled, (state, action) => {
-        state.loading = false;
-
-        // 1️⃣ 캐릭터 목록 세팅
-        state.allCharacters = action.payload.map((item, index) => ({
-          ...item,
-          // 🔥 첫 번째 캐릭터는 기본 무료 캐릭터
-          unlocked: index === 0 ? true : item.unlocked,
-        }));
-
-        // 2️⃣ 서버에서 장착된 캐릭터가 있는지 확인
-        const equipped = state.allCharacters.find(c => c.equipped);
-
-        if (equipped) {
-          // 서버 기준 장착 캐릭터 사용
-          state.equippedCharacterId = equipped.id;
-        } else if (state.allCharacters.length > 0) {
-          // 🔥 아무도 장착 안 돼 있으면 기본 캐릭터 강제 장착
-          state.allCharacters[0].equipped = true;
-          state.equippedCharacterId = state.allCharacters[0].id;
-        }
       })
       .addCase(fetchAllCharacters.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? '캐릭터 조회 실패';
-      })
-
-      /* ---------- 전체 배경 ---------- */
-      .addCase(fetchAllBackgrounds.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.error = action.error.message || '캐릭터 로딩 실패';
       })
       .addCase(fetchAllBackgrounds.fulfilled, (state, action) => {
-        state.loading = false;
         state.allBackgrounds = action.payload;
-
-        const equipped = action.payload.find(b => b.equipped);
-        state.equippedBackgroundId = equipped?.id ?? null;
+        const equipped = action.payload.find((b) => b.equipped);
+        if (equipped && equipped.assetUrl) {
+          state.equippedBackgroundId = Number(equipped.assetUrl);
+        } else {
+          state.equippedBackgroundId = DEFAULT_BACKGROUND_ASSET_URL;
+          const defaultBg = action.payload.find(b => Number(b.assetUrl) === DEFAULT_BACKGROUND_ASSET_URL);
+          if (defaultBg) {
+            defaultBg.equipped = true;
+          }
+        }
+        state.loading = false;
+      })
+      .addCase(fetchAllBackgrounds.pending, (state) => {
+        state.loading = true;
       })
       .addCase(fetchAllBackgrounds.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message ?? '배경 조회 실패';
+        state.error = action.error.message || '배경 로딩 실패';
       })
 
-      /* ---------- 장착 ---------- */
-      .addCase(equipTheme.fulfilled, (state, action) => {
-        const { id, category } = action.payload;
+      .addCase(equipTheme.pending, (state, action) => {
+        const { id, category } = action.meta.arg;
+        
+        console.log(`🚀 [선조치] ${category} ID: ${id} 장착 반영 시작`);
 
         if (category === 'CHARACTER') {
           state.equippedCharacterId = id;
           state.allCharacters.forEach(c => {
-            c.equipped = c.id === id;
+            c.equipped = Number(c.assetUrl) === id;
           });
         } else {
           state.equippedBackgroundId = id;
           state.allBackgrounds.forEach(b => {
-            b.equipped = b.id === id;
+            b.equipped = Number(b.assetUrl) === id;
           });
+        }
+      })
+      
+      .addCase(equipTheme.fulfilled, (state, action) => {
+        const { id, category } = action.payload;
+        console.log(`✅ [서버 확인] ${category} ID: ${id} 장착 완료`);
+        
+        if (category === 'CHARACTER') {
+          state.equippedCharacterId = id;
+          state.allCharacters.forEach(c => {
+            c.equipped = Number(c.assetUrl) === id;
+          });
+        } else {
+          state.equippedBackgroundId = id;
+          state.allBackgrounds.forEach(b => {
+            b.equipped = Number(b.assetUrl) === id;
+          });
+        }
+      })
+      
+
+      .addCase(equipTheme.rejected, (state, action) => {
+        console.error("❌ 장착 실패 (서버 에러):", action.error);
+        state.error = action.error.message || '장착 실패';
+        
+        const { category } = action.meta.arg;
+        
+        if (category === 'CHARACTER') {
+          const previousEquipped = state.allCharacters.find(c => c.equipped);
+          if (previousEquipped) {
+            state.equippedCharacterId = Number(previousEquipped.assetUrl);
+          }
+        } else {
+          const previousEquipped = state.allBackgrounds.find(b => b.equipped);
+          if (previousEquipped) {
+            state.equippedBackgroundId = Number(previousEquipped.assetUrl);
+          }
         }
       });
   },
 });
 
+export const { setEquippedTheme } = themeSlice.actions;
 export default themeSlice.reducer;
