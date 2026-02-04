@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
 
   titleBanner: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 800,
     height: 110,
     justifyContent: 'center',
     alignItems: 'center',
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 28,
+    fontSize: 32,
     color: '#6b5b4b',
     fontWeight: '800',
     textAlign: 'center',
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
 
   cardRow: {
     width: '100%',
-    maxWidth: 880,
+    maxWidth: 1000,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'flex-start',
@@ -117,13 +117,13 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: 380,
-    maxWidth: 360,
+    width: 450,
+    maxWidth: 500,
   },
 
   cardBackground: {
     width: '100%',
-    height: 330,
+    height: 400,
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 28,
@@ -136,15 +136,16 @@ const styles = StyleSheet.create({
 
   cardCharacter_1: {
     width: '75%',
-    height: 190,
-    marginTop: 10,
+    height: 235,
+    marginTop: 25,
+    marginLeft: -40,
   },
 
   cardCharacter_2: {
     width: '75%',
-    height: 180,
-    marginLeft: 18,
-    marginTop: 7
+    height: 205,
+    marginLeft: -10,
+    marginTop: 30
   },
 
   cardButton: {
@@ -162,17 +163,19 @@ const styles = StyleSheet.create({
 
   cardButtonBlue: {
     backgroundColor: '#a7c9df',
-    marginBottom: 10,
+    marginBottom: 20,
+    marginLeft: -25,
   },
 
   cardButtonGold: {
     backgroundColor: '#e5c27a',
-    marginBottom: 10,
+    marginBottom: 20,
+    marginLeft: -26,
   },
 
   cardButtonText: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: '800',
   },
 });
