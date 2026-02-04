@@ -18,7 +18,7 @@ import { RootState } from "../../store/stores";
 
 const { OverlayModule } = NativeModules;
 
-// 🎨 매핑 테이블 (서버 ID -> 안드로이드 drawable)
+// 매핑 테이블 
 const charMap: Record<string, string> = {
   "1": "char_1", "2": "char_2", "3": "char_3", "4": "char_4",
   "5": "char_5", "6": "char_6", "7": "char_7", "8": "char_8"
@@ -28,11 +28,9 @@ const bgMap: Record<string, string> = {
   "1": "background1", "2": "background2", "3": "background3", "4": "background4"
 };
 
-// === [AI 민감도 설정 최적화] ===
-const YAW_THRESHOLD = 0.22;      // 0.25 -> 0.22로 조금 더 엄격하게 (고개 돌림 감지)
-const EAR_THRESHOLD = 0.12;      // 0.08 -> 0.12로 조정 (눈 감음 감지 민감도 상향)
-const MOVEMENT_THRESHOLD = 15;   // 20 -> 15로 조정 (산만함 더 빨리 감지)
-
+const YAW_THRESHOLD = 0.22;     
+const EAR_THRESHOLD = 0.12;     
+const MOVEMENT_THRESHOLD = 15;  
 export default function DigitalClassScreen() {
   const router = useRouter();
   const { classId } = useLocalSearchParams<{ classId: string }>(); 
@@ -63,7 +61,7 @@ export default function DigitalClassScreen() {
   const lastNoseY = useSharedValue(0);
   const movementScore = useSharedValue(0);
 
-  // 🧠 스레드 통신 함수
+  //  스레드 통신 함수
   const setStatusJS = Worklets.createRunOnJS((status: string) => {
     if (studentStatus !== status) {
       setStudentStatus(status);
@@ -75,7 +73,7 @@ export default function DigitalClassScreen() {
 
   useEffect(() => { if (!hasPermission) requestPermission(); }, [hasPermission]);
 
-  // 🧠 [AI 분석 로직 개선 버전]
+  //  [AI 분석 로직 개선 버전]
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
     if (model.state !== 'loaded') return;
@@ -111,7 +109,6 @@ export default function DigitalClassScreen() {
         else if (leftEAR < EAR_THRESHOLD) newStatus = "SLEEPING";
         else if (movementScore.value > MOVEMENT_THRESHOLD) newStatus = "UNFOCUS";
 
-        // 🚀 [실시간 로그 출력] 터미널에서 확인 가능합니다.
         console.log(
           `📊 [AI 분석] 상태: ${newStatus} | ` +
           `👁️ 눈(EAR): ${leftEAR.toFixed(3)} (기준: ${EAR_THRESHOLD}) | ` +
@@ -129,7 +126,7 @@ export default function DigitalClassScreen() {
     }
   }, [model, setStatusJS]);
 
-  // 📡 소켓 통신 (테마 변경 및 수업 종료)
+  // 소켓 통신 (테마 변경 및 수업 종료)
   useEffect(() => {
     if (!classId) return;
     const setupSubscriptions = () => {
@@ -164,24 +161,20 @@ export default function DigitalClassScreen() {
   }, [classId, inPipMode]);
 
   const handleClassEnd = (body: any) => {
-    // 1. 오버레이 닫기
     if (OverlayModule) OverlayModule.hideOverlay();
 
-    // 2. 서버에서 받은 경험치 데이터 세팅
     setResultData({
       gainedXP: body.gainedXP || 0,
       currentXP: body.currentXP || 0,
       maxXP: body.maxXP || 100
     });
 
-    // 3. 레벨업 여부 확인 (서버에서 준 데이터 기준)
     setHasLevelUpData(!!body.levelUp); 
 
-    // 4. 결과창 노출
     setIsResultVisible(true);
   };
 
-  // 📱 앱 상태에 따른 오버레이 팝업
+  //  앱 상태에 따른 오버레이 팝업
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextAppState) => {
       if (appState.current === "active" && nextAppState.match(/inactive|background/)) {
