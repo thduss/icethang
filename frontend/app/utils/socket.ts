@@ -44,7 +44,7 @@ export const disconnectSocket = () => {
 export const changeClassMode = (classId: number, mode: 'NORMAL' | 'DIGITAL') => {
   if (stompClient.connected) {
     stompClient.publish({
-      destination: `/app/class/mode`, 
+      destination: `/app/mode`, 
       body: JSON.stringify({ classId, mode }),
     });
   }
