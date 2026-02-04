@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, StyleSheet, AppState, Platform, NativeModules, Text } from "react-native";
-import { Camera, useCameraDevice } from "react-native-vision-camera"; // 🚀 Vision Camera
+import { View, StyleSheet, AppState, Platform, NativeModules, Text, ActivityIndicator } from "react-native";
+import { Camera, useCameraDevice, useFrameProcessor, useCameraPermission } from "react-native-vision-camera";
+import { useTensorflowModel } from 'react-native-fast-tflite';
+import { useResizePlugin } from 'vision-camera-resize-plugin';
+import { useSharedValue, Worklets } from 'react-native-worklets-core';
 import PipHandler, { usePipModeListener } from 'react-native-pip-android';
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSelector } from "react-redux";
-import * as ImageManipulator from 'expo-image-manipulator'; // 🚀 리사이징용
 
 import TrafficLight from "../../components/TrafficLight";
 import ClassResultModal from "../../components/ClassResultModal";
-import LevelUpModal from "../../components/LevelUpRewardModal"; // 🚀 레벨업 모달 추가 필요
+import LevelUpRewardModal from "../../components/LevelUpRewardModal";
 
 import { stompClient } from "../../utils/socket";
 import { SOCKET_CONFIG } from "../../api/socket";
@@ -16,6 +18,7 @@ import { RootState } from "../../store/stores";
 
 const { OverlayModule } = NativeModules;
 
+// 🎨 매핑 테이블 (서버 ID -> 안드로이드 drawable)
 const charMap: Record<string, string> = {
   "1": "char_1", "2": "char_2", "3": "char_3", "4": "char_4",
   "5": "char_5", "6": "char_6", "7": "char_7", "8": "char_8"
@@ -25,131 +28,164 @@ const bgMap: Record<string, string> = {
   "1": "background1", "2": "background2", "3": "background3", "4": "background4"
 };
 
+// === [AI 민감도 설정 최적화] ===
+const YAW_THRESHOLD = 0.22;      // 0.25 -> 0.22로 조금 더 엄격하게 (고개 돌림 감지)
+const EAR_THRESHOLD = 0.12;      // 0.08 -> 0.12로 조정 (눈 감음 감지 민감도 상향)
+const MOVEMENT_THRESHOLD = 15;   // 20 -> 15로 조정 (산만함 더 빨리 감지)
+
 export default function DigitalClassScreen() {
   const router = useRouter();
   const { classId } = useLocalSearchParams<{ classId: string }>(); 
   const inPipMode = usePipModeListener();
   const appState = useRef(AppState.currentState);
-  const device = useCameraDevice('front');
-  const camera = useRef<Camera>(null);
-  const aiWs = useRef<WebSocket | null>(null); // 🚀 AI 서버용 웹소켓
-
+  
   const { equippedCharacterId, equippedBackgroundId } = useSelector((state: RootState) => state.theme);
 
-  const [isResultVisible, setIsResultVisible] = useState(false);
-  const [isLevelUpVisible, setIsLevelUpVisible] = useState(false); // 🚀 레벨업 상태
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('front');
+  const model = useTensorflowModel(require('../../../assets/face_landmarker.tflite'));
+  const { resize } = useResizePlugin();
+
   const [studentStatus, setStudentStatus] = useState<string>("FOCUS");
-  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isResultVisible, setIsResultVisible] = useState(false);
+  const [isLevelUpVisible, setIsLevelUpVisible] = useState(false);
+  const [hasLevelUpData, setHasLevelUpData] = useState(false);
+  const [resultData, setResultData] = useState({ gainedXP: 0, currentXP: 0, maxXP: 100 });
 
   const [theme, setTheme] = useState({
     character: charMap[String(equippedCharacterId)] || "char_1",
     background: bgMap[String(equippedBackgroundId)] || "background1"
   });
 
-  // 1. AI 서버용 웹소켓 및 프레임 전송 루프
-  useEffect(() => {
-    // AI 서버 주소 (FastAPI/Flask 서버 IP)
-  const serverUrl = process.env.EXPO_PUBLIC_AI_SERVER_URL;
-  
-  if (serverUrl) {
-    aiWs.current = new WebSocket(serverUrl);
-  }
-    
-    const interval = setInterval(async () => {
-      if (camera.current && isCameraReady && aiWs.current?.readyState === WebSocket.OPEN && !isResultVisible) {
-        try {
-          // 📸 깜빡임 없는 스냅샷 추출
-          const snapshot = await camera.current.takeSnapshot();
-          
-          // 📏 서버 부하를 줄이기 위한 320px 리사이징
-          const resized = await ImageManipulator.manipulateAsync(
-            `file://${snapshot.path}`,
-            [{ resize: { width: 320 } }],
-            { base64: true, format: ImageManipulator.SaveFormat.JPEG, compress: 0.7 }
-          );
+  // AI 연산용 공유 변수
+  const frameCounter = useSharedValue(0);
+  const lastNoseX = useSharedValue(0);
+  const lastNoseY = useSharedValue(0);
+  const movementScore = useSharedValue(0);
 
-          if (resized.base64) {
-            aiWs.current.send(resized.base64); // AI 서버 전송
-          }
-        } catch (err) {
-          console.error("AI 프레임 추출 실패:", err);
-        }
+  // 🧠 스레드 통신 함수
+  const setStatusJS = Worklets.createRunOnJS((status: string) => {
+    if (studentStatus !== status) {
+      setStudentStatus(status);
+      if (OverlayModule?.updateOverlayStatus) {
+        OverlayModule.updateOverlayStatus(status);
       }
-    }, 500); // 0.5초 간격
+    }
+  });
 
-    return () => {
-      clearInterval(interval);
-      aiWs.current?.close();
-    };
-  }, [isCameraReady, isResultVisible]);
+  useEffect(() => { if (!hasPermission) requestPermission(); }, [hasPermission]);
 
-  // 2. 소켓 구독 (수업 모드, 종료, 실시간 테마 변경)
+  // 🧠 [AI 분석 로직 개선 버전]
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet';
+    if (model.state !== 'loaded') return;
+
+    frameCounter.value += 1;
+    if (frameCounter.value % 5 !== 0) return; 
+
+    const resized = resize(frame, { scale: { width: 192, height: 192 }, pixelFormat: 'rgb', dataType: 'float32' });
+    const outputs = model.model.runSync([resized]);
+    
+    if (outputs && outputs.length > 0) {
+      const landmarks = outputs[0] as Float32Array;
+
+      if (landmarks.length > 100) {
+        const noseX = landmarks[1 * 3];
+        const noseY = landmarks[1 * 3 + 1];
+
+        // 1. 움직임(산만함) 계산
+        const diff = Math.abs(noseX - lastNoseX.value) + Math.abs(noseY - lastNoseY.value);
+        lastNoseX.value = noseX;
+        lastNoseY.value = noseY;
+        
+        if (diff > 2) movementScore.value = Math.min(30, movementScore.value + 1.5);
+        else movementScore.value = Math.max(0, movementScore.value - 1.0);
+
+        // 2. 졸음(EAR) 및 시선(Yaw) 계산
+        const leftEAR = (Math.abs(landmarks[159*3+1] - landmarks[145*3+1])) / (Math.abs(landmarks[33*3] - landmarks[133*3]));
+        const faceWidth = Math.abs(landmarks[454*3] - landmarks[234*3]);
+        const yawRatio = (noseX - landmarks[234*3]) / faceWidth;
+
+        let newStatus = "FOCUS";
+        if (Math.abs(yawRatio - 0.5) > YAW_THRESHOLD) newStatus = "UNFOCUS";
+        else if (leftEAR < EAR_THRESHOLD) newStatus = "SLEEPING";
+        else if (movementScore.value > MOVEMENT_THRESHOLD) newStatus = "UNFOCUS";
+
+        // 🚀 [실시간 로그 출력] 터미널에서 확인 가능합니다.
+        console.log(
+          `📊 [AI 분석] 상태: ${newStatus} | ` +
+          `👁️ 눈(EAR): ${leftEAR.toFixed(3)} (기준: ${EAR_THRESHOLD}) | ` +
+          `↔️ 시선(Yaw): ${(yawRatio - 0.5).toFixed(3)} (기준: ±${YAW_THRESHOLD}) | ` +
+          `🏃 움직임: ${movementScore.value.toFixed(1)}`
+        );
+
+        setStatusJS(newStatus);
+      } 
+      else {
+        console.log("⚠️ [AI 분석] 얼굴이 인식되지 않음 -> AWAY");
+        setStatusJS("AWAY");
+        movementScore.value = 0;
+      }
+    }
+  }, [model, setStatusJS]);
+
+  // 📡 소켓 통신 (테마 변경 및 수업 종료)
   useEffect(() => {
     if (!classId) return;
-
     const setupSubscriptions = () => {
-      // 모드 변경 구독
       const modeSub = stompClient.subscribe(SOCKET_CONFIG.SUBSCRIBE.MODE_STATUS(classId), (msg) => {
         const body = JSON.parse(msg.body);
         if (body.mode === 'NORMAL') {
-          if (OverlayModule) OverlayModule.hideOverlay();
+          OverlayModule?.hideOverlay();
           router.replace('/screens/Classtime_Normal'); 
         }
       });
 
-      // 수업 종료 및 상태 알림 구독
       const classSub = stompClient.subscribe(SOCKET_CONFIG.SUBSCRIBE.CLASS_TOPIC(classId), (msg) => {
         const body = JSON.parse(msg.body);
-        
         if (body.type === 'CLASS_FINISHED' || body.type === 'END') {
-          // 🚀 레벨업 데이터가 포함되어 있다면 로직 분기
           handleClassEnd(body);
         } 
-        else if (['FOCUS', 'UNFOCUS', 'AWAY', 'SLEEPING'].includes(body.type)) {
-          setStudentStatus(body.type);
-        }
         else if (body.type === 'THEME_CHANGED') {
           const newChar = charMap[String(body.characterId)] || "char_1";
           const newBg = bgMap[String(body.backgroundId)] || "background1";
           setTheme({ character: newChar, background: newBg });
+          if (appState.current.match(/inactive|background/) || inPipMode) {
+            OverlayModule?.showOverlay("테마가 변경되었습니다!", false, newChar, newBg, 0, 0);
+          }
         }
       });
-
       return { modeSub, classSub };
     };
 
-    let subs: { modeSub: any; classSub: any } | null = null;
-    if (stompClient.connected) {
-      subs = setupSubscriptions();
-    } else {
-      stompClient.onConnect = () => { subs = setupSubscriptions(); };
-    }
-
-    return () => {
-      if (subs) {
-        subs.modeSub.unsubscribe();
-        subs.classSub.unsubscribe();
-      }
-    };
+    let subs: any = null;
+    if (stompClient.connected) subs = setupSubscriptions();
+    return () => { if (subs) { subs.modeSub.unsubscribe(); subs.classSub.unsubscribe(); } };
   }, [classId, inPipMode]);
 
   const handleClassEnd = (body: any) => {
+    // 1. 오버레이 닫기
     if (OverlayModule) OverlayModule.hideOverlay();
-    if (Platform.OS === 'android') OverlayModule.relaunchApp();
 
-    // 🚀 레벨업 체크 로직 (서버 데이터 기반)
-    if (body.levelUp) {
-      setIsLevelUpVisible(true);
-    } else {
-      setIsResultVisible(true);
-    }
+    // 2. 서버에서 받은 경험치 데이터 세팅
+    setResultData({
+      gainedXP: body.gainedXP || 0,
+      currentXP: body.currentXP || 0,
+      maxXP: body.maxXP || 100
+    });
+
+    // 3. 레벨업 여부 확인 (서버에서 준 데이터 기준)
+    setHasLevelUpData(!!body.levelUp); 
+
+    // 4. 결과창 노출
+    setIsResultVisible(true);
   };
 
-  // 3. 앱 상태 변경 시 오버레이/PiP 제어
+  // 📱 앱 상태에 따른 오버레이 팝업
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
+    const sub = AppState.addEventListener("change", (nextAppState) => {
       if (appState.current === "active" && nextAppState.match(/inactive|background/)) {
-        if (Platform.OS === 'android' && !inPipMode && !isResultVisible) {
+        if (!inPipMode && !isResultVisible) {
           OverlayModule?.showOverlay(
             "수업에 집중하고 있어요!", 
             false, 
@@ -164,50 +200,29 @@ export default function DigitalClassScreen() {
       }
       appState.current = nextAppState;
     });
-
-    return () => subscription.remove();
+    return () => sub.remove();
   }, [inPipMode, isResultVisible, theme]);
 
-  if (!device) return <Text>카메라를 찾을 수 없습니다.</Text>;
+  if (model.state !== 'loaded') return <View style={styles.loading}><ActivityIndicator size="large"/><Text>AI 모델 로딩 중...</Text></View>;
 
   return (
     <View style={styles.container}>
-      {/* 🚀 Vision Camera: 1x1 크기로 숨겨서 백그라운드 분석용으로 사용 */}
-      <View style={styles.hiddenCamera}>
-        <Camera
-          ref={camera}
-          device={device}
-          isActive={!isResultVisible}
-          photo={true}
-          onInitialized={() => setIsCameraReady(true)}
-        />
-      </View>
-
+      <Camera style={StyleSheet.absoluteFill} device={device!} isActive={!isResultVisible} frameProcessor={frameProcessor} pixelFormat="yuv" />
       <View style={styles.content}>
         <TrafficLight size={inPipMode ? "small" : "large"} status={studentStatus} />
       </View>
-
-      {/* 1. 수업 결과 모달 */}
-      <ClassResultModal 
-        visible={isResultVisible} 
-        onClose={() => router.replace('/screens/Student_Home')}
-        gainedXP={100} 
-      />
-
-      {/* 2. 레벨업 모달 (추가됨) */}
-      <LevelUpModal 
-        visible={isLevelUpVisible}
-        onClose={() => {
-          setIsLevelUpVisible(false);
-          setIsResultVisible(true); // 레벨업 확인 후 결과 모달로 이동
-        }}
-      />
+      <ClassResultModal visible={isResultVisible} gainedXP={resultData.gainedXP} currentXP={resultData.currentXP} maxXP={resultData.maxXP} isLevelUp={hasLevelUpData} onClose={() => {
+          setIsResultVisible(false);
+          if (hasLevelUpData) setIsLevelUpVisible(true);
+          else router.replace('/screens/Student_Home');
+      }} />
+      <LevelUpRewardModal visible={isLevelUpVisible} onClose={() => router.replace('/screens/Student_Home')} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F5F5" },
-  hiddenCamera: { position: "absolute", width: 1, height: 1, opacity: 0, zIndex: -1 },
+  container: { flex: 1, backgroundColor: 'black' },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

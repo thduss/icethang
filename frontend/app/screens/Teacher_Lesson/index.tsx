@@ -104,15 +104,25 @@ const TeacherLessonScreen = () => {
       classNo: 1
     };
 
+    
+
     const success = await endClassSession(classId, reportData);
     
-    if(success) {
-      console.log("✅ 수업 리포트 저장 성공");
+    if (success) {
+      if (stompClient && stompClient.connected) {
+        stompClient.publish({
+          destination: `/pub/class/${classId}/finish`, 
+          body: JSON.stringify({
+            type: 'CLASS_FINISHED',
+            classId: classId,
+          }),
+        });
+      }
+      console.log("✅ 수업 종료 신호 전송 완료");
+      router.back(); 
     } else {
-      Alert.alert("알림", "리포트 저장 실패. (수업은 종료됩니다)");
+      Alert.alert("알림", "리포트 저장 실패.");
     }
-
-    router.back(); 
   };
 
   return (
