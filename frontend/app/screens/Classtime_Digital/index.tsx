@@ -129,12 +129,10 @@ export default function DigitalClassScreen() {
         console.log("🏁 수업 종료됨 - PiP 탈출 및 전체화면 복구 시도");
         
         isExiting.current = true;
-        OverlayModule?.hideOverlay(); // 오버레이 먼저 제거
+        OverlayModule?.hideOverlay(); 
 
-        // 🚨 [핵심 수정] PiP 모드에서 앱을 전면(Full Screen)으로 강제 복구
         OverlayModule?.relaunchApp();
 
-        // 앱이 전면으로 올라오는 찰나의 시간을 확보한 뒤 API 호출 및 모달 노출
         setTimeout(() => {
           fetchClassResult();
         }, 500);
@@ -193,4 +191,4 @@ export default function DigitalClassScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'black' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
-});
+}); 
