@@ -6,7 +6,7 @@ import ExperienceBar from './ExpBar';
 interface ClassResultModalProps {
   visible: boolean;
   onClose: () => void;
-  gainedXP?: number;   
+  focusRate?: number;   
   currentXP?: number;   
   maxXP?: number;       
   isLevelUp?: boolean;  
@@ -26,7 +26,7 @@ const normalize = (size: number) => Math.round(size * SCALE);
 export default function ClassResultModal({ 
   visible, 
   onClose, 
-  gainedXP = 0,    
+  focusRate = 0,    
   currentXP = 0,   
   maxXP = 100,     
   isLevelUp = false 
@@ -87,7 +87,7 @@ export default function ClassResultModal({
             {/*  경험치 섹션 */}
             <View style={styles.xpSection}>
                 <Text style={styles.xpInfoText}>
-                    오늘 수업으로 획득한 경험치 <Text style={styles.xpGreen}>+{gainedXP}</Text> ⬆
+                    오늘 수업으로 획득한 경험치 <Text style={styles.xpGreen}>+{focusRate}</Text> ⬆
                 </Text>
                 
                 <View style={{ width: '80%' }}>
@@ -98,7 +98,7 @@ export default function ClassResultModal({
             {/*  보상 텍스트 */}
             <View style={styles.rewardTextContainer}>
                 <Text style={styles.rewardBigText}>
-                  ✨ {gainedXP} 경험치 획득 완료! ✨
+                  ✨ {focusRate} 경험치 획득 완료! ✨
                 </Text>
                 <Text style={styles.rewardSmallText}>
                     {isLevelUp ? "🎉 레벨업 달성! " : "꾸준히 학습하여 레벨을 올려보세요!"}
