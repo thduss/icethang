@@ -29,7 +29,7 @@ export default function DigitalClassScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { classId } = useLocalSearchParams<{ classId: string }>(); 
-  const inPipMode = usePipModeListener();
+  const inPipMode = usePipModeListener(); 
   const appState = useRef(AppState.currentState);
   
   // 상태 데이터 
