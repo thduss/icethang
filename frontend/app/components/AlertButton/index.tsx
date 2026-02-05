@@ -1,55 +1,89 @@
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 
-// 1. Props & Ref 타입 정의
 export interface AlertButtonRef {
   triggerAlert: (type: string) => void;
 }
 
 interface AlertButtonProps {
-  onStatusChange?: (status: string) => void; // 부모에게 알릴 함수
+  onStatusChange?: (status: string) => void;
 }
 
 const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [showSpeechBubble, setShowSpeechBubble] = useState(false);
+  const [bubbleMessage, setBubbleMessage] = useState('');
+  const [bubbleOpacity] = useState(new Animated.Value(0));
   
-  // 2. 부모가 호출하는 함수 (선생님이 경고 보낼 때 등)
+  const showBubbleWithMessage = (message: string) => {
+    setBubbleMessage(message);
+    setShowSpeechBubble(true);
+
+    Animated.timing(bubbleOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    
+    setTimeout(() => {
+      Animated.timing(bubbleOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowSpeechBubble(false);
+      });
+    }, 3000);
+  };
+  
   useImperativeHandle(ref, () => ({
     triggerAlert: (type: string) => {
-      // 학생 화면에 띄울 게 없다면 콘솔만 찍음
-      console.log(`🔔 [경고 수신] 선생님으로부터 ${type} 경고가 왔습니다.`);
+      console.log(`🔔 [경고 수신] AI 감지: ${type}`);
+      
+      if (type === 'MOVING' || type === 'UNFOCUS') {
+        showBubbleWithMessage('⚠️ 경고 멘트 : 집중 필요!');
+      }
     }
   }));
-
-  // 3. 학생이 버튼 눌러서 상태 보고할 때
   const reportStatus = (status: string) => {
-    // (1) 모달 닫기
     setModalVisible(false);
 
-    // (2) 콘솔 로그 (요청하신 대로)
-    console.log(`📢 [학생 요청] 상태 선택됨: "${status}" -> 부모에게 전달합니다.`);
+    console.log(`📢 [학생 요청] 상태 선택됨: "${status}" -> 전달합니다.`);
 
-    // (3) 부모(NormalClassScreen)에게 전달 -> 여기서 소켓 쏠 예정
     if (props.onStatusChange) {
       props.onStatusChange(status);
     }
+    
+    const messageMap: { [key: string]: string } = {
+      'RESTROOM': '🚽 선생님께 화장실 알림을 보냈어요!',
+      'ACTIVITY': '✋ 선생님께 발표 알림을 보냈어요!',
+    };
+    
+    const confirmMessage = messageMap[status];
+    if (confirmMessage) {
+      showBubbleWithMessage(confirmMessage);
+    }
   };
-
-  
 
   return (
     <View style={styles.container}>
-      {/* 메인 버튼 */}
+      {showSpeechBubble && (
+        <Animated.View style={[styles.speechBubble, { opacity: bubbleOpacity }]}>
+          <Text style={styles.speechBubbleText}>{bubbleMessage}</Text>
+          <View style={styles.speechBubbleTail} />
+        </Animated.View>
+      )}
+
       <TouchableOpacity
         style={styles.mainButton}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.8}
       >
         <Text style={styles.mainButtonText}>🔔</Text>
-        <Text style={styles.mainButtonLabel}>알려주기</Text>
+        <Text style={styles.mainButtonLabel}>HELP</Text>
       </TouchableOpacity>
 
-      {/* 선택 모달창 */}
+      {/* 선택 모달창 (학생이 버튼 클릭) */}
       <Modal
         animationType="fade"
         transparent
@@ -88,22 +122,115 @@ const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) =>
 });
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  mainButton: {
-    width: 80, height: 80, backgroundColor: '#FFE066', borderRadius: 40,
-    justifyContent: 'center', alignItems: 'center', elevation: 5,
+  container: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'flex-end' 
   },
-  mainButtonText: { fontSize: 28 },
-  mainButtonLabel: { fontSize: 15, fontWeight: '700', marginTop: 2, color: '#5A4A2F' },
   
-  // 모달 스타일
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalView: { width: '80%', backgroundColor: '#ffffff', borderRadius: 24, padding: 24, alignItems: 'center' },
-  modalTitle: { fontSize: 25, fontWeight: '800', marginBottom: 18 },
-  statusBtn: { width: '100%', paddingVertical: 18, borderRadius: 26, marginBottom: 14, alignItems: 'center', elevation: 4 },
-  statusBtnText: { fontSize: 20, fontWeight: '700', color: '#333' },
-  closeBtn: { marginTop: 10, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 40, backgroundColor: '#d9d8d7' },
-  closeBtnText: { color: '#070101', fontWeight: '700' },
+  speechBubble: {
+    position: 'absolute',
+    right: 115, // 버튼 왼쪽에 위치
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  speechBubbleTail: {
+    position: 'absolute',
+    right: -10,
+    top: '50%',
+    marginTop: -8,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: '#FFFFFF',
+    borderRightColor: 'transparent',
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  speechBubbleText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333333',
+    textAlign: 'center',
+  },
+  
+  mainButton: {
+    width: 100,  
+    height: 100, 
+    backgroundColor: '#FFE066',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  mainButtonText: { 
+    fontSize: 36  
+  },
+  mainButtonLabel: { 
+    fontSize: 16,  
+    fontWeight: '700', 
+    marginTop: 4, 
+    color: '#5A4A2F' 
+  },
+  
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.4)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  modalView: { 
+    width: '80%', 
+    backgroundColor: '#ffffff', 
+    borderRadius: 24, 
+    padding: 24, 
+    alignItems: 'center' 
+  },
+  modalTitle: { 
+    fontSize: 25, 
+    fontWeight: '800', 
+    marginBottom: 18 
+  },
+  statusBtn: { 
+    width: '100%', 
+    paddingVertical: 18, 
+    borderRadius: 26, 
+    marginBottom: 14, 
+    alignItems: 'center', 
+    elevation: 4 
+  },
+  statusBtnText: { 
+    fontSize: 20, 
+    fontWeight: '700', 
+    color: '#333' 
+  },
+  closeBtn: { 
+    marginTop: 10, 
+    borderRadius: 20, 
+    paddingVertical: 10, 
+    paddingHorizontal: 40, 
+    backgroundColor: '#d9d8d7' 
+  },
+  closeBtnText: { 
+    color: '#070101', 
+    fontWeight: '700' 
+  },
 });
 
 export default AlertButton;
