@@ -111,7 +111,7 @@ const TeacherLessonScreen = () => {
     if (success) {
       if (stompClient && stompClient.connected) {
         stompClient.publish({
-          destination: `/pub/class/${classId}/finish`, 
+          destination: `/topic/class/${classId}`, 
           body: JSON.stringify({
             type: 'CLASS_FINISHED',
             classId: classId,
