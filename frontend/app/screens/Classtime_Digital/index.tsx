@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { View, StyleSheet, AppState, NativeModules, ActivityIndicator } from "react-native";
+import { View, StyleSheet, AppState, NativeModules, ActivityIndicator, Alert } from "react-native";
 import { Camera, useCameraDevice, useFrameProcessor, useCameraPermission } from "react-native-vision-camera";
 import { useTensorflowModel } from 'react-native-fast-tflite';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
@@ -7,6 +7,7 @@ import { useSharedValue, Worklets } from 'react-native-worklets-core';
 import PipHandler, { usePipModeListener } from 'react-native-pip-android';
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
+import axios from 'axios';
 
 import ClassResultModal from "../../components/ClassResultModal";
 import LevelUpRewardModal from "../../components/LevelUpRewardModal";
@@ -42,25 +43,39 @@ export default function DigitalClassScreen() {
     background: bgMap[String(themeState?.equippedBackgroundId)] || "background1"
   }), [themeState]);
 
-  // 🚨 페이지 이탈(이동) 시 즉시 오버레이 삭제
+  // 서버에서 내 최종 수업 결과(XP) 가져오기
+  const fetchClassResult = async () => {
+    try {
+      const response = await axios.get(`/api/class/${classId}/result/${user?.id}`);
+      const data = response.data;
+
+      setResultData({
+        gainedXP: data.gainedXP || 0,
+        currentXP: data.currentXP || 0,
+        maxXP: data.maxXP || 100
+      });
+      setHasLevelUpData(!!data.levelUp);
+      setIsResultVisible(true);
+    } catch (error) {
+      console.error("❌ 결과 조회 실패:", error);
+      setIsResultVisible(true);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       isExiting.current = false;
       return () => {
-        console.log("🏃 [이탈] 페이지를 떠납니다. 오버레이를 강제로 끕니다.");
         isExiting.current = true;
-        OverlayModule?.hideOverlay(); // 즉시 호출
+        OverlayModule?.hideOverlay();
       };
     }, [])
   );
 
   const setStatusJS = Worklets.createRunOnJS((newStatus: string, details: string) => {
     if (isExiting.current) return;
-    
-    // 🔍 [AI LOG] 터미널에서 실시간 수치 확인
-    console.log(`🤖 [AI 분석]: ${newStatus} | ${details}`);
-
     if (studentStatus !== newStatus) {
+      console.log(`🤖 [AI 감지]: ${newStatus} | ${details}`);
       setStudentStatus(newStatus);
       if (stompClient?.connected) {
         const kst = new Date(new Date().getTime() + 32400000).toISOString().split('.')[0];
@@ -102,18 +117,30 @@ export default function DigitalClassScreen() {
     }
   }, [model]);
 
+  // 소켓 종료 신호 수신 로직 보강
   useEffect(() => {
     if (!classId || !stompClient.connected) return;
+
     const classSub = stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
+      console.log("📩 [소켓 수신]:", msg.body);
       const body = JSON.parse(msg.body);
-      if (['CLASS_FINISHED', 'END', 'FINISH', 'STOP'].includes(body.type)) {
+
+      if (body.type === 'CLASS_FINISHED') {
+        console.log("🏁 수업 종료됨 - PiP 탈출 및 전체화면 복구 시도");
+        
         isExiting.current = true;
-        OverlayModule?.hideOverlay(); // 수업 종료 시 삭제
-        setResultData({ gainedXP: body.gainedXP || 0, currentXP: body.currentXP || 0, maxXP: body.maxXP || 100 });
-        setHasLevelUpData(!!body.levelUp);
-        setIsResultVisible(true);
+        OverlayModule?.hideOverlay(); // 오버레이 먼저 제거
+
+        // 🚨 [핵심 수정] PiP 모드에서 앱을 전면(Full Screen)으로 강제 복구
+        OverlayModule?.relaunchApp();
+
+        // 앱이 전면으로 올라오는 찰나의 시간을 확보한 뒤 API 호출 및 모달 노출
+        setTimeout(() => {
+          fetchClassResult();
+        }, 500);
       }
     });
+
     return () => classSub.unsubscribe();
   }, [classId]);
 
