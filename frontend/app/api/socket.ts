@@ -6,12 +6,14 @@ export const SOCKET_CONFIG = {
 
   PUBLISH: {
     ALERT: "/app/alert",
+    ENTER: "/app/enter", 
+    REQUEST_COUNT: "/app/class/count",
   },
 
   SUBSCRIBE: {
     CLASS_TOPIC: (classId: string) => `/topic/class/${classId}`, 
     MODE_STATUS: (classId: string) => `/topic/class/${classId}/mode`, 
-    STUDENT_COUNT: (classId: string) => `/topic/class/${classId}/count`, 
+    STUDENT_COUNT: (classId: string) => `/topic/class/${classId}/count`,  
   },
 
   RECONNECT_DELAY: 5000,
