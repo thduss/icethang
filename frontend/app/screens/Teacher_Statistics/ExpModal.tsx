@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
 
   inputLabel: {
     width: 60,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#3E2723",
   },
@@ -425,13 +425,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
-    height: 35,
+    height: 40,
     paddingHorizontal: 8,
     justifyContent: "center",
   },
 
   textInput: {
-    fontSize: 13,
+    fontSize: 10,
     color: "#000",
   },
 
@@ -443,9 +443,10 @@ const styles = StyleSheet.create({
 
   grantButton: {
     backgroundColor: "#7FA864",
-    paddingVertical: 8,
+    paddingVertical: 5,
     paddingHorizontal: 15,
     borderRadius: 8,
+    marginBottom: 10,
   },
 
   grantButtonText: {

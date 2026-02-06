@@ -12,7 +12,7 @@ const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const YEARS = Array.from({ length: 10 }, (_, i) => 2020 + i)
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 
-const CELL_SIZE = 40
+const CELL_SIZE = 42
 const GRID_WIDTH = CELL_SIZE * 7
 
 const isSameDay = (a: Date, b: Date) =>
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
 
   modal: {
-    width: 320,
+    width: 350,
     backgroundColor: '#FFF',
     borderRadius: 16,
     paddingVertical: 16,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
 
   picker: {
-    width: 120,
+    width: 140,
     height: 70,
     justifyContent: 'center',
   },
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
 
   dayText: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#3A2E1F',
   },
 
