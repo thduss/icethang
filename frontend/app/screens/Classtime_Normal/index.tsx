@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react"
-import { Text, View, StyleSheet, ActivityIndicator, Dimensions} from "react-native"
-import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor} from 'react-native-vision-camera';
+import { Text, View, StyleSheet, ActivityIndicator } from "react-native"
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, OutputOrientation } from 'react-native-vision-camera';
 import { useTensorflowModel } from 'react-native-fast-tflite'; 
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
@@ -15,35 +15,44 @@ import SockJS from "sockjs-client";
 import { SOCKET_CONFIG } from "../../api/socket";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/stores";
-import axios from "axios";
-import ClassResultModal from "../../components/ClassResultModal";
-import LevelUpRewardModal from "../../components/LevelUpRewardModal";
 
+type AIStatus = "FOCUS" | "BLINKING" | "MOVING" | "GAZE OFF" | "SLEEPING" | "AWAY" | "RESTROOM" | "ACTIVITY" | "UNFOCUS"
+type ClassMode = "NORMAL" | "DIGITAL";
 
-type AIStatus = "FOCUSED" | "BLINKING" | "MOVING" | "GAZE OFF" | "SLEEPING" | "AWAY" | "RESTROOM" | "ACTIVITY" | "UNFOCUS"
-type ClassMode = "NORMAL" | "DIGITAL";  
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+// ==============================
+// 설정값
+// ==============================
 
-const YAW_THRESHOLD = 0.25;
-const EAR_THRESHOLD = 0.08;
-const MOVEMENT_THRESHOLD = 20;
-const AWAY_FRAME_LIMIT = 100;
+// [데드존] 1.5 픽셀 이하의 떨림은 무시
+const MOVEMENT_DEADZONE = 1.5; 
+const POS_DIFF_SCALE = 1.0; 
+
+// [임계값] 2.0 이상이면 움직임으로 간주
+const MOVEMENT_THRESHOLD = 2.0; 
+const HEAD_MOVEMENT_TH = 1.5;
+
+// [졸음]
+const DEFAULT_EAR_THRESHOLD = 0.15;
+const EYE_CLOSED_TIME_LIMIT = 2000; 
+
+// 기타
+const MOVEMENT_TRIGGER_COUNT = 5; 
+const SMOOTHING_ALPHA = 0.15;
+const CALIBRATION_FRAMES = 30;
+const AWAY_FRAME_LIMIT = 30;
+const MIN_FACE_SCORE = -4.0;
 
 const IDX = {
-  LEFT_EYE: [159, 145, 33, 133],
-  RIGHT_EYE: [386, 374, 362, 263],
-  FACE_EDGES: [234, 454],
-  NOSE_TIP: 1
+  NOSE_TIP: 1,
+  CHIN: 152,
+  LEFT_EYE_OUTER: 33,
+  RIGHT_EYE_OUTER: 263,
+  LEFT_MOUTH: 61,
+  RIGHT_MOUTH: 291,
+  FOREHEAD: 10,
+  LEFT_EYE: [159, 145, 33, 133, 158, 153],
+  RIGHT_EYE: [386, 374, 362, 263, 385, 380],
 };
-
-const STATUS_MAP = {
-  0: "FOCUSED",
-  1: "MOVING",
-  2: "AWAY",
-  3: "UNFOCUS",
-  4: "SLEEPING",
-  5: "GAZE OFF"
-} as const;
 
 interface StudentInfo {
   id: number;
@@ -51,35 +60,79 @@ interface StudentInfo {
   classId: number;
 }
 
+// ==============================
+// 계산 로직
+// ==============================
+const calcHeadPose = (landmarks: Float32Array) => {
+  'worklet';
+  const getP = (idx: number) => ({ x: landmarks[idx * 3], y: landmarks[idx * 3 + 1] });
+  
+  const nose = getP(IDX.NOSE_TIP);
+  const chin = getP(IDX.CHIN);
+  const leftEye = getP(IDX.LEFT_EYE_OUTER);
+  const rightEye = getP(IDX.RIGHT_EYE_OUTER);
+  const leftMouth = getP(IDX.LEFT_MOUTH);
+  const rightMouth = getP(IDX.RIGHT_MOUTH);
+  const forehead = getP(IDX.FOREHEAD);
+
+  const eyeCenter = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 };
+  const eyeWidth = Math.sqrt(Math.pow(rightEye.x - leftEye.x, 2) + Math.pow(rightEye.y - leftEye.y, 2));
+  
+  const noseOffset = nose.x - eyeCenter.x;
+  const yaw = (noseOffset / eyeWidth) * 50;
+
+  const faceHeight = Math.sqrt(Math.pow(chin.x - forehead.x, 2) + Math.pow(chin.y - forehead.y, 2));
+  const mouthCenter = { x: (leftMouth.x + rightMouth.x) / 2, y: (leftMouth.y + rightMouth.y) / 2 };
+  const verticalOffset = mouthCenter.y - eyeCenter.y;
+  const pitch = (verticalOffset / faceHeight) * 50;
+
+  const roll = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) * (180 / Math.PI);
+
+  return [yaw, pitch, roll];
+};
+
+const calcEAR = (landmarks: Float32Array, indices: number[]) => {
+  'worklet';
+  const getX = (i: number) => landmarks[i * 3];
+  const getY = (i: number) => landmarks[i * 3 + 1];
+  
+  const v1 = Math.abs(getY(indices[1]) - getY(indices[5]));
+  const v2 = Math.abs(getY(indices[2]) - getY(indices[4]));
+  const h = Math.abs(getX(indices[0]) - getX(indices[3]));
+
+  return (v1 + v2) / (2.0 * h);
+};
 
 
 export default function NormalClassScreen() {
   const router = useRouter();
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
-
+  
   const model = useTensorflowModel(require('../../../assets/face_landmarker.tflite'));
   const { resize } = useResizePlugin();
 
-  const [aiStatus, setAiStatus] = useState<AIStatus>("FOCUSED");
+  const [aiStatus, setAiStatus] = useState<AIStatus>("FOCUS");
+  const [debugInfo, setDebugInfo] = useState("");
+
   const [studentCount, setStudentCount] = useState(0);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [showCalibration, setShowCalibration] = useState(false);
+  const [showCalibration, setShowCalibration] = useState(true);
   const [currentMode, setCurrentMode] = useState<ClassMode>("NORMAL");
   const [isCameraActive, setIsCameraActive] = useState(true);
 
-  const [isResultVisible, setIsResultVisible] = useState(false);
-  const [isLevelUpVisible, setIsLevelUpVisible] = useState(false);
-  const [hasLevelUpData, setHasLevelUpData] = useState(false);
-  const [resultData, setResultData] = useState({ gainedXP: 0, currentXP: 0, maxXP: 100 });
-
-  const lastNoseX = useSharedValue(0);
-  const lastNoseY = useSharedValue(0);
-  const movementScore = useSharedValue(0);
+  const prevHeadPose = useSharedValue<[number, number, number] | null>(null);
+  const isCalibrated = useSharedValue(false);
+  const calibrationData = useSharedValue<number[]>([]);
   const faceMissingCount = useSharedValue(0);
-  const frameCounter = useSharedValue(0);
+  const lastBlinkTime = useSharedValue(0);
+  const eyeClosedStart = useSharedValue<number | null>(null);
+  const movementCounter = useSharedValue(0);
+  const lastHeadPose = useSharedValue<[number, number, number]>([0,0,0]);
+  const smoothedNosePos = useSharedValue<[number, number] | null>(null);
+  const personalEarThreshold = useSharedValue(DEFAULT_EAR_THRESHOLD);
 
-  const lastAlertTime = useRef(0);
+  const prevStatusRef = useRef<AIStatus | null>(null);
   const stompClient = useRef<Client | null>(null);
   const alertRef = useRef<AlertButtonRef>(null);
 
@@ -91,20 +144,209 @@ export default function NormalClassScreen() {
     classId: studentData?.classId || 1,
   };
 
-  const logDebug = Worklets.createRunOnJS((message: string, data?: any) => {
-    if (data !== undefined) {
-      console.log(`🔍 [AI Debug] ${message}:`, data);
-    } else {
-      console.log(`🔍 [AI Debug] ${message}`);
-    }
+  const handleStatusChange = Worklets.createRunOnJS((data: { status: string, debug: string }) => {
+    setAiStatus(data.status as AIStatus);
+    setDebugInfo(data.debug); 
   });
 
+  const handleCalibrationFinish = Worklets.createRunOnJS((earTh: number) => {
+    setShowCalibration(false);
+    console.log(`✅ Calibration Finished. EAR Th: ${earTh.toFixed(3)}`);
+  });
+
+  const handleModeChange = (newMode: ClassMode) => {
+    setCurrentMode(newMode);
+    setIsCameraActive(false);
+    setTimeout(() => {
+      if (newMode === "NORMAL") router.replace("/screens/Classtime_Normal");
+      else if (newMode === "DIGITAL") router.replace("/screens/Classtime_Digital");
+    }, 300);
+  };
+
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet';
+    if (model.state !== 'loaded') return;
+
+    const resized = resize(frame, {
+      scale: { width: 192, height: 192 },
+      pixelFormat: 'rgb',
+      dataType: 'float32',
+      mirror: true
+    });
+
+    const outputs = model.model.runSync([resized]);
+
+    // 1. AWAY 감지
+    let isFaceDetected = false;
+    if (outputs.length > 1) {
+      const scores = outputs[1] as Float32Array;
+      if (scores[0] > MIN_FACE_SCORE) isFaceDetected = true;
+    } else if (outputs.length > 0 && (outputs[0] as Float32Array).length > 100) {
+       isFaceDetected = true;
+    }
+
+    if (!isFaceDetected) {
+      faceMissingCount.value += 1;
+      if (faceMissingCount.value > AWAY_FRAME_LIMIT) {
+        handleStatusChange({ status: "AWAY", debug: "No Face" });
+      }
+      return; 
+    }
+    faceMissingCount.value = 0;
+
+    const landmarks = outputs[0] as Float32Array;
+    const now = Date.now();
+
+    const rawNoseX = landmarks[IDX.NOSE_TIP * 3];
+    const rawNoseY = landmarks[IDX.NOSE_TIP * 3 + 1];
+
+    const rawHead = calcHeadPose(landmarks);
+    const leftEar = calcEAR(landmarks, IDX.LEFT_EYE);
+    const rightEar = calcEAR(landmarks, IDX.RIGHT_EYE);
+    const avgEar = (leftEar + rightEar) / 2.0;
+    
+    // [보정값 적용]
+    const eyesOpen = avgEar > personalEarThreshold.value;
+
+    let curHead = rawHead;
+    let curNoseX = rawNoseX;
+    let curNoseY = rawNoseY;
+
+    if (prevHeadPose.value !== null) {
+      curHead = [
+        SMOOTHING_ALPHA * rawHead[0] + (1 - SMOOTHING_ALPHA) * prevHeadPose.value[0],
+        SMOOTHING_ALPHA * rawHead[1] + (1 - SMOOTHING_ALPHA) * prevHeadPose.value[1],
+        SMOOTHING_ALPHA * rawHead[2] + (1 - SMOOTHING_ALPHA) * prevHeadPose.value[2],
+      ];
+    }
+    prevHeadPose.value = curHead;
+
+    if (smoothedNosePos.value !== null) {
+      curNoseX = SMOOTHING_ALPHA * rawNoseX + (1 - SMOOTHING_ALPHA) * smoothedNosePos.value[0];
+      curNoseY = SMOOTHING_ALPHA * rawNoseY + (1 - SMOOTHING_ALPHA) * smoothedNosePos.value[1];
+    }
+
+    // Calibration
+    if (!isCalibrated.value) {
+      const newData = [...calibrationData.value, curHead[0], curHead[1], curHead[2], avgEar]; 
+      calibrationData.value = newData;
+      smoothedNosePos.value = [curNoseX, curNoseY]; 
+
+      if (newData.length >= CALIBRATION_FRAMES * 4) {
+        let sums = [0, 0, 0, 0];
+        const count = newData.length / 4;
+        for (let i = 0; i < newData.length; i += 4) {
+          sums[0] += newData[i];
+          sums[1] += newData[i+1];
+          sums[2] += newData[i+2];
+          sums[3] += newData[i+3];
+        }
+        
+        const avgUserEar = sums[3] / count;
+        let calculatedTh = avgUserEar * 0.6;
+        if (calculatedTh < 0.1) calculatedTh = 0.1; 
+        
+        personalEarThreshold.value = calculatedTh;
+        isCalibrated.value = true;
+        handleCalibrationFinish(personalEarThreshold.value);
+      } else {
+        return; 
+      }
+    }
+
+    const [yaw, pitch, roll] = curHead;
+
+    // 2. 졸음 감지
+    let eyesTooLongClosed = false;
+    let eyeDuration = 0;
+    if (!eyesOpen) {
+      if (eyeClosedStart.value === null) eyeClosedStart.value = now;
+      lastBlinkTime.value = now;
+      eyeDuration = now - eyeClosedStart.value;
+      if (eyeDuration > EYE_CLOSED_TIME_LIMIT) {
+        eyesTooLongClosed = true;
+      }
+    } else {
+      eyeClosedStart.value = null;
+    }
+
+    // 3. 움직임 감지
+    const angleDiff = Math.abs(yaw - lastHeadPose.value[0]) + Math.abs(pitch - lastHeadPose.value[1]);
+    lastHeadPose.value = [yaw, pitch, roll];
+
+    let posDiff = 0;
+    let rawDiff = 0; 
+
+    if (smoothedNosePos.value !== null) {
+        const diffX = Math.abs(curNoseX - smoothedNosePos.value[0]);
+        const diffY = Math.abs(curNoseY - smoothedNosePos.value[1]);
+        rawDiff = diffX + diffY;
+
+        // [데드존]
+        if (rawDiff < MOVEMENT_DEADZONE) {
+            posDiff = 0;
+        } else {
+            posDiff = rawDiff * POS_DIFF_SCALE;
+        }
+    }
+    smoothedNosePos.value = [curNoseX, curNoseY];
+
+    const totalMovement = (!eyesOpen) ? 0 : (angleDiff + posDiff);
+
+    if (totalMovement > MOVEMENT_THRESHOLD) {
+      movementCounter.value += 1;
+    } else {
+      movementCounter.value = Math.max(0, movementCounter.value - 1);
+    }
+    const isMoving = movementCounter.value > MOVEMENT_TRIGGER_COUNT;
+
+    // 4. 최종 판정
+    let finalStatus: AIStatus = "FOCUS";
+    let debugStr = `Diff: ${rawDiff.toFixed(2)}`;
+
+    if (eyesTooLongClosed) {
+      finalStatus = "UNFOCUS"; 
+      debugStr = `SLEEP (${(eyeDuration/1000).toFixed(1)}s)`;
+    } else if (isMoving) {
+      finalStatus = "UNFOCUS"; 
+      debugStr = `MOVING Score: ${totalMovement.toFixed(2)}`;
+    } else {
+      finalStatus = "FOCUS";
+    }
+
+    handleStatusChange({ status: finalStatus, debug: debugStr });
+
+  }, [model]);
+
+  // ==============================
+  // UI
+  // ==============================
+  useEffect(() => { if (!hasPermission) requestPermission(); }, [hasPermission]);
+  useEffect(() => {
+    async function lockOrientation() {
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT);
+    }
+    lockOrientation();
+    return () => { ScreenOrientation.unlockAsync(); };
+  }, []);
+
+  const sendStatusToServer = (status: AIStatus) => {
+    if (!isSocketConnected || !stompClient.current) return;
+    let serverType = status === "FOCUS" ? "FOCUS" : status === "AWAY" ? "AWAY" : "UNFOCUS";
+    const payload = {
+      classid: parseInt(classId),
+      studentld: studentInfo.id,
+      studentName: studentInfo.name,
+      type: serverType,
+      detectedAt: new Date().toISOString()
+    };
+    stompClient.current.publish({ destination: SOCKET_CONFIG.PUBLISH.ALERT, body: JSON.stringify(payload) });
+  };
+
   const handleStudentStatusReport = (status: string) => {
-    console.log(`📥 [학생 보고] 받은 상태: ${status}`);
-    
-    const displayStatus = (status === 'RESTROOM' || status === 'ACTIVITY') ? 'FOCUSED' : status;
+    const displayStatus = (status === 'RESTROOM' || status === 'ACTIVITY') ? 'FOCUS' : status;
     setAiStatus(displayStatus as AIStatus);
-    
+    prevStatusRef.current = displayStatus as AIStatus; 
     if (isSocketConnected && stompClient.current) {
       const payload = {
         classid: parseInt(classId),
@@ -113,484 +355,74 @@ export default function NormalClassScreen() {
         type: status,
         detectedAt: new Date().toISOString()
       };
-      
-      console.log('📤 [학생 보고 전송]:', payload);
-      stompClient.current.publish({ 
-        destination: SOCKET_CONFIG.PUBLISH.ALERT, 
-        body: JSON.stringify(payload) 
-      });
+      stompClient.current.publish({ destination: SOCKET_CONFIG.PUBLISH.ALERT, body: JSON.stringify(payload) });
     }
-  };
-
-  const fetchClassResult = async () => {
-  try {
-    const response = await axios.get(`/api/class/${classId}/result/${studentInfo.id}`);
-    const data = response.data;
-
-    setResultData({
-      gainedXP: data.gainedXP || 0,
-      currentXP: data.currentXP || 0,
-      maxXP: data.maxXP || 100
-    });
-    setHasLevelUpData(!!data.levelUp);
-    setIsResultVisible(true);
-  } catch (error) {
-    console.error("❌ 결과 조회 실패:", error);
-    setIsResultVisible(true);
-  }
-};
-  
-  const handleStatusChange = Worklets.createRunOnJS((newStatusCode: number) => {
-    const statusText = STATUS_MAP[newStatusCode as keyof typeof STATUS_MAP] || "FOCUSED";
-    console.log(`🎯 [Status Change] ${newStatusCode} -> ${statusText}`);
-    
-    setAiStatus(statusText as AIStatus);
-    console.log(`✅ [Status Updated] -> ${statusText}`);
-  });
-  
-
-  const handleModeChange = (newMode: ClassMode) => {
-    console.log(`🔄 [Mode Change] ${currentMode} -> ${newMode}`);
-    setCurrentMode(newMode);
-    
-    console.log('📷 [Camera] 카메라 비활성화 중...');
-    setIsCameraActive(false);
-  
-    setTimeout(() => {
-      if (newMode === "NORMAL") {
-        console.log('🎯 [Navigation] NORMAL 수업으로 이동');
-        router.replace("/screens/Classtime_Normal");
-      } else if (newMode === "DIGITAL") {
-        console.log('🎯 [Navigation] DIGITAL 수업으로 이동');
-        router.replace("/screens/Classtime_Digital");
-      }
-    }, 300);
-  };
-
-  useEffect(() => { if (!hasPermission) requestPermission(); }, [hasPermission]);
-
-  useEffect(() => {
-    async function lockOrientation() {
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
-    }
-    lockOrientation();
-
-    return () => {
-      ScreenOrientation.unlockAsync(); 
-    };
-  }, []);
-
-  const frameProcessor = useFrameProcessor((frame) => {
-    'worklet';
-    if (model.state !== 'loaded') return;
-
-    frameCounter.value += 1;
-    if (frameCounter.value % 3 !== 0) return;
-
-    const shouldDetailLog = frameCounter.value % 300 === 0;
-
-    const resized = resize(frame, {
-      scale: { width: 192, height: 192 },
-      pixelFormat: 'rgb',
-      dataType: 'float32',
-    });
-
-    if (shouldDetailLog) {
-      logDebug('Processing frame', frameCounter.value);
-    }
-
-    try {
-      const outputs = model.model.runSync([resized]);
-      
-      if (outputs && outputs.length > 0) {
-        const landmarks = outputs[0] as Float32Array;
-
-        if (shouldDetailLog) {
-          logDebug('Landmarks length', landmarks.length);
-        }
-
-        if (landmarks.length < 100) {
-          faceMissingCount.value += 1;
-          if (shouldDetailLog) {
-            logDebug('Face missing', faceMissingCount.value);
-          }
-          if (faceMissingCount.value > AWAY_FRAME_LIMIT) {
-            logDebug('AWAY - face missing for extended period');
-            handleStatusChange(2);
-          }
-          return;
-        }
-
-        faceMissingCount.value = 0;
-        
-        const noseX = landmarks[IDX.NOSE_TIP * 3];
-        const noseY = landmarks[IDX.NOSE_TIP * 3 + 1];
-
-        if (shouldDetailLog) {
-          logDebug('Nose position', { 
-            x: noseX.toFixed(3), 
-            y: noseY.toFixed(3) 
-          });
-        }
-
-        const diff = Math.abs(noseX - lastNoseX.value) + Math.abs(noseY - lastNoseY.value);
-        lastNoseX.value = noseX;
-        lastNoseY.value = noseY;
-
-        if (diff > 2) {
-          movementScore.value = Math.min(MOVEMENT_THRESHOLD + 10, movementScore.value + 1.5);
-          if (shouldDetailLog) {
-            logDebug('Movement detected', `diff=${diff.toFixed(3)}, score=${movementScore.value.toFixed(1)}`);
-          }
-        } else {
-          movementScore.value = Math.max(0, movementScore.value - 0.5);
-        }
-
-        const isMovingTooMuch = movementScore.value > MOVEMENT_THRESHOLD;
-
-        const calculateEAR = (indices: number[]) => {
-          'worklet';
-          const p0x = landmarks[indices[0] * 3];
-          const p0y = landmarks[indices[0] * 3 + 1];
-          const p1x = landmarks[indices[1] * 3];
-          const p1y = landmarks[indices[1] * 3 + 1];
-          const p2x = landmarks[indices[2] * 3];
-          const p2y = landmarks[indices[2] * 3 + 1];
-          const p3x = landmarks[indices[3] * 3];
-          const p3y = landmarks[indices[3] * 3 + 1];
-
-          const vertical = Math.sqrt(Math.pow(p0x - p1x, 2) + Math.pow(p0y - p1y, 2));
-          const horizontal = Math.sqrt(Math.pow(p2x - p3x, 2) + Math.pow(p2y - p3y, 2));
-          
-          return vertical / horizontal;
-        };
-
-        const leftEAR = calculateEAR(IDX.LEFT_EYE);
-        const rightEAR = calculateEAR(IDX.RIGHT_EYE);
-        const avgEAR = (leftEAR + rightEAR) / 2;
-        const isSleeping = avgEAR < EAR_THRESHOLD;
-
-        if (shouldDetailLog) {
-          logDebug('EAR values', {
-            left: leftEAR.toFixed(3),
-            right: rightEAR.toFixed(3),
-            avg: avgEAR.toFixed(3),
-            sleeping: isSleeping
-          });
-        }
-
-        const leftEdgeX = landmarks[IDX.FACE_EDGES[0] * 3];
-        const rightEdgeX = landmarks[IDX.FACE_EDGES[1] * 3];
-        const faceWidth = Math.abs(rightEdgeX - leftEdgeX);
-        const yawRatio = (noseX - leftEdgeX) / faceWidth;
-        const isLookingAway = Math.abs(yawRatio - 0.5) > YAW_THRESHOLD;
-
-        if (shouldDetailLog) {
-          logDebug('Gaze tracking', {
-            yawRatio: yawRatio.toFixed(3),
-            lookingAway: isLookingAway,
-            faceWidth: faceWidth.toFixed(2)
-          });
-        }
-
-        let currentStatus = 0;
-
-        if (isSleeping) {
-          currentStatus = 4;
-          logDebug('Status: SLEEPING detected');
-        } else if (isLookingAway) {
-          currentStatus = 5;
-          logDebug('Status: GAZE OFF detected');
-        } else if (isMovingTooMuch) {
-          currentStatus = 1;
-          logDebug('Status: MOVING detected');
-        }
-
-        if (shouldDetailLog) {
-          logDebug('Final status', {
-            code: currentStatus,
-            movementScore: movementScore.value.toFixed(1),
-            sleeping: isSleeping,
-            gazeOff: isLookingAway
-          });
-        }
-        
-        handleStatusChange(currentStatus);
-
-      } else {
-        if (shouldDetailLog) {
-          logDebug('No outputs', 'Model returned empty');
-        }
-      }
-
-    } catch (e: any) { 
-      logDebug('Frame error', e?.message);
-    }
-  }, [model]);
-
-  const sendStatusToServer = (status: AIStatus) => {
-    if (!isSocketConnected || !stompClient.current) {
-      console.log('⚠️ [Server] Socket not connected');
-      return;
-    }
-    const now = Date.now();
-    if (status !== "FOCUSED" && (now - lastAlertTime.current < 3000)) {
-      console.log('⚠️ [Server] Throttled');
-      return;
-    }
-    if (status !== "FOCUSED") lastAlertTime.current = now;
-
-    let serverType = status === "FOCUSED" ? "FOCUS" : status === "AWAY" ? "AWAY" : "UNFOCUS";
-
-    const payload = {
-      classid: parseInt(classId),
-      studentld: studentInfo.id,
-      studentName: studentInfo.name,
-      type: serverType,
-      detectedAt: new Date().toISOString()
-    };
-    
-    console.log('📤 [Server] Sending:', payload);
-    stompClient.current.publish({ 
-      destination: SOCKET_CONFIG.PUBLISH.ALERT, 
-      body: JSON.stringify(payload) 
-    });
   };
 
   useEffect(() => {
-    console.log(`🔄 [Effect] status=${aiStatus}, connected=${isSocketConnected}`);
-    if (isSocketConnected && aiStatus !== "FOCUSED" && aiStatus !== "RESTROOM" && aiStatus !== "ACTIVITY") {
-      sendStatusToServer(aiStatus);
-      alertRef.current?.triggerAlert(aiStatus);
+    if (isSocketConnected && aiStatus !== "RESTROOM" && aiStatus !== "ACTIVITY") {
+      if (aiStatus !== prevStatusRef.current) {
+        sendStatusToServer(aiStatus);
+        if (aiStatus !== "FOCUS") {
+          alertRef.current?.triggerAlert(aiStatus);
+        }
+        prevStatusRef.current = aiStatus;
+      }
     }
   }, [aiStatus, isSocketConnected]);
 
   useEffect(() => {
-    console.log('🔌 [Socket] Initializing...');
-    
     const client = new Client({
       webSocketFactory: () => new SockJS(SOCKET_CONFIG.BROKER_URL),
       reconnectDelay: SOCKET_CONFIG.RECONNECT_DELAY,
-      heartbeatIncoming: SOCKET_CONFIG.HEARTBEAT,
-      heartbeatOutgoing: SOCKET_CONFIG.HEARTBEAT,
-      
-      debug: (str) => {
-        console.log('🔧 [STOMP Debug]:', str);
-      },
-      
       onConnect: () => {
-        console.log('✅ [Socket] Connected!');
         setIsSocketConnected(true);
-        setStudentCount(1); 
-        
-        console.log('📡 [Socket] 구독 설정 시작...');
-        
-        const studentCountTopic = SOCKET_CONFIG.SUBSCRIBE.STUDENT_COUNT(classId);
-        console.log('🔍 [Socket] 접속자 수 구독 주소:', studentCountTopic);
-        
-        client.subscribe(
-          studentCountTopic, 
-          (msg) => {
-            console.log('📥 [Socket] ===== 접속자 수 메시지 수신 =====');
-            console.log('📥 [Socket] Raw count message:', msg.body);
-            console.log('📥 [Socket] Message headers:', msg.headers);
-            
-            try {
-              const data = JSON.parse(msg.body);
-              console.log('📥 [Socket] 파싱된 전체 데이터:', JSON.stringify(data, null, 2));
-              
-              let count = 0;
-              
-              if (data.type === "USER_COUNT" && data.count !== undefined) {
-                count = data.count;
-                console.log('📥 [Socket] ✅ USER_COUNT 타입:', count);
-              } else if (data.studentCount !== undefined) {
-                count = data.studentCount;
-                console.log('📥 [Socket] ✅ studentCount 필드:', count);
-              } else if (data.userCount !== undefined) {
-                count = data.userCount;
-                console.log('📥 [Socket] ✅ userCount 필드:', count);
-              } else if (data.count !== undefined) {
-                count = data.count;
-                console.log('📥 [Socket] ✅ count 필드:', count);
-              } else if (typeof data === 'number') {
-                count = data;
-                console.log('📥 [Socket] ✅ 숫자 직접:', count);
-              } else {
-                console.warn('⚠️ [Socket] 알 수 없는 형식:', data);
-              }
-              
-              console.log('📥 [Socket] 최종 접속자 수 업데이트:', count);
-              setStudentCount(count);
-              
-            } catch (e) {
-              console.error('❌ [Socket] 접속자 수 파싱 오류:', e);
-              console.error('❌ [Socket] 원본 메시지:', msg.body);
-              
-              const numberMatch = msg.body.match(/\d+/);
-              if (numberMatch) {
-                const count = parseInt(numberMatch[0]);
-                console.log('📥 [Socket] 숫자 추출 성공:', count);
-                setStudentCount(count);
-              }
-            }
-          }
-        );
-        console.log('✅ [Socket] 접속자 수 구독 완료:', studentCountTopic);
-        const alertTopic = SOCKET_CONFIG.SUBSCRIBE.CLASS_TOPIC(classId);
-        console.log('🔍 [Socket] 알림 구독 주소:', alertTopic);
-        
-        client.subscribe(
-          alertTopic, 
-          (msg) => {
-            console.log('📥 [Socket] Raw alert message:', msg.body);
-            try {
-              const alert = JSON.parse(msg.body);
-              console.log('📥 [Socket] 선생님 알림:', alert);
-            } catch (e) {
-              console.error('❌ [Socket] 알림 파싱 오류:', e);
-            }
-          }
-        );
-        console.log('✅ [Socket] 알림 구독 완료:', alertTopic);
-        const modeTopic = SOCKET_CONFIG.SUBSCRIBE.MODE_STATUS(classId);
-        console.log('🔍 [Socket] 모드 구독 주소:', modeTopic);
-        
-        client.subscribe(
-          modeTopic, 
-          (msg) => {
-            console.log('📥 [Socket] Raw mode message:', msg.body);
-            try {
-              const data = JSON.parse(msg.body);
-              const mode = data.mode?.toUpperCase() as ClassMode;
-              console.log('📥 [Socket] 모드 변경 수신:', mode, '| 전체 데이터:', data);
-              
-              if (mode === "NORMAL" || mode === "DIGITAL") {
-                handleModeChange(mode);
-              } else {
-                console.warn('⚠️ [Socket] 알 수 없는 모드:', data);
-              }
-            } catch (e) {
-              console.error('❌ [Socket] 모드 파싱 오류:', e);
-            }
-          }
-        );
-        console.log('✅ [Socket] 모드 구독 완료:', modeTopic);
-
-        const classFinishTopic = `/topic/class/${classId}`;
-console.log('🔍 [Socket] 수업 종료 구독 주소:', classFinishTopic);
-
-client.subscribe(
-  classFinishTopic, 
-  (msg) => {
-    console.log('📥 [Socket] Raw class message:', msg.body);
-    try {
-      const data = JSON.parse(msg.body);
-      console.log('📥 [Socket] 수업 메시지 수신:', data);
-      
-      if (data.type === 'CLASS_FINISHED') {
-        console.log('🏁 [Socket] 수업 종료 신호 수신');
-        
-        setIsCameraActive(false);
-        
+        setStudentCount(1);
+        client.subscribe(SOCKET_CONFIG.SUBSCRIBE.STUDENT_COUNT(classId), (msg) => {
+          try {
+            const data = JSON.parse(msg.body);
+            const count = data.count || data.studentCount || data.userCount || (typeof data === 'number' ? data : 0);
+            setStudentCount(count);
+          } catch(e) {}
+        });
+        client.subscribe(SOCKET_CONFIG.SUBSCRIBE.CLASS_TOPIC(classId), (msg) => {});
+        client.subscribe(SOCKET_CONFIG.SUBSCRIBE.MODE_STATUS(classId), (msg) => {
+          try {
+            const data = JSON.parse(msg.body);
+            if (data.mode === "NORMAL" || data.mode === "DIGITAL") handleModeChange(data.mode);
+          } catch(e) {}
+        });
         setTimeout(() => {
-          fetchClassResult();
-        }, 500);
-      }
-    } catch (e) {
-      console.error('❌ [Socket] 수업 메시지 파싱 오류:', e);
-    }
-  }
-);
-console.log('✅ [Socket] 수업 종료 구독 완료:', classFinishTopic);
-
-        setTimeout(() => {
-          const enterPayload = { 
-            classid: parseInt(classId), 
-            studentld: studentInfo.id, 
-            studentName: studentInfo.name 
-          };
-          console.log('📤 [Socket] 학생 입장 발행:', enterPayload);
-          console.log('📤 [Socket] 발행 주소:', SOCKET_CONFIG.PUBLISH.ENTER);
-          
-          client.publish({ 
-            destination: SOCKET_CONFIG.PUBLISH.ENTER, 
-            body: JSON.stringify(enterPayload) 
-          });
-          
-          console.log('✅ [Socket] 입장 발행 완료');
-          
-          setTimeout(() => {
-            console.log('📤 [Socket] 접속자 수 요청');
-            client.publish({
-              destination: SOCKET_CONFIG.PUBLISH.REQUEST_COUNT,
-              body: JSON.stringify({ classid: parseInt(classId) })
-            });
-          }, 500);
-          
+           client.publish({ 
+             destination: SOCKET_CONFIG.PUBLISH.ENTER, 
+             body: JSON.stringify({ classid: parseInt(classId), studentld: studentInfo.id, studentName: studentInfo.name }) 
+           });
+           client.publish({ destination: SOCKET_CONFIG.PUBLISH.REQUEST_COUNT, body: JSON.stringify({ classid: parseInt(classId) }) });
         }, 100);
-      },
-      
-      onDisconnect: () => {
-        console.log('⚠️ [Socket] Disconnected');
-        setIsSocketConnected(false);
-      },
-      
-      onWebSocketClose: () => {
-        console.log('❌ [Socket] WebSocket Closed');
-        setIsSocketConnected(false);
-      },
-      
-      onStompError: (frame) => {
-        console.error('❌ [Socket] STOMP Error:', frame.headers['message']);
-        console.error('❌ [Socket] STOMP Error Body:', frame.body);
-      },
+      }
     });
-    
     client.activate();
     stompClient.current = client;
-    
-    return () => { 
-      console.log('🔌 [Socket] Cleanup - 연결 해제');
-      if (stompClient.current) {
-        stompClient.current.deactivate();
-      }
-      setIsSocketConnected(false); 
-    };
-  }, [classId, studentInfo.id, studentInfo.name]);
+    return () => { if(stompClient.current) stompClient.current.deactivate(); };
+  }, [classId]);
 
   if (!hasPermission) return <View style={styles.permissionContainer}><Text style={{color:'white'}}>카메라 권한 필요</Text></View>;
   if (device == null) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="white" /><Text style={{ color: 'white', marginTop: 10 }}>카메라 초기화 중...</Text></View>;
   if (model.state !== 'loaded') return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="white" /><Text style={{ color: 'white', marginTop: 10 }}>AI 모델 로딩 중...</Text></View>;
 
-return (
-  <View style={styles.container}>
-    <Camera 
-      style={StyleSheet.absoluteFill}
-      device={device} 
-      isActive={isCameraActive && !isResultVisible}
-      frameProcessor={frameProcessor} 
-      pixelFormat="yuv"
-    />
-    
-    <View style={{
-      position: 'absolute',
-      width: SCREEN_HEIGHT,
-      height: SCREEN_WIDTH,
-      left: SCREEN_WIDTH / 2,
-      top: SCREEN_HEIGHT / 2,
-      transform: [
-        { translateX: -SCREEN_HEIGHT / 2 },
-        { translateY: -SCREEN_WIDTH / 2 },
-        { rotate: '90deg' }
-      ]
-    }}>
+  return (
+    <View style={styles.container}>
+      <Camera 
+        style={StyleSheet.absoluteFill}
+        device={device} 
+        isActive={isCameraActive}
+        frameProcessor={frameProcessor} 
+        pixelFormat="yuv"
+        outputOrientation={'landscape-left' as OutputOrientation}
+      />
+      
       <View style={styles.bottomOverlay}>
         <ClassProgressBar targetMinutes={10} />
-      </View>
-
-      <View style={styles.statusText}>
-        <Text style={{color:'white', fontSize: 20, fontWeight: 'bold'}}>{aiStatus}</Text>
       </View>
       
       <View style={styles.rightCenterContainer}>
@@ -605,51 +437,18 @@ return (
           ref={alertRef} 
           onStatusChange={handleStudentStatusReport} 
         />
-        </View>
+      </View>
+      
+      <CalibrationModal visible={showCalibration} onFinish={() => {/* 자동 종료 */}} />
     </View>
-      
-    <CalibrationModal visible={showCalibration} onFinish={() => setShowCalibration(false)} />
-    <ClassResultModal 
-      visible={isResultVisible} 
-      onClose={() => {
-        setIsResultVisible(false);
-        if (hasLevelUpData) setIsLevelUpVisible(true);
-        else router.replace('/screens/Student_Home');
-      }} 
-      currentXP={resultData.currentXP} 
-      maxXP={resultData.maxXP} 
-      
-    />
-    <LevelUpRewardModal 
-      visible={isLevelUpVisible} 
-      onClose={() => {
-        setIsLevelUpVisible(false);
-        router.replace('/screens/Student_Home');
-      }} 
-    />
-  </View>
-)};
+  )
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'black' },
   loadingContainer: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
-  statusText: { 
-    position: 'absolute', 
-    top: 30, 
-    left: 30, 
-    zIndex: 20, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    padding: 10, 
-    borderRadius: 10 
-  },
-  rightCenterContainer: { 
-    position: 'absolute', 
-    right: 15, 
-    top: '50%',
-    transform: [{ translateY: -50 }], 
-    zIndex: 10, 
-    alignItems: 'center' 
-  },
+  statusText: { position: 'absolute', top: 30, left: 30, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 15, borderRadius: 10 },
+  rightCenterContainer: { position: 'absolute', right: 30, top: '40%', transform: [{ translateY: -50 }], zIndex: 10, alignItems: 'center' },
   studentCountBadge: { 
     marginTop: 15, 
     backgroundColor: 'rgba(0,0,0,0.7)', 
@@ -659,30 +458,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)'
   },
-  studentCountText: { 
-    color: "white", 
-    fontSize: 16, 
-    fontWeight: "700",
-  },
-  bottomOverlay: { 
-    position: 'absolute', 
-    bottom: 10,  
-    left: 0, 
-    right: 0, 
-    zIndex: 10, 
-    alignItems: 'center',
-    paddingHorizontal: 20  
-  },
-  alertButtonContainer: { 
-    position: 'absolute', 
-    top: 10,  
-    right: 15,  
-    zIndex: 20  
-  },
-  permissionContainer: { 
-    flex: 1, 
-    backgroundColor: 'black', 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-});
+  studentCountText: { color: "white", fontSize: 16, fontWeight: "700" },
+  bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, alignItems: 'center' },
+  alertButtonContainer: { position: 'absolute', top: 50, right: 30, zIndex: 10 },
+  permissionContainer: { flex: 1, backgroundColor: 'black', justifyContent: "center", alignItems: "center" },
+})
