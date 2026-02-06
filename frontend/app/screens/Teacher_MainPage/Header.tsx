@@ -1,13 +1,25 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
-import { useSelector } from 'react-redux';
-import { RootState } from '../../store/stores';
-
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store/stores';
+import { useEffect } from 'react';
+import { fetchTeacherMe } from '../../store/slices/authSlice';
 
 const Header = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  
   const inviteCode = useSelector(
     (state: RootState) => state.class.selectedClassDetail?.inviteCode
   );
+  
+  const teacherName = useSelector(
+    (state: RootState) => state.auth.teacherData?.teacherName
+  );
+
+  useEffect(() => {
+    dispatch(fetchTeacherMe());
+  }, [dispatch]);
+  
 
   return (
     <View style={styles.container}>
@@ -30,7 +42,7 @@ const Header = () => {
 
       <View style={styles.titleArea}>
         <Text style={styles.title}>스마트 교실 도우미</Text>
-        <Text style={styles.subTitle}>김코치 선생님</Text>
+        <Text style={styles.subTitle}> {teacherName ? `${teacherName} 선생님` : '로딩 중...'}</Text>
       </View>
     </View>
   )

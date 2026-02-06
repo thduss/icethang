@@ -63,7 +63,6 @@ const extractToken = (response: any) => {
   return response.data?.accessToken || null;
 };
 
-// 1. 선생님 로그인
 export const loginTeacher = createAsyncThunk(
   'auth/loginTeacher',
   async (loginData: any, { rejectWithValue }) => {
@@ -85,6 +84,17 @@ export const loginTeacher = createAsyncThunk(
   }
 );
 
+export const fetchTeacherMe = createAsyncThunk(
+  'auth/fetchTeacherMe',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get('/auth/me');
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || '정보 조회 실패');
+    }
+  }
+);
 
 export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
@@ -109,7 +119,6 @@ export const loginStudent = createAsyncThunk(
   }
 );
 
-// 3. 학생 최초 가입
 export const joinStudent = createAsyncThunk(
   'auth/joinStudent',
   async (studentData: { name: string; studentNumber: number; inviteCode: string }, { rejectWithValue }) => {
@@ -132,7 +141,6 @@ export const joinStudent = createAsyncThunk(
   }
 );
 
-// 4. 로그아웃
 export const logoutUser = createAsyncThunk('auth/logout', async () => {
   try {
     await api.post('/auth/logout');
@@ -149,7 +157,6 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    // 앱 실행 시 스토리지에 토큰이 있다면 Redux 상태 복구
     restoreAuth: (state, action: PayloadAction<{ accessToken: string; userRole: 'student' | 'teacher' }>) => {
       state.isLoggedIn = true;
       state.accessToken = action.payload.accessToken;
@@ -169,13 +176,24 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(logoutUser.fulfilled, (state) => {
-         // 로그아웃 시 상태 초기화
          state.isLoggedIn = false;
          state.userRole = null;
          state.accessToken = null;
          state.studentData = null;
          state.teacherData = null;
       })
+       .addCase(fetchTeacherMe.fulfilled, (state, action) => {
+      state.loading = false;
+      state.teacherData = {
+        teacherId: action.payload.id,
+        email: action.payload.email,
+        teacherName: action.payload.teacherName,
+        school: {
+          schoolId: action.payload.schoolId,
+          schoolName: action.payload.schoolName || '',
+        }
+      };
+    })
       .addMatcher(
         isAnyOf(joinStudent.fulfilled, loginStudent.fulfilled),
         (state, action) => {
