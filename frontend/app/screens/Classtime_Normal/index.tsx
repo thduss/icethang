@@ -24,7 +24,6 @@ type AIStatus = "FOCUSED" | "BLINKING" | "MOVING" | "GAZE OFF" | "SLEEPING" | "A
 type ClassMode = "NORMAL" | "DIGITAL";  
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// === [설정] ===
 const YAW_THRESHOLD = 0.25;
 const EAR_THRESHOLD = 0.08;
 const MOVEMENT_THRESHOLD = 20;
@@ -438,8 +437,6 @@ export default function NormalClassScreen() {
           }
         );
         console.log('✅ [Socket] 접속자 수 구독 완료:', studentCountTopic);
-        
-        // 선생님 반 알림 구독
         const alertTopic = SOCKET_CONFIG.SUBSCRIBE.CLASS_TOPIC(classId);
         console.log('🔍 [Socket] 알림 구독 주소:', alertTopic);
         
@@ -507,7 +504,6 @@ client.subscribe(
 );
 console.log('✅ [Socket] 수업 종료 구독 완료:', classFinishTopic);
 
-        // ✅ 구독 완료 후 입장 발행
         setTimeout(() => {
           const enterPayload = { 
             classid: parseInt(classId), 
@@ -524,7 +520,6 @@ console.log('✅ [Socket] 수업 종료 구독 완료:', classFinishTopic);
           
           console.log('✅ [Socket] 입장 발행 완료');
           
-          // ✅ 입장 후 접속자 수 요청 (500ms 후)
           setTimeout(() => {
             console.log('📤 [Socket] 접속자 수 요청');
             client.publish({
