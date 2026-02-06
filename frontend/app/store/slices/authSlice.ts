@@ -88,7 +88,7 @@ export const fetchTeacherMe = createAsyncThunk(
   'auth/fetchTeacherMe',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.patch('/auth/me');
+      const response = await api.get('/auth/me');
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || '정보 조회 실패');
