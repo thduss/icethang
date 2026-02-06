@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react"
-import { Text, View, StyleSheet, ActivityIndicator } from "react-native"
-import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, OutputOrientation } from 'react-native-vision-camera';
+import { Text, View, StyleSheet, ActivityIndicator, Dimensions} from "react-native"
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor} from 'react-native-vision-camera';
 import { useTensorflowModel } from 'react-native-fast-tflite'; 
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
@@ -22,6 +22,7 @@ import LevelUpRewardModal from "../../components/LevelUpRewardModal";
 
 type AIStatus = "FOCUSED" | "BLINKING" | "MOVING" | "GAZE OFF" | "SLEEPING" | "AWAY" | "RESTROOM" | "ACTIVITY" | "UNFOCUS"
 type ClassMode = "NORMAL" | "DIGITAL";  
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // === [설정] ===
 const YAW_THRESHOLD = 0.25;
@@ -51,11 +52,13 @@ interface StudentInfo {
   classId: number;
 }
 
+
+
 export default function NormalClassScreen() {
   const router = useRouter();
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
-  
+
   const model = useTensorflowModel(require('../../../assets/face_landmarker.tflite'));
   const { resize } = useResizePlugin();
 
@@ -147,18 +150,13 @@ export default function NormalClassScreen() {
   });
   
 
-  // ✅ Mode 변경 처리 함수 (카메라 비활성화 후 전환)
   const handleModeChange = (newMode: ClassMode) => {
     console.log(`🔄 [Mode Change] ${currentMode} -> ${newMode}`);
     setCurrentMode(newMode);
-
     
-    
-    // ✅ 1. 먼저 현재 카메라 비활성화
     console.log('📷 [Camera] 카메라 비활성화 중...');
     setIsCameraActive(false);
-    
-    // ✅ 2. 카메라 정리 시간을 준 후 화면 전환 (300ms)
+  
     setTimeout(() => {
       if (newMode === "NORMAL") {
         console.log('🎯 [Navigation] NORMAL 수업으로 이동');
@@ -174,7 +172,7 @@ export default function NormalClassScreen() {
 
   useEffect(() => {
     async function lockOrientation() {
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT);
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
     }
     lockOrientation();
 
@@ -368,7 +366,6 @@ export default function NormalClassScreen() {
     }
   }, [aiStatus, isSocketConnected]);
 
-  // ✅ 소켓 연결 및 구독 설정
   useEffect(() => {
     console.log('🔌 [Socket] Initializing...');
     
@@ -385,15 +382,13 @@ export default function NormalClassScreen() {
       onConnect: () => {
         console.log('✅ [Socket] Connected!');
         setIsSocketConnected(true);
-        setStudentCount(1); // ✅ 최소 자기 자신 1명
+        setStudentCount(1); 
         
         console.log('📡 [Socket] 구독 설정 시작...');
         
-        // ✅ 구독 주소 확인
         const studentCountTopic = SOCKET_CONFIG.SUBSCRIBE.STUDENT_COUNT(classId);
         console.log('🔍 [Socket] 접속자 수 구독 주소:', studentCountTopic);
         
-        // ✅ 접속자 수 구독 - 더 넓은 파싱
         client.subscribe(
           studentCountTopic, 
           (msg) => {
@@ -405,7 +400,6 @@ export default function NormalClassScreen() {
               const data = JSON.parse(msg.body);
               console.log('📥 [Socket] 파싱된 전체 데이터:', JSON.stringify(data, null, 2));
               
-              // ✅ 여러 형식 모두 지원
               let count = 0;
               
               if (data.type === "USER_COUNT" && data.count !== undefined) {
@@ -434,7 +428,6 @@ export default function NormalClassScreen() {
               console.error('❌ [Socket] 접속자 수 파싱 오류:', e);
               console.error('❌ [Socket] 원본 메시지:', msg.body);
               
-              // ✅ JSON 파싱 실패 시 숫자만 추출
               const numberMatch = msg.body.match(/\d+/);
               if (numberMatch) {
                 const count = parseInt(numberMatch[0]);
@@ -463,8 +456,6 @@ export default function NormalClassScreen() {
           }
         );
         console.log('✅ [Socket] 알림 구독 완료:', alertTopic);
-
-        // ✅ 모드 변경 구독
         const modeTopic = SOCKET_CONFIG.SUBSCRIBE.MODE_STATUS(classId);
         console.log('🔍 [Socket] 모드 구독 주소:', modeTopic);
         
@@ -503,10 +494,8 @@ client.subscribe(
       if (data.type === 'CLASS_FINISHED') {
         console.log('🏁 [Socket] 수업 종료 신호 수신');
         
-        // 카메라 비활성화
         setIsCameraActive(false);
         
-        // 결과 조회
         setTimeout(() => {
           fetchClassResult();
         }, 500);
@@ -579,21 +568,32 @@ console.log('✅ [Socket] 수업 종료 구독 완료:', classFinishTopic);
   if (device == null) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="white" /><Text style={{ color: 'white', marginTop: 10 }}>카메라 초기화 중...</Text></View>;
   if (model.state !== 'loaded') return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="white" /><Text style={{ color: 'white', marginTop: 10 }}>AI 모델 로딩 중...</Text></View>;
 
-  return (
-    <View style={styles.container}>
-      <Camera 
-        style={StyleSheet.absoluteFill}
-        device={device} 
-        isActive={isCameraActive && !isResultVisible}
-        frameProcessor={frameProcessor} 
-        pixelFormat="yuv"
-        
-      />
-      
+return (
+  <View style={styles.container}>
+    <Camera 
+      style={StyleSheet.absoluteFill}
+      device={device} 
+      isActive={isCameraActive && !isResultVisible}
+      frameProcessor={frameProcessor} 
+      pixelFormat="yuv"
+    />
+    
+    <View style={{
+      position: 'absolute',
+      width: SCREEN_HEIGHT,
+      height: SCREEN_WIDTH,
+      left: SCREEN_WIDTH / 2,
+      top: SCREEN_HEIGHT / 2,
+      transform: [
+        { translateX: -SCREEN_HEIGHT / 2 },
+        { translateY: -SCREEN_WIDTH / 2 },
+        { rotate: '90deg' }
+      ]
+    }}>
       <View style={styles.bottomOverlay}>
         <ClassProgressBar targetMinutes={10} />
       </View>
-      
+
       <View style={styles.statusText}>
         <Text style={{color:'white', fontSize: 20, fontWeight: 'bold'}}>{aiStatus}</Text>
       </View>
@@ -610,36 +610,51 @@ console.log('✅ [Socket] 수업 종료 구독 완료:', classFinishTopic);
           ref={alertRef} 
           onStatusChange={handleStudentStatusReport} 
         />
-      </View>
-      
-      <CalibrationModal visible={showCalibration} onFinish={() => setShowCalibration(false)} />
-        <ClassResultModal 
-  visible={isResultVisible} 
-  onClose={() => {
-    setIsResultVisible(false);
-    if (hasLevelUpData) setIsLevelUpVisible(true);
-    else router.replace('/screens/Student_Home');
-  }} 
-  currentXP={resultData.currentXP} 
-  maxXP={resultData.maxXP} 
-/>
-
-<LevelUpRewardModal 
-  visible={isLevelUpVisible} 
-  onClose={() => {
-    setIsLevelUpVisible(false);
-    router.replace('/screens/Student_Home');
-  }} 
-/>
+        </View>
     </View>
-  )
-}
+      
+    <CalibrationModal visible={showCalibration} onFinish={() => setShowCalibration(false)} />
+    <ClassResultModal 
+      visible={isResultVisible} 
+      onClose={() => {
+        setIsResultVisible(false);
+        if (hasLevelUpData) setIsLevelUpVisible(true);
+        else router.replace('/screens/Student_Home');
+      }} 
+      currentXP={resultData.currentXP} 
+      maxXP={resultData.maxXP} 
+      
+    />
+    <LevelUpRewardModal 
+      visible={isLevelUpVisible} 
+      onClose={() => {
+        setIsLevelUpVisible(false);
+        router.replace('/screens/Student_Home');
+      }} 
+    />
+  </View>
+)};
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'black' },
   loadingContainer: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
-  statusText: { position: 'absolute', top: 30, left: 30, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 10 },
-  rightCenterContainer: { position: 'absolute', right: 30, top: '40%', transform: [{ translateY: -50 }], zIndex: 10, alignItems: 'center' },
+  statusText: { 
+    position: 'absolute', 
+    top: 30, 
+    left: 30, 
+    zIndex: 20, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    padding: 10, 
+    borderRadius: 10 
+  },
+  rightCenterContainer: { 
+    position: 'absolute', 
+    right: 15, 
+    top: '50%',
+    transform: [{ translateY: -50 }], 
+    zIndex: 10, 
+    alignItems: 'center' 
+  },
   studentCountBadge: { 
     marginTop: 15, 
     backgroundColor: 'rgba(0,0,0,0.7)', 
@@ -654,7 +669,25 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: "700",
   },
-  bottomOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10, alignItems: 'center' },
-  alertButtonContainer: { position: 'absolute', top: 50, right: 30, zIndex: 10 },
-  permissionContainer: { flex: 1, backgroundColor: 'black', justifyContent: "center", alignItems: "center" },
-})
+  bottomOverlay: { 
+    position: 'absolute', 
+    bottom: 10,  
+    left: 0, 
+    right: 0, 
+    zIndex: 10, 
+    alignItems: 'center',
+    paddingHorizontal: 20  
+  },
+  alertButtonContainer: { 
+    position: 'absolute', 
+    top: 10,  
+    right: 15,  
+    zIndex: 20  
+  },
+  permissionContainer: { 
+    flex: 1, 
+    backgroundColor: 'black', 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+});
