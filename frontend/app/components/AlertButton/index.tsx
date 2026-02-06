@@ -89,6 +89,8 @@ const AlertButton = forwardRef<AlertButtonRef, AlertButtonProps>((props, ref) =>
         transparent
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
+        supportedOrientations={['landscape', 'portrait']} 
+        
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalView}>
@@ -197,6 +199,7 @@ const styles = StyleSheet.create({
   },
   modalView: { 
     width: '80%', 
+    transform: [{ rotate: '90deg' }],
     backgroundColor: '#ffffff', 
     borderRadius: 24, 
     padding: 24, 
