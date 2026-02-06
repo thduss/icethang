@@ -3,16 +3,9 @@ import { View, Text, Modal, StyleSheet, TouchableOpacity, Image, Animated, Dimen
 import LottieView from 'lottie-react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/stores';
+import itemData from '../../assets/themes/itemData'; 
 
 const { width } = Dimensions.get('window');
-
-// 🎨 에셋 매핑 (가진 번호에 맞춰 PNG/GIF 자동 대응 가능하도록 설정)
-const CHARACTER_IMAGES: Record<number, any> = {
-  5: require('../../assets/characters/5.png'), // 여기서부터 보상 가능성 높음
-  6: require('../../assets/characters/6.png'),
-  7: require('../../assets/characters/7.png'),
-  8: require('../../assets/characters/8.png'),
-};
 
 interface LevelUpRewardModalProps {
   visible: boolean;
@@ -24,22 +17,37 @@ export default function LevelUpRewardModal({ visible, onClose }: LevelUpRewardMo
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
 
-  // 🛠️ 'ownedCharacterIds' 속성 에러 방지를 위해 as any 사용
   const themeState = useSelector((state: RootState) => state.theme) as any;
   const ownedCharacterIds: number[] = themeState?.ownedCharacterIds || [];
   
   const [step, setStep] = useState<'closed' | 'opening' | 'opened'>('closed');
 
-  // 🎁 보상 캐릭터 결정 로직
   const rewardInfo = useMemo(() => {
-    // 현재 보유한 리스트 중 가장 큰 번호의 다음 번호를 보상으로 설정
-    const lastId = ownedCharacterIds.length > 0 ? Math.max(...ownedCharacterIds) : 4;
+    const lastId = ownedCharacterIds.length > 0 ? Math.max(...ownedCharacterIds) : 5;
     const nextId = lastId + 1;
     
+    const characterAsset = itemData[nextId];
+
+    // 객체 정의 시 중괄호와 쉼표 오타를 주의하세요.
+    const characterNames: Record<number, string> = {
+      5: "기본 다람쥐",
+      6: "똑똑한 로봇",
+      7: "새싹 요정",
+      8: "하얀 토끼",
+      9: "포근한 아기곰",
+      10: "꼬마 여우",
+      11: "날쌘 진돗개",
+      12: "줄무늬 고양이",
+      13: "파란 자동차",
+      14: "빨간 자동차",
+      15: "은하수 기차",
+      16: "탐험선 배"
+    };
+
     return {
       id: nextId,
-      name: `새로운 친구 No.${nextId}`,
-      image: CHARACTER_IMAGES[nextId] || CHARACTER_IMAGES[1] // 없을 경우 1번 기본값
+      name: characterNames[nextId] || `특별한 친구 No.${nextId}`,
+      image: characterAsset ? characterAsset.imageInactive : require('../../assets/characters/2.png') 
     };
   }, [ownedCharacterIds, visible]);
 
@@ -59,7 +67,6 @@ export default function LevelUpRewardModal({ visible, onClose }: LevelUpRewardMo
 
   const onChestOpened = () => {
     setStep('opened');
-    // 캐릭터가 나타나는 애니메이션
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true })
@@ -80,7 +87,6 @@ export default function LevelUpRewardModal({ visible, onClose }: LevelUpRewardMo
             </Text>
 
             <View style={styles.animationArea}>
-              {/* 폭죽 효과 */}
               {step === 'opened' && (
                 <LottieView
                   source={require('../../assets/animations/confetti.json')}
@@ -89,7 +95,6 @@ export default function LevelUpRewardModal({ visible, onClose }: LevelUpRewardMo
                 />
               )}
 
-              {/* 획득한 캐릭터 이미지 */}
               {step === 'opened' && (
                 <Animated.View style={[styles.rewardBox, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
                   <Image source={rewardInfo.image} style={styles.characterImage} resizeMode="contain" />
@@ -99,7 +104,6 @@ export default function LevelUpRewardModal({ visible, onClose }: LevelUpRewardMo
                 </Animated.View>
               )}
 
-              {/* 보물 상자 Lottie */}
               <LottieView
                 ref={chestRef}
                 source={require('../../assets/animations/treasure-chest.json')}
