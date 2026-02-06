@@ -29,8 +29,11 @@ stages {
                     // 1. 브랜치 감지
                     checkout scm
 
+                    echo "🔍 [디버깅] 현재 인식된 브랜치 이름: '${env.BRANCH_NAME}'" 
+                    echo "🔍 [디버깅] GIT_BRANCH 변수 확인: '${env.GIT_BRANCH}'"
+
                     // 2. 현재 브랜치 확인 및 변수 설정
-                    if (env.BRANCH_NAME == 'master') {
+                    if (env.BRANCH_NAME == 'master'|| env.GIT_BRANCH?.contains('master')) {
                         echo "🚨 [운영 배포] Master 브랜치 감지 -> Release Server 배포 설정"
                         env.SERVICE_NAME = 'release-server'
                         env.IMAGE_TAG = 'release'
