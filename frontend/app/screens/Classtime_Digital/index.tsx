@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { View, StyleSheet, AppState, NativeModules, ActivityIndicator, Text } from "react-native";
-import { Camera, useCameraDevice, useFrameProcessor, useCameraPermission } from "react-native-vision-camera";
+import { View, StyleSheet, AppState, NativeModules, ActivityIndicator, Text, Image } from "react-native";
+import { Camera, useCameraDevice, useFrameProcessor } from "react-native-vision-camera";
 import { useTensorflowModel } from 'react-native-fast-tflite';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
-import { useSharedValue, Worklets } from 'react-native-worklets-core';
-import PipHandler, { usePipModeListener } from 'react-native-pip-android';
+import { Worklets } from 'react-native-worklets-core';
+import PipHandler from 'react-native-pip-android';
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import axios from 'axios';
@@ -16,7 +16,11 @@ import { RootState } from "../../store/stores";
 
 const { OverlayModule } = NativeModules;
 
-const charMap: Record<string, string> = { "1": "char_1", "2": "char_2", "3": "char_3", "4": "char_4", "5": "char_5", "6": "char_6", "7": "char_7", "8": "char_8" };
+const charMap: Record<string, string> = { 
+  "5": "char_1", "6": "char_2", "7": "char_3", "8": "char_4", 
+  "9": "char_5", "10": "char_6", "11": "char_7", "12": "char_8",
+  "13": "char_9", "14": "char_10", "15": "char_11", "16": "char_12"
+};
 const bgMap: Record<string, string> = { "1": "background1", "2": "background2", "3": "background3", "4": "background4" };
 
 const YAW_THRESHOLD = 0.22;
@@ -66,7 +70,6 @@ export default function DigitalClassScreen() {
     useCallback(() => {
       isExiting.current = false;
       return () => {
-        console.log("🏃 [이탈] 오버레이 및 리소스 정리");
         isExiting.current = true;
         OverlayModule?.hideOverlay();
       };
@@ -75,8 +78,6 @@ export default function DigitalClassScreen() {
 
   const setStatusJS = Worklets.createRunOnJS((newStatus: string, details: string) => {
     if (isExiting.current) return;
-    console.log(`🤖 [AI 분석]: ${newStatus} | ${details}`);
-    
     if (studentStatus !== newStatus) {
       setStudentStatus(newStatus);
       if (stompClient?.connected) {
@@ -119,53 +120,37 @@ export default function DigitalClassScreen() {
     }
   }, [model, isReady]);
 
-useEffect(() => {
-  if (!isReady || !classId || !stompClient.connected) {
-    console.log("⚠️ 소켓 구독 대기 중...", { isReady, classId, connected: stompClient.connected });
-    return;
-  }
-
-  console.log(`✅ 수업 종료 신호 구독 시작: /topic/class/${classId}`);
-  const classSub = stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
-    console.log("📩 [소켓 수신]:", msg.body);
-    const body = JSON.parse(msg.body);
-
-    if (body.type === 'CLASS_FINISHED') {
-      console.log("🏁 CLASS_FINISHED 감지! 종료 프로세스 시작");
-      
-      // 1. 중복 실행 방지 및 카메라 중단
-      isExiting.current = true;
-
-      // 2. 네이티브 호출 (에러가 나도 다음 코드가 실행되도록 try-catch)
-      try {
-        OverlayModule?.hideOverlay();
-        // relaunchApp이 정의되지 않았을 경우를 대비해 옵셔널 체이닝(?.) 사용
-        OverlayModule?.relaunchApp?.(); 
-      } catch (e) {
-        console.warn("⚠️ 네이티브 호출 실패(무시하고 진행):", e);
-      }
-
-      // 3. 백엔드 데이터 매핑 (데이터가 없을 경우를 대비한 기본값 세팅)
-      setResultData({
-        focusRate: body.focusRate || 0,
-        currentXP: body.currentXP || 0,
-        maxXP: body.maxXP || 100
-      });
-      setHasLevelUpData(!!body.levelUp);
-
-      // 4. 강제 모달 띄우기 (약간의 지연을 주어 UI 렌더링 확보)
-      setTimeout(() => {
-        console.log("✨ 결과 모달 표시 (setIsResultVisible -> true)");
-        setIsResultVisible(true);
-      }, 700);
+  const processClassFinished = (data: any) => {
+    isExiting.current = true;
+    try {
+      OverlayModule?.hideOverlay();
+      OverlayModule?.relaunchApp?.(); 
+    } catch (e) {
+      console.warn("⚠️ 네이티브 호출 실패:", e);
     }
-  });
 
-  return () => {
-    console.log("🚫 수업 종료 구독 해제");
-    classSub.unsubscribe();
+    setResultData({
+      focusRate: data.focusRate || 0,
+      currentXP: data.currentXP || 0,
+      maxXP: data.maxXP || 100
+    });
+    setHasLevelUpData(!!data.levelUp);
+
+    setTimeout(() => {
+      setIsResultVisible(true);
+    }, 700);
   };
-}, [isReady, classId]);
+
+  useEffect(() => {
+    if (!isReady || !classId || !stompClient.connected) return;
+    const classSub = stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
+      const body = JSON.parse(msg.body);
+      if (body.type === 'CLASS_FINISHED') {
+        processClassFinished(body);
+      }
+    });
+    return () => classSub.unsubscribe();
+  }, [isReady, classId]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -201,6 +186,22 @@ useEffect(() => {
         frameProcessor={frameProcessor} 
         pixelFormat="yuv" 
       />
+
+      {!isResultVisible && (
+        <View style={styles.overlayContainer}>
+          <Image 
+            source={require('../../../assets/common_IsStudent.png')} 
+            style={styles.studentImage}
+            resizeMode="contain"
+          />
+          <View style={styles.statusBox}>
+            <Text style={styles.statusText}>
+              {studentStatus === "FOCUS" ? "선생님 말씀에 집중 중! 🔥" : 
+               studentStatus === "SLEEPING" ? "깜빡 졸고 있어요! 💤" : "자리를 비우셨나요? 👀"}
+            </Text>
+          </View>
+        </View>
+      )}
       
       <ClassResultModal 
         visible={isResultVisible} 
@@ -228,4 +229,29 @@ useEffect(() => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'black' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studentImage: {
+    width: '70%',
+    height: '50%',
+  },
+  statusBox: {
+    marginTop: 30,
+    backgroundColor: 'white',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 30,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: '#4A90E2',
+  },
+  statusText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  }
 });

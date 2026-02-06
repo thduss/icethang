@@ -6,19 +6,16 @@ import ExperienceBar from './ExpBar';
 interface ClassResultModalProps {
   visible: boolean;
   onClose: () => void;
-  focusRate?: number;   
-  currentXP?: number;   
-  maxXP?: number;       
+  focusRate?: number;   // 이번 수업에서 획득한 점수 (획득 경험치)
+  currentXP?: number;   // 현재 레벨 내에서의 진행 경험치
+  maxXP?: number;       // 현재 레벨의 최대 경험치 통
   isLevelUp?: boolean;  
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const BASE_WIDTH = 550; 
-
 const MODAL_WIDTH = Math.min(SCREEN_WIDTH * 0.95, 950); 
 const MODAL_HEIGHT = MODAL_WIDTH * 0.75; 
-
 const SCALE = MODAL_WIDTH / BASE_WIDTH;
 
 const normalize = (size: number) => Math.round(size * SCALE);
@@ -34,6 +31,7 @@ export default function ClassResultModal({
 
   const today = new Date();
   const dateString = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+  // 분모가 0이 되는 것을 방지
   const safeMaxXP = maxXP === 0 ? 100 : maxXP;
 
   return (
@@ -44,7 +42,6 @@ export default function ClassResultModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        
         <ImageBackground
           source={require('../../assets/result_background.png')} 
           style={[styles.modalBackground, { width: MODAL_WIDTH, height: MODAL_HEIGHT }]}
@@ -52,20 +49,20 @@ export default function ClassResultModal({
         >
           <View style={styles.contentContainer}>
             
-            {/*  헤더 */}
+            {/* 헤더 */}
             <View style={styles.headerBadge}>
               <Ionicons name="sparkles" size={normalize(14)} color="#FFD700" style={{marginRight: 5}} />
               <Text style={styles.headerText}>경험치를 받았어요!</Text>
               <Ionicons name="sparkles" size={normalize(14)} color="#FFD700" style={{marginLeft: 5}} />
             </View>
 
-            {/*  타이틀 & 날짜 */}
+            {/* 타이틀 & 날짜 */}
             <View style={styles.topSection}>
                 <Text style={styles.title}>오늘의 경험치 통계</Text>
                 <Text style={styles.dateText}>☁️ {dateString} ☁️</Text>
             </View>
 
-            {/*  캐릭터 */}
+            {/* 캐릭터 섹션 */}
             <View style={styles.characterContainer}>
                <Image 
                  source={require('../../assets/common_Enter.png')} 
@@ -84,24 +81,25 @@ export default function ClassResultModal({
                />
             </View>
 
-            {/*  경험치 섹션 */}
+            {/* 경험치 섹션 (focusRate, currentXP, maxXP 적용) */}
             <View style={styles.xpSection}>
                 <Text style={styles.xpInfoText}>
                     오늘 수업으로 획득한 경험치 <Text style={styles.xpGreen}>+{focusRate}</Text> ⬆
                 </Text>
                 
                 <View style={{ width: '80%' }}>
+                    {/* ExpBar 컴포넌트에 계산된 값 전달 */}
                     <ExperienceBar currentXP={currentXP} maxXP={safeMaxXP} />
                 </View>
             </View>
 
-            {/*  보상 텍스트 */}
+            {/* 보상 텍스트 */}
             <View style={styles.rewardTextContainer}>
                 <Text style={styles.rewardBigText}>
                   ✨ {focusRate} 경험치 획득 완료! ✨
                 </Text>
                 <Text style={styles.rewardSmallText}>
-                    {isLevelUp ? "🎉 레벨업 달성! " : "꾸준히 학습하여 레벨을 올려보세요!"}
+                    {isLevelUp ? "🎉 레벨업 달성! 보상을 확인하세요!" : "꾸준히 학습하여 레벨을 올려보세요!"}
                 </Text>
             </View>
             
@@ -110,7 +108,7 @@ export default function ClassResultModal({
                 <Text style={styles.confirmButtonText}>확인</Text>
             </TouchableOpacity>
 
-            {/*  보물상자 */}
+            {/* 보물상자 아이콘 */}
             <View style={styles.chestPosition}>
                  <Image 
                     source={require('../../assets/reward.png')} 
@@ -145,8 +143,6 @@ const styles = StyleSheet.create({
     paddingTop: normalize(20), 
     paddingBottom: normalize(20),
   },
-  
-  // 헤더
   headerBadge: {
     position: 'absolute',
     top: -normalize(14), 
@@ -165,8 +161,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', 
     fontSize: normalize(15) 
   },
-
-  // 상단
   topSection: {
     alignItems: 'center',
     marginTop: normalize(5), 
@@ -183,8 +177,6 @@ const styles = StyleSheet.create({
     fontSize: normalize(13), 
     fontWeight: '600',
   },
-
-  // 캐릭터
   characterContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -197,8 +189,6 @@ const styles = StyleSheet.create({
     height: normalize(75),
     marginHorizontal: -5, 
   },
-
-  // 경험치 섹션
   xpSection: {
     width: '100%',
     alignItems: 'center',
@@ -215,8 +205,6 @@ const styles = StyleSheet.create({
     fontSize: normalize(17),
     fontWeight: '900',
   },
-
-  // 보상 텍스트
   rewardTextContainer: {
     alignItems: 'center',
     marginBottom: normalize(10), 
@@ -231,8 +219,6 @@ const styles = StyleSheet.create({
     fontSize: normalize(12),
     color: '#8D6E63',
   },
-
-  // 버튼
   confirmButton: {
     backgroundColor: '#5C9DFF',
     paddingVertical: normalize(12), 
@@ -249,8 +235,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: normalize(17),
   },
-
-  // 보물상자 위치
   chestPosition: {
     position: 'absolute',
     bottom: normalize(35),
