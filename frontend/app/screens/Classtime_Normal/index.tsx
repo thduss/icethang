@@ -182,7 +182,7 @@ export default function NormalClassScreen() {
       const scores = outputs[1] as Float32Array;
       if (scores[0] > MIN_FACE_SCORE) isFaceDetected = true;
     } else if (outputs.length > 0 && (outputs[0] as Float32Array).length > 100) {
-       isFaceDetected = true;
+      isFaceDetected = true;
     }
 
     if (!isFaceDetected) {

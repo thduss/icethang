@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from "react-native";
 
 export interface TodaySubject {
     period: number;
@@ -10,7 +10,7 @@ interface TodayListProps {
     data: TodaySubject[];
 }
 
-const TodayList = ({data}: TodayListProps) => {
+const TodayList = ({ data }: TodayListProps) => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -19,20 +19,29 @@ const TodayList = ({data}: TodayListProps) => {
 
             <View style={styles.listContainer}>
                 {data.length === 0 ? (
-                    <View style={{ alignItems: 'center', marginTop: 20 }}>
-                        <Text style={{ color: '#aaa' }}>수업이 없는 날입니다.</Text>
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>
+                            수업이 없는 날입니다.
+                        </Text>
                     </View>
                 ) : (
                     data.map((item, index) => (
-                        <View key={`${item.period}-${index}`} style={[
-                            styles.row,
-                            index === data.length - 1 && { borderBottomWidth: 0 }
-                        ]}>
+                        <View
+                            key={`${item.period}-${index}`}
+                            style={[
+                                styles.row,
+                                index === data.length - 1 && { borderBottomWidth: 0 },
+                            ]}
+                        >
                             <View style={styles.periodBox}>
-                                <Text style={styles.periodText}>{item.period}교시</Text>
+                                <Text style={styles.periodText}>
+                                    {item.period}교시
+                                </Text>
                             </View>
                             <View style={styles.subjectBox}>
-                                <Text style={styles.subjectText}>{item.subject}</Text>
+                                <Text style={styles.subjectText}>
+                                    {item.subject}
+                                </Text>
                             </View>
                         </View>
                     ))
@@ -47,11 +56,11 @@ export default TodayList;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FDFBF8',
+        backgroundColor: "#FDFBF8",
         borderRadius: 20,
-        overflow: 'hidden',
+        // overflow: "hidden",
         borderWidth: 2,
-        borderColor: '#E0D6C8',
+        borderColor: "#E0D6C8",
         elevation: 4,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -59,48 +68,60 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     header: {
-        backgroundColor: '#4E342E',
+        backgroundColor: "#4E342E",
         paddingVertical: 15,
-        alignItems: 'center',
+        alignItems: "center",
     },
     headerText: {
-        color: '#fff',
+        color: "#fff",
         fontSize: 20,
-        fontWeight: 'bold',
+        fontWeight: "bold",
     },
     listContainer: {
+        flex: 1,
         padding: 15,
     },
     row: {
-        flexDirection: 'row',
+        flexDirection: "row",
         borderBottomWidth: 1,
-        borderBottomColor: '#D7C8B6',
+        borderBottomColor: "#D7C8B6",
         paddingVertical: 12,
     },
     periodBox: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
         borderRightWidth: 1,
-        borderRightColor: '#D7C8B6',
-        backgroundColor: '#EFE9E1',
+        borderRightColor: "#D7C8B6",
+        backgroundColor: "#EFE9E1",
         borderRadius: 5,
         marginRight: 10,
         paddingVertical: 5,
     },
     periodText: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#5D4037',
+        fontWeight: "bold",
+        color: "#5D4037",
     },
     subjectBox: {
         flex: 2,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     subjectText: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#3E2723',
+        fontWeight: "bold",
+        color: "#3E2723",
+    },
+    emptyContainer: {
+        height: 140,
+        width: 150,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    emptyText: {
+        color: "#aaa",
+        fontSize: 16,
+        textAlign: "center",
     },
 });
