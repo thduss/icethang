@@ -14,4 +14,4 @@ COPY ${JAR_FILE} app.jar
 ENV TZ=Asia/Seoul
 
 # 6. 실행
-ENTRYPOINT ["sh", "-c", "java -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} -Dspring.config.location=optional:/config/ -jar /app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
