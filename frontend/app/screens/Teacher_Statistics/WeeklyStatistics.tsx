@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native'
 import { WeeklyStat } from 'app/store/slices/statisticsSlice'
 
-const CHART_HEIGHT = 200
+const CHART_HEIGHT = 150
 
 interface WeekRange {
   start: Date
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#DDD',
-    height: 430,
+    height: 350,
   },
 
   chart: {
