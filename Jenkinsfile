@@ -15,11 +15,6 @@ pipeline {
         
         // Mattermost Webhook URL
         MATTERMOST_URL = 'https://meeting.ssafy.com/hooks/83x1b6t177b59nxcej5ufsxtja'
-        
-        // 기본값 설정
-        SERVICE_NAME = 'develop-server'
-        IMAGE_TAG = 'develop'
-        SPRING_PROFILE = 'develop'
     }
 
 stages {
