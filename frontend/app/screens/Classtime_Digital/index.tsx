@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { View, StyleSheet, AppState, NativeModules, ActivityIndicator, Alert } from "react-native";
-import { Camera, useCameraDevice, useFrameProcessor, useCameraPermission } from "react-native-vision-camera";
+import { View, StyleSheet, AppState, NativeModules, ActivityIndicator, Text, Image } from "react-native";
+import { Camera, useCameraDevice, useFrameProcessor } from "react-native-vision-camera";
 import { useTensorflowModel } from 'react-native-fast-tflite';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
-import { useSharedValue, Worklets } from 'react-native-worklets-core';
-import PipHandler, { usePipModeListener } from 'react-native-pip-android';
+import { Worklets } from 'react-native-worklets-core';
+import PipHandler from 'react-native-pip-android';
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import axios from 'axios';
@@ -16,7 +16,11 @@ import { RootState } from "../../store/stores";
 
 const { OverlayModule } = NativeModules;
 
-const charMap: Record<string, string> = { "1": "char_1", "2": "char_2", "3": "char_3", "4": "char_4", "5": "char_5", "6": "char_6", "7": "char_7", "8": "char_8" };
+const charMap: Record<string, string> = { 
+  "5": "char_1", "6": "char_2", "7": "char_3", "8": "char_4", 
+  "9": "char_5", "10": "char_6", "11": "char_7", "12": "char_8",
+  "13": "char_9", "14": "char_10", "15": "char_11", "16": "char_12"
+};
 const bgMap: Record<string, string> = { "1": "background1", "2": "background2", "3": "background3", "4": "background4" };
 
 const YAW_THRESHOLD = 0.22;
@@ -25,6 +29,7 @@ const EAR_THRESHOLD = 0.12;
 export default function DigitalClassScreen() {
   const router = useRouter();
   const { classId } = useLocalSearchParams<{ classId: string }>(); 
+  const [isReady, setIsReady] = useState(false);
   const isExiting = useRef(false);
   const appState = useRef(AppState.currentState);
   
@@ -36,24 +41,23 @@ export default function DigitalClassScreen() {
   const [isResultVisible, setIsResultVisible] = useState(false);
   const [isLevelUpVisible, setIsLevelUpVisible] = useState(false);
   const [hasLevelUpData, setHasLevelUpData] = useState(false);
-  const [resultData, setResultData] = useState({ gainedXP: 0, currentXP: 0, maxXP: 100 });
+  const [resultData, setResultData] = useState({ focusRate: 0, currentXP: 0, maxXP: 100 });
 
   const currentTheme = useMemo(() => ({
     character: charMap[String(themeState?.equippedCharacterId)] || "char_1",
     background: bgMap[String(themeState?.equippedBackgroundId)] || "background1"
   }), [themeState]);
 
-  // 서버에서 내 최종 수업 결과(XP) 가져오기
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReady(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const fetchClassResult = async () => {
     try {
       const response = await axios.get(`/api/class/${classId}/result/${user?.id}`);
       const data = response.data;
-
-      setResultData({
-        gainedXP: data.gainedXP || 0,
-        currentXP: data.currentXP || 0,
-        maxXP: data.maxXP || 100
-      });
+      setResultData({ focusRate: data.focusRate || 0, currentXP: data.currentXP || 0, maxXP: data.maxXP || 100 });
       setHasLevelUpData(!!data.levelUp);
       setIsResultVisible(true);
     } catch (error) {
@@ -75,7 +79,6 @@ export default function DigitalClassScreen() {
   const setStatusJS = Worklets.createRunOnJS((newStatus: string, details: string) => {
     if (isExiting.current) return;
     if (studentStatus !== newStatus) {
-      console.log(`🤖 [AI 감지]: ${newStatus} | ${details}`);
       setStudentStatus(newStatus);
       if (stompClient?.connected) {
         const kst = new Date(new Date().getTime() + 32400000).toISOString().split('.')[0];
@@ -89,12 +92,12 @@ export default function DigitalClassScreen() {
   });
 
   const device = useCameraDevice('front');
-  const model = useTensorflowModel(require('../../../assets/face_landmarker.tflite'));
+  const model = useTensorflowModel(isReady ? require('../../../assets/face_landmarker.tflite') : null);
   const { resize } = useResizePlugin();
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
-    if (model.state !== 'loaded' || isExiting.current) return;
+    if (!isReady || model.state !== 'loaded' || isExiting.current) return;
     const resized = resize(frame, { scale: { width: 192, height: 192 }, pixelFormat: 'rgb', dataType: 'float32' });
     const outputs = model.model.runSync([resized]);
 
@@ -112,35 +115,42 @@ export default function DigitalClassScreen() {
 
         setStatusJS(status, `EAR: ${leftEAR.toFixed(2)}, Yaw: ${yawVal.toFixed(2)}`);
       } else {
-        setStatusJS("AWAY", "인식 불가");
+        setStatusJS("AWAY", "얼굴 없음");
       }
     }
-  }, [model]);
+  }, [model, isReady]);
 
-  // 소켓 종료 신호 수신 로직 보강
+  const processClassFinished = (data: any) => {
+    isExiting.current = true;
+    try {
+      OverlayModule?.hideOverlay();
+      OverlayModule?.relaunchApp?.(); 
+    } catch (e) {
+      console.warn("⚠️ 네이티브 호출 실패:", e);
+    }
+
+    setResultData({
+      focusRate: data.focusRate || 0,
+      currentXP: data.currentXP || 0,
+      maxXP: data.maxXP || 100
+    });
+    setHasLevelUpData(!!data.levelUp);
+
+    setTimeout(() => {
+      setIsResultVisible(true);
+    }, 700);
+  };
+
   useEffect(() => {
-    if (!classId || !stompClient.connected) return;
-
+    if (!isReady || !classId || !stompClient.connected) return;
     const classSub = stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
-      console.log("📩 [소켓 수신]:", msg.body);
       const body = JSON.parse(msg.body);
-
       if (body.type === 'CLASS_FINISHED') {
-        console.log("🏁 수업 종료됨 - PiP 탈출 및 전체화면 복구 시도");
-        
-        isExiting.current = true;
-        OverlayModule?.hideOverlay(); 
-
-        OverlayModule?.relaunchApp();
-
-        setTimeout(() => {
-          fetchClassResult();
-        }, 500);
+        processClassFinished(body);
       }
     });
-
     return () => classSub.unsubscribe();
-  }, [classId]);
+  }, [isReady, classId]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -159,11 +169,39 @@ export default function DigitalClassScreen() {
     return () => sub.remove();
   }, [isResultVisible, currentTheme]);
 
-  if (model.state !== 'loaded') return <View style={styles.loading}><ActivityIndicator size="large"/></View>;
+  if (!isReady || model.state !== 'loaded') {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Camera style={StyleSheet.absoluteFill} device={device!} isActive={!isResultVisible} frameProcessor={frameProcessor} pixelFormat="yuv" />
+      <Camera 
+        style={StyleSheet.absoluteFill} 
+        device={device!} 
+        isActive={!isResultVisible && isReady} 
+        frameProcessor={frameProcessor} 
+        pixelFormat="yuv" 
+      />
+
+      {!isResultVisible && (
+        <View style={styles.overlayContainer}>
+          <Image 
+            source={require('../../../assets/common_IsStudent.png')} 
+            style={styles.studentImage}
+            resizeMode="contain"
+          />
+          <View style={styles.statusBox}>
+            <Text style={styles.statusText}>
+              {studentStatus === "FOCUS" ? "선생님 말씀에 집중 중! 🔥" : 
+               studentStatus === "SLEEPING" ? "깜빡 졸고 있어요! 💤" : "자리를 비우셨나요? 👀"}
+            </Text>
+          </View>
+        </View>
+      )}
       
       <ClassResultModal 
         visible={isResultVisible} 
@@ -172,7 +210,7 @@ export default function DigitalClassScreen() {
           if (hasLevelUpData) setIsLevelUpVisible(true);
           else router.replace('/screens/Student_Home');
         }} 
-        gainedXP={resultData.gainedXP} 
+        focusRate={resultData.focusRate} 
         currentXP={resultData.currentXP} 
         maxXP={resultData.maxXP} 
       />
@@ -191,4 +229,29 @@ export default function DigitalClassScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'black' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
-}); 
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studentImage: {
+    width: '70%',
+    height: '50%',
+  },
+  statusBox: {
+    marginTop: 30,
+    backgroundColor: 'white',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 30,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: '#4A90E2',
+  },
+  statusText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  }
+});
