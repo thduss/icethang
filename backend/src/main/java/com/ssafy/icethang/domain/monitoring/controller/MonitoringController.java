@@ -36,11 +36,14 @@ public class MonitoringController {
     public void enterClass(AlertRequest request, StompHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
 
+        Student student = studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new RuntimeException("입장 처리 중 학생을 찾을 수 없습니다."));
+
         // 1. 메모리에 접속 정보 저장
         ConnectedStudentDto studentInfo = ConnectedStudentDto.builder()
-                .studentId(request.getStudentId())
-                .studentName(request.getStudentName())
-                .studentNumber(0)
+                .studentId(student.getId())
+                .studentName(student.getName())
+                .studentNumber(student.getStudentNumber())
                 .build();
 
         socketSessionService.addStudent(sessionId, request.getClassId(), studentInfo);
@@ -50,9 +53,10 @@ public class MonitoringController {
         // 2. 선생님에게 "누가 들어왔다"고 알림 전송 (ENTER)
         MonitoringAlertResponse response = MonitoringAlertResponse.builder()
                 .type(AlertType.ENTER)
-                .studentId(request.getStudentId())
-                .studentName(request.getStudentName())
-                .message(request.getStudentName() + " 학생이 입장했습니다.")
+                .studentId(student.getId())
+                .studentName(student.getName())
+                .studentNumber(student.getStudentNumber())
+                .message(student.getName() + " 학생이 입장했습니다.")
                 .alertTime(LocalDateTime.now())
                 .build();
 
