@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   modalView: { 
     width: '80%', 
-    transform: [{ rotate: '90deg' }],
+    transform: [{ rotate: '0deg' }],
     backgroundColor: '#ffffff', 
     borderRadius: 24, 
     padding: 24, 

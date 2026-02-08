@@ -147,7 +147,7 @@ export default function StudentLoginScreen() {
               </View>
 
               <View style={{ width: '100%', height: inputHeight, backgroundColor: '#FFF9C4', borderRadius: 20, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: spacing * 1.5, borderWidth: 2, borderColor: '#FBC02D', borderStyle: 'dashed' }}>
-                <Text style={{ fontSize: fontSizeInput, fontWeight: 'bold', color: '#8D6E63', width: 70 }}>인증코드</Text>
+                <Text style={{ fontSize: fontSizeInput, fontWeight: 'bold', color: '#8D6E63', width: 120 }}>인증코드</Text>
                 <TextInput
                   ref={codeRef}
                   style={{ flex: 1, fontSize: fontSizeInput, color: '#5D4037', fontWeight: 'bold', textAlign: 'right', marginRight: 10, letterSpacing: 2 }}
