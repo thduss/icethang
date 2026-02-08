@@ -23,9 +23,6 @@ const charMap: Record<string, string> = {
 };
 const bgMap: Record<string, string> = { "1": "background1", "2": "background2", "3": "background3", "4": "background4" };
 
-// ==========================================
-// 1. AI Constants (고정됨)
-// ==========================================
 const GAZE_RATIO_TH_X = 0.20;
 const GAZE_RATIO_TH_Y = 0.15;
 const GAZE_CORRECTION_YAW = 0.015;
@@ -61,9 +58,7 @@ const IDX = {
   RIGHT_EYE_BOX: [362, 263, 386, 374]
 };
 
-// ==========================================
-// 2. 계산 함수 (고정됨)
-// ==========================================
+
 const calcHeadPose = (landmarks: Float32Array) => {
   'worklet';
   const getP = (idx: number) => ({ x: landmarks[idx * 3], y: landmarks[idx * 3 + 1] });
@@ -158,9 +153,7 @@ export default function DigitalClassScreen() {
     }
   };
 
-  // =================================================================
-  // [수정된 부분] 소켓 수신 (일반 수업 전환 로직 강화)
-  // =================================================================
+
   useEffect(() => {
     if (!stompClient || !stompClient.connected) return;
 
@@ -169,9 +162,9 @@ export default function DigitalClassScreen() {
         console.log("📩 [Socket]:", body.type, body.mode);
 
         const wakeApp = () => {
-            isExiting.current = true; // 프레임 프로세서 중지
-            OverlayModule?.hideOverlay(); // 오버레이 숨김
-            OverlayModule?.relaunchApp(); // 앱을 포그라운드로 깨우기
+            isExiting.current = true; 
+            OverlayModule?.hideOverlay(); 
+            OverlayModule?.relaunchApp(); 
         };
 
         if (body.type === 'CLASS_FINISHED') {
@@ -181,16 +174,15 @@ export default function DigitalClassScreen() {
         else if (
             body.type === 'START_NORMAL_CLASS' || 
             body.type === 'SWITCH_TO_NORMAL' ||
-            (body.type === 'CHANGE_MODE' && body.mode === 'NORMAL') // CHANGE_MODE 체크 강화
+            (body.type === 'CHANGE_MODE' && body.mode === 'NORMAL') 
         ) {
             console.log("🏫 일반 수업으로 이동 (Digital -> Normal)");
             wakeApp();
             
-            // 앱이 완전히 깨어난 후 이동 (Delay 1s)
             setTimeout(() => {
                 router.replace({
                   pathname: '/screens/Classtime_Normal',
-                  params: { classId: classId } // classId를 명시적으로 전달
+                  params: { classId: classId }
                 });
             }, 1000);
         }
@@ -238,9 +230,7 @@ export default function DigitalClassScreen() {
   const model = useTensorflowModel(require('../../../assets/face_landmarker.tflite'));
   const { resize } = useResizePlugin();
 
-  // ==========================================
-  // 3. Frame Processor (고정됨)
-  // ==========================================
+
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
     if (model.state !== 'loaded' || isExiting.current) return;
