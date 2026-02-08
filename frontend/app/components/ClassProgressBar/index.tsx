@@ -200,15 +200,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     position: 'absolute',
-    left: -20,
+    left: -50,
   },
   mainCharImg: {
-    width: 65,
-    height: 65,
+    width: 110,
+    height: 90,
+    bottom:50
   },
   subCharImg: {
-    width: 25,
-    height: 25,
+    width: 40,
+    height: 40,
     marginLeft: -6,
   },
   loadingText: {
