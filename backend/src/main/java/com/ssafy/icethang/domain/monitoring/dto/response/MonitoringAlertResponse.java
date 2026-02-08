@@ -16,7 +16,7 @@ public class MonitoringAlertResponse {
 
     // 알람 상세 정보
     private AlertType type;        // 상태 (AWAY, UNFOCUS ,FOCUS)
-    private String message;        // "김싸피이 수업에서 이탈했습니다."
+    private String message;        // "김싸피 수업에서 이탈했습니다."
     private LocalDateTime alertTime; // 알람 발생 시각
 
     // 이번 교시 누적 통계
