@@ -309,4 +309,4 @@ const styles = StyleSheet.create({
   studentImage: { width: '70%', height: '50%' },
   statusBox: { marginTop: 30, backgroundColor: 'white', paddingHorizontal: 30, paddingVertical: 15, borderRadius: 30, elevation: 10, borderWidth: 2, borderColor: '#4A90E2' },
   statusText: { fontSize: 18, fontWeight: 'bold', color: '#333' }
-});
+}); 
