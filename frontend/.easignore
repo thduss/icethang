@@ -1,18 +1,16 @@
-# 모든 노드 모듈 완벽 차단
-**/node_modules/
+# node_modules 제외
 node_modules/
 
-# 2GB짜리 안드로이드 폴더 완벽 차단
-**/android/
+# 네이티브 폴더 제외 (EAS Build는 서버에서 새로 만듭니다)
 android/
+ios/
 
-# 기타 무거운 폴더들
-**/ios/
-**/.expo/
-**/.git/
-**/build/
+# 빌드 및 설정 폴더
+.expo/
+.git/
+.hg/
+dist/
+build/
 
-# 패치 파일이나 에러 로그
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# 로그 파일
+*.log
