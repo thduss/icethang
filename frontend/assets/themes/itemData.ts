@@ -1,4 +1,4 @@
-export interface LocalThemeItem {
+  export interface LocalThemeItem {
   id: number;
   imageActive: any;
   imageInactive: any;
@@ -36,73 +36,73 @@ const itemData: Record<number, LocalThemeItem> = {
   // CHARACTER
   5: {
     id: 5,
-    imageActive: require('../characters/1.gif'),
+    imageActive: require('../characters/animated/chara1.gif'),
     imageInactive: require('../characters/1.png'),
     category: 'CHARACTER',
   },
   6: {
     id: 6,
-    imageActive: require('../characters/2.gif'),
+    imageActive: require('../characters/animated/chara2.gif'),
     imageInactive: require('../characters/2.png'),
     category: 'CHARACTER',
   },
   7: {
     id: 7,
-    imageActive: require('../characters/3.png'),
+    imageActive: require('../characters/animated/chara3.gif'),
     imageInactive: require('../characters/3.png'),
     category: 'CHARACTER',
   },
   8: {
     id: 8,
-    imageActive: require('../characters/4.png'),
+    imageActive: require('../characters/animated/chara4.gif'),
     imageInactive: require('../characters/4.png'),
     category: 'CHARACTER',
   },
   9: {
     id: 9,
-    imageActive: require('../characters/5.gif'),
+    imageActive: require('../characters/animated/chara5.gif'),
     imageInactive: require('../characters/5.png'),
     category: 'CHARACTER',
   },
   10: {
     id: 10,
-    imageActive: require('../characters/6.gif'),
+    imageActive: require('../characters/animated/chara6.gif'),
     imageInactive: require('../characters/6.png'),
     category: 'CHARACTER',
   },
   11: {
     id: 11,
-    imageActive: require('../characters/7.png'),
+    imageActive: require('../characters/animated/chara7.gif'),
     imageInactive: require('../characters/7.png'),
     category: 'CHARACTER',
   },
   12: {
     id: 12,
-    imageActive: require('../characters/8.png'),
+    imageActive: require('../characters/animated/chara8.gif'),
     imageInactive: require('../characters/8.png'),
     category: 'CHARACTER',
   },
   13: {
     id: 13,
-    imageActive: require('../characters/9.png'),
+    imageActive: require('../characters/animated/chara9.gif'),
     imageInactive: require('../characters/9.png'),
     category: 'CHARACTER',
   },
   14: {
     id: 14,
-    imageActive: require('../characters/10.png'),
+    imageActive: require('../characters/animated/chara10.gif'),
     imageInactive: require('../characters/10.png'),
     category: 'CHARACTER',
   },
   15: {
     id: 15,
-    imageActive: require('../characters/11.png'),
+    imageActive: require('../characters/animated/chara11.gif'),
     imageInactive: require('../characters/11.png'),
     category: 'CHARACTER',
   },
   16: {
     id: 16,
-    imageActive: require('../characters/12.png'),
+    imageActive: require('../characters/animated/chara12.gif'),
     imageInactive: require('../characters/12.png'),
     category: 'CHARACTER',
   },

@@ -1,43 +1,79 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Animated, Easing, useWindowDimensions, ImageBackground } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router'; 
-import { stompClient } from '../../utils/socket'; 
-import { SOCKET_CONFIG } from '../../api/socket'; 
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/stores';
+import { stompClient, connectSocket } from '../../utils/socket';
+import * as SecureStore from 'expo-secure-store';
 
 export default function StudentWaitingScreen() {
   const { width, height } = useWindowDimensions();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const classId = params.classId ? String(params.classId) : "1";
+  const studentData = useSelector((state: RootState) => state.auth.studentData);
+  const classId = params.classId ? String(params.classId) : studentData?.classId?.toString() || "1";
   const bounceAnim = useRef(new Animated.Value(0)).current;
+  const reduxToken = useSelector((state: RootState) => state.auth?.accessToken);
 
   useEffect(() => {
-    if (!stompClient.active) stompClient.activate();
+    console.log('[Loading] useEffect 시작 - classId:', classId, 'active:', stompClient.active, 'connected:', stompClient.connected);
 
     const setupSubscription = () => {
       const targetPath = `/topic/class/${classId}/mode`;
+      console.log('[Loading] 구독 시작:', targetPath);
       return stompClient.subscribe(targetPath, (msg) => {
-        const body = JSON.parse(msg.body);
-        console.log("📥 메시지 수신:", body.mode);
+        console.log('[Loading] 모드 메시지 수신 RAW:', msg.body);
+        try {
+          const body = JSON.parse(msg.body);
+          console.log('[Loading] 파싱된 mode:', body.mode);
 
-        // ✅ [수정] 이동 경로를 단순 문자열로도 시도 (가장 확실한 방법)
-        if (body.mode === 'DIGITAL') {
-          router.replace(`/screens/Classtime_Digital?classId=${classId}`);
-        } else if (body.mode === 'NORMAL') {
-          router.replace(`/screens/Classtime_Normal?classId=${classId}`);
+          if (body.mode === 'DIGITAL') {
+            console.log('[Loading] DIGITAL 모드 -> Classtime_Digital로 이동');
+            router.replace(`/screens/Classtime_Digital?classId=${classId}`);
+          } else if (body.mode === 'NORMAL') {
+            console.log('[Loading] NORMAL 모드 -> Classtime_Normal로 이동');
+            router.replace(`/screens/Classtime_Normal?classId=${classId}`);
+          } else {
+            console.log('[Loading] 알 수 없는 mode:', body.mode);
+          }
+        } catch (e) {
+          console.error('[Loading] 메시지 파싱 에러:', e);
         }
       });
     };
 
     let modeSub: any = null;
-    if (stompClient.connected) {
-      modeSub = setupSubscription();
-    } else {
-      stompClient.onConnect = () => { modeSub = setupSubscription(); };
-    }
 
-    return () => { if (modeSub) modeSub.unsubscribe(); };
-  }, [classId]);
+    const initSocket = async () => {
+      // 토큰 확보 (Redux -> SecureStore)
+      let token = reduxToken;
+      if (!token) {
+        token = await SecureStore.getItemAsync('accessToken');
+      }
+      console.log('[Loading] 토큰:', token ? '있음' : '없음');
+
+      // 인증 포함 연결
+      connectSocket(token || "");
+
+      if (stompClient.connected) {
+        console.log('[Loading] 이미 연결됨 -> 즉시 구독');
+        modeSub = setupSubscription();
+      } else {
+        console.log('[Loading] 미연결 -> onConnect 콜백 설정');
+        stompClient.onConnect = () => {
+          console.log('[Loading] onConnect 콜백 실행됨!');
+          modeSub = setupSubscription();
+        };
+      }
+    };
+
+    initSocket();
+
+    return () => {
+      console.log('[Loading] useEffect cleanup - unsubscribe');
+      if (modeSub) modeSub.unsubscribe();
+    };
+  }, [classId, reduxToken]);
 
   // 애니메이션 로직 (생략 - 기존과 동일)
   useEffect(() => {

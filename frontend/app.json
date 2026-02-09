@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "ice-thang",
+    "slug": "ice-thang",
     "scheme": "ice-thang",
     "version": "1.0.0",
     "orientation": "landscape",
@@ -16,7 +16,10 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "학습 모니터링 및 얼굴 감지를 위해 카메라 권한이 필요합니다."
+      }
     },
     "web": {
       "bundler": "metro",
@@ -27,6 +30,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.20"
+          }
+        }
+      ],
       [
         "expo-font",
         {
@@ -73,6 +84,12 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
       ]
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "76d1c236-7401-4e26-b6a9-e88908b3af87"
+      }
     }
   }
 }

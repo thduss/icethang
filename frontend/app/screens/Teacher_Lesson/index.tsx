@@ -29,62 +29,87 @@ const TeacherLessonScreen = () => {
   const className = params.className ? String(params.className) : "1학년 1반";
 
   const { participantCount, alertList, studentList, classMode, startTime } = useSelector((state: RootState) => state.lesson);
-  const token = useSelector((state: RootState) => state.auth?.token);
+  const token = useSelector((state: RootState) => state.auth?.accessToken);
 
   useEffect(() => {
     const initLesson = async () => {
       if (!classId) return;
+      console.log('[Teacher] initLesson 시작 - classId:', classId);
 
       let activeToken = token;
       if (!activeToken) {
         activeToken = await SecureStore.getItemAsync('accessToken');
+        console.log('[Teacher] SecureStore에서 토큰 조회:', activeToken ? '있음' : '없음');
+      } else {
+        console.log('[Teacher] Redux 토큰 사용');
       }
 
       if (activeToken) {
-        console.log("🚀 [수업 대기] 선생님 접속 완료. 학생 입장을 기다립니다...");
+        console.log('[Teacher] 토큰 확인 완료. 소켓 상태 - connected:', stompClient.connected, 'active:', stompClient.active);
 
-        // 실시간 소켓 연결
-        if (!stompClient.connected) {
-          connectSocket(activeToken);
-        }
-
-        stompClient.onConnect = () => {
-          console.log(`✅ [반 ${classId}] 실시간 소켓 구독 시작`);
+        const setupSubscriptions = () => {
+          console.log(`[Teacher] 구독 설정 시작 - /topic/class/${classId}`);
+          console.log('[Teacher] 소켓 상태 확인 - connected:', stompClient.connected, 'active:', stompClient.active);
 
           // 통합 알림 구독 (입장, 딴짓, 이탈)
-          stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
-            const body = JSON.parse(msg.body);
-            console.log('📦 소켓 수신:', body.type, body);
+          const classSub = stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
+            console.log('[Teacher] /topic/class/' + classId + ' 메시지 수신 RAW:', msg.body);
+            try {
+              const body = JSON.parse(msg.body);
+              console.log('[Teacher] 파싱된 메시지 - type:', body.type, 'studentId:', body.studentId, 'studentName:', body.studentName);
 
-            // 입장 (ENTER) -> 리스트에 추가
-            if (body.type === 'ENTER') {
-              console.log(`👋 학생 입장 확인: ${body.studentName}`);
-              dispatch(joinStudent(body));
-            } 
-            // 상태 변경 (UNFOCUS, AWAY, FOCUS)
-            else if (['FOCUS', 'UNFOCUS', 'AWAY'].includes(body.type)) {
-              dispatch(updateStudentAlert(body));
+              if (body.type === 'ENTER') {
+                console.log('[Teacher] ENTER 처리 -> joinStudent dispatch');
+                dispatch(joinStudent(body));
+              } else if (['FOCUS', 'UNFOCUS', 'AWAY', 'RESTROOM', 'ACTIVITY'].includes(body.type)) {
+                console.log('[Teacher] 상태 알림 처리 -> updateStudentAlert dispatch, type:', body.type);
+                dispatch(updateStudentAlert(body));
+              } else {
+                console.log('[Teacher] 알 수 없는 type:', body.type);
+              }
+            } catch (e) {
+              console.error('[Teacher] 메시지 파싱 에러:', e);
             }
           });
+          console.log('[Teacher] /topic/class/' + classId + ' 구독 완료, subId:', classSub?.id);
 
           // 모드 동기화
-          stompClient.subscribe(`/topic/class/${classId}/mode`, (msg) => {
-             const body = JSON.parse(msg.body);
-             dispatch(setClientClassMode(body.mode));
+          const modeSub = stompClient.subscribe(`/topic/class/${classId}/mode`, (msg) => {
+            console.log('[Teacher] /topic/class/' + classId + '/mode 메시지 수신:', msg.body);
+            const body = JSON.parse(msg.body);
+            dispatch(setClientClassMode(body.mode));
           });
+          console.log('[Teacher] /topic/class/' + classId + '/mode 구독 완료, subId:', modeSub?.id);
         };
+
+        if (stompClient.connected) {
+          console.log('[Teacher] 이미 연결됨 -> 즉시 구독');
+          setupSubscriptions();
+        } else {
+          console.log('[Teacher] 미연결 -> connectSocket 호출 후 onConnect 대기');
+          connectSocket(activeToken);
+          stompClient.onConnect = () => {
+            console.log('[Teacher] onConnect 콜백 실행됨!');
+            setupSubscriptions();
+          };
+        }
+      } else {
+        console.warn('[Teacher] 토큰 없음! 소켓 연결 불가');
       }
     };
 
     initLesson();
 
-    // 나갈 때 소켓 끊기
-    return () => { disconnectSocket(); };
+    return () => {
+      console.log('[Teacher] useEffect cleanup - disconnectSocket 호출');
+      disconnectSocket();
+    };
   }, [classId, token, dispatch]);
 
 
   const handleToggleMode = () => {
     const nextMode = classMode === 'NORMAL' ? 'DIGITAL' : 'NORMAL';
+    console.log('[Teacher] 모드 변경 요청:', classMode, '->', nextMode);
     changeClassMode(classId, nextMode);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     dispatch(setClientClassMode(nextMode));
@@ -106,20 +131,25 @@ const TeacherLessonScreen = () => {
 
     
 
+    console.log('[Teacher] 수업 종료 API 호출 - classId:', classId, 'reportData:', JSON.stringify(reportData));
     const success = await endClassSession(classId, reportData);
-    
+    console.log('[Teacher] 수업 종료 API 결과:', success);
+
     if (success) {
       if (stompClient && stompClient.connected) {
+        console.log('[Teacher] CLASS_FINISHED 발행 -> /topic/class/' + classId);
         stompClient.publish({
-          destination: `/topic/class/${classId}`, 
+          destination: `/topic/class/${classId}`,
           body: JSON.stringify({
             type: 'CLASS_FINISHED',
             classId: classId,
           }),
         });
+      } else {
+        console.warn('[Teacher] CLASS_FINISHED 발행 실패 - 소켓 미연결');
       }
-      console.log("✅ 수업 종료 신호 전송 완료");
-      router.back(); 
+      console.log('[Teacher] 수업 종료 완료, 뒤로가기');
+      router.back();
     } else {
       Alert.alert("알림", "리포트 저장 실패.");
     }
