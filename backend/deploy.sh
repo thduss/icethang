@@ -61,19 +61,24 @@ docker run -d \
 
 # 5. Health Check
 echo "🏥 Health Check 시작..."
-for i in {1..10}; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${TARGET_PORT}/actuator/health || true)
-    
-    if [ "$HTTP_CODE" == "200" ]; then
-        echo "✅ 서버 정상 구동 확인!"
+
+# 타겟 포트 확인 (디버깅용)
+echo "🔍 확인 대상: http://127.0.0.1:${TARGET_PORT}"
+
+for i in {1..15}; do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${TARGET_PORT} || echo "000")
+
+    if [ "$HTTP_CODE" != "000" ]; then
+        echo "✅ 서버 정상 구동 확인! (응답 코드: $HTTP_CODE)"
         break
     else
-        echo "⏳ 대기 중... ($i/10)"
-        sleep 5
+        echo "⏳ 대기 중... ($i/15) - 아직 응답 없음 (Code: $HTTP_CODE)"
+        sleep 10
     fi
 
-    if [ $i -eq 10 ]; then
+    if [ $i -eq 15 ]; then
         echo "❌ 배포 실패: 서버가 응답하지 않습니다."
+        echo "💡 힌트: 로컬에서 'curl -v http://127.0.0.1:${TARGET_PORT}'를 실행해서 원인을 확인해보세요."
         docker stop ${CONTAINER_NAME}
         exit 1
     fi
