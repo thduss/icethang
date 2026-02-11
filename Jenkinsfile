@@ -33,15 +33,19 @@ stages {
                         env.SERVICE_NAME = 'release-server'
                         env.IMAGE_TAG = 'release'
                         env.SPRING_PROFILE = 'release'
-                        env.CONTAINER_NAME = 'release-server'
-                        env.HOST_PORT = '8081'
+
+                        env.BLUE_PORT = '8081'
+                        env.GREEN_PORT = '8083'
+                        env.NGINX_INC_FILE = '/etc/nginx/conf.d/release-url.inc'
                     } else {
                         echo "🚧 [개발 배포] Develop 브랜치 감지 -> Develop Server 배포 설정"
                         env.SERVICE_NAME = 'develop-server'
                         env.IMAGE_TAG = 'develop'
                         env.SPRING_PROFILE = 'develop'
-                        env.CONTAINER_NAME = 'develop-server'
-                        env.HOST_PORT = '8082'
+
+                        env.BLUE_PORT = '8082'
+                        env.GREEN_PORT = '8084'
+                        env.NGINX_INC_FILE = '/etc/nginx/conf.d/develop-url.inc'
                     }
 
                     // 3. backend 폴더 & 인프라 변경 사항 감지
@@ -86,31 +90,52 @@ stages {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy (Blue-Green)') {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
-                echo "🚀 EC2 배포 시작... (Profile: ${env.SPRING_PROFILE}, Port: ${env.HOST_PORT})"
                 script {
-                    // 1. 기존 컨테이너 정리
-                    try {
-                        sh "docker stop ${env.CONTAINER_NAME}"
-                        sh "docker rm ${env.CONTAINER_NAME}"
-                    } catch (Exception e) {
-                        echo '기존에 실행 중인 컨테이너가 없습니다.'
-                    }
+                    // 1. 현재 실행 중인 컬러 확인
+                    def isBlue = sh(script: "docker ps --format '{{.Names}}' | grep ${env.SERVICE_NAME}-blue || true", returnStdout: true).trim()
+                    
+                    def TARGET_COLOR = isBlue ? "green" : "blue"
+                    def TARGET_PORT = (TARGET_COLOR == "blue") ? env.BLUE_PORT : env.GREEN_PORT
+                    def TARGET_CONTAINER = "${env.SERVICE_NAME}-${TARGET_COLOR}"
+                    def OLD_CONTAINER = (TARGET_COLOR == "blue") ? "${env.SERVICE_NAME}-green" : "${env.SERVICE_NAME}-blue"
 
-                    // 2. 새 컨테이너 실행
+                    echo "🚀 현재 상태: ${isBlue ? 'Blue' : 'Green'} 실행 중"
+                    echo "🚀 타겟 설정: ${TARGET_COLOR} (Port: ${TARGET_PORT}) 배포 시작"
+
+                    // 2. 새 컨테이너 실행 (타겟 컬러로)
                     sh """
                         docker run -d \
-                        -p ${env.HOST_PORT}:8080 \
-                        --name ${env.CONTAINER_NAME} \
+                        -p ${TARGET_PORT}:8080 \
+                        --name ${TARGET_CONTAINER} \
                         --network infra_app-network \
                         -v ${HOST_CONF_DIR}:/config \
                         -e SPRING_PROFILES_ACTIVE=${env.SPRING_PROFILE} \
-                        ${env.IMAGE_NAME}:${env.IMAGE_TAG} \
+                        ${IMAGE_NAME}:${env.IMAGE_TAG} \
                         --spring.data.redis.database=${env.SPRING_PROFILE == 'develop' ? 1 : 0} \
                         --spring.config.additional-location=file:/config/
                     """
+
+                    // 3. Health Check (새 컨테이너가 정상적으로 떴는지 확인)
+                    echo "🔍 Health Check 중... (http://localhost:${TARGET_PORT}/actuator/health)"
+                    timeout(time: 5, unit: 'MINUTES') {
+                        waitUntil {
+                            def r = sh(script: "curl -s http://localhost:${TARGET_PORT}/actuator/health | grep UP || true", returnStdout: true).trim()
+                            return (r != "")
+                        }
+                    }
+
+                    // 4. Nginx 포트 스위칭
+                    echo "🔄 Nginx 스위칭: ${env.NGINX_INC_FILE} -> ${TARGET_PORT}"
+                    sh "echo 'set \$service_url http://127.0.0.1:${TARGET_PORT};' | sudo tee ${env.NGINX_INC_FILE}"
+                    sh "sudo nginx -s reload"
+
+                    // 5. 이전 컨테이너 정리
+                    echo "🗑️ 이전 컨테이너(${OLD_CONTAINER}) 제거"
+                    sh "docker stop ${OLD_CONTAINER} || true"
+                    sh "docker rm ${OLD_CONTAINER} || true"
                 }
             }
         }
@@ -139,9 +164,32 @@ stages {
         }
         failure {
             script {
-                 mattermostSend(color: 'danger', 
-                    message: "### 🚨 E204 백엔드 배포 실패... 로그를 확인해주세요.",
-                    endpoint: "${MATTERMOST_URL}",
+                // Git 정보 가져오기 (실패 시에도 정보 획득 시도)
+                def Author = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
+                def Msg = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
+                def Branch = env.BRANCH_NAME ?: env.GIT_BRANCH
+                
+                // 에러 로그 바로가기 링크 생성
+                def BuildUrl = env.BUILD_URL
+                def ConsoleUrl = "${BuildUrl}console"
+                
+                // Mattermost 메시지 포맷팅
+                def failMessage = """### 🚨 **배포 실패 (Build Failed)**
+| 정보 | 내용 |
+|---|---|
+| **프로젝트** | ${env.JOB_NAME} #${env.BUILD_NUMBER} |
+| **브랜치** | ${Branch} |
+| **작성자** | ${Author} |
+| **커밋 메시지** | ${Msg} |
+| **에러 로그** | [👉 **바로가기 (Click Here)**](${ConsoleUrl}) |
+
+> **확인 방법**: 위 링크를 클릭하여 Console Output의 맨 아래 에러 로그를 확인해주세요.
+"""
+
+                mattermostSend(
+                    color: 'danger', 
+                    message: failMessage, 
+                    endpoint: "${MATTERMOST_URL}", 
                     channel: '#team-e204'
                 )
             }
