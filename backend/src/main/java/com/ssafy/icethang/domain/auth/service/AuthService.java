@@ -9,6 +9,8 @@ import com.ssafy.icethang.domain.auth.entity.AuthProvider;
 import com.ssafy.icethang.domain.auth.entity.Schools;
 import com.ssafy.icethang.domain.auth.repository.AuthRepository;
 import com.ssafy.icethang.domain.auth.repository.SchoolsRepository;
+import com.ssafy.icethang.global.exception.DuplicateResourceException;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.CustomUserDetailsService;
 import com.ssafy.icethang.global.security.TokenProvider;
@@ -47,12 +49,12 @@ public class AuthService {
 
     @Transactional
     public String signup(SignupRequest request){
-        // 1. 이메일 중복 검사
+        // 이메일 중복 검사
         if(authRepository.findByEmail(request.getEmail()).isPresent()){
-            throw new RuntimeException("이미 가입된 이메일입니다.");
+            throw new DuplicateResourceException("이미 가입된 이메일입니다.");
         }
 
-        // 2. 학교 정보 처리 (DB -> 없으면 nice API 호출)
+        // 학교 정보 처리 (DB -> 없으면 nice API 호출)
         Schools school = schoolsRepository.findBySchoolName(request.getSchoolName())
                 .orElseGet(() -> {
                     return niceApiService.searchAndSaveSchool(request.getSchoolName());
@@ -133,19 +135,18 @@ public class AuthService {
                 .build();
     }
 
-
     // 회원정보 조회
     @Transactional
     public Auth getUser(String email) {
         return authRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("유저를 찾을 수 없습니다."));
     }
 
     // 회원정보 수정
     @Transactional
     public void updateUser(String email, UpdateUserRequest request) {
         Auth auth = authRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("유저를 찾을 수 없습니다."));
 
         // 이름 변경 요청
         if (request.getTeacherName() != null) {
@@ -226,7 +227,7 @@ public class AuthService {
                 })
                 .orElseGet(() -> {
                     Schools defaultSchool = schoolsRepository.findById(1)
-                            .orElseThrow(() -> new RuntimeException("기본 학교(ID: 1)가 DB에 없어요! SQL 확인해주세요"));
+                            .orElseThrow(() -> new ResourceNotFoundException("기본 학교(ID: 1)가 DB에 없어요! SQL 확인해주세요"));
 
                     Auth auth = new Auth();
                     auth.setEmail(userInfo.getEmail());

@@ -6,6 +6,7 @@ import com.ssafy.icethang.domain.auth.repository.AuthRepository;
 import com.ssafy.icethang.global.security.UserPrincipal;
 import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfo;
 import com.ssafy.icethang.global.security.oauth2.auth.OAuth2UserInfoFactory;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +53,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
 
         // 이메일 가져와야하므로 없으면 예외 발생
         if (userInfo.getEmail() == null || userInfo.getEmail().isEmpty()) {
-            throw new OAuth2AuthenticationException("Email not found from OAuth2 provider");
+            throw new OAuth2AuthenticationException(new OAuth2Error("email_not_found"),
+                    "Email not found from OAuth2 provider", null);
         }
 
         // 이메일로 DB 조회(기존 회원인지 검증)
@@ -64,8 +66,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService{
 
             // 다른 소셜로 가입된 이메일인지 체크(provider가 다른지 확인)
             if (auth.getProvider() != AuthProvider.valueOf(registrationId.toUpperCase())) {
-                throw new OAuth2AuthenticationException(
-                        "Looks like you're signed up with " + auth.getProvider() + " account. Please use your " + auth.getProvider() + " account to login."
+                throw new OAuth2AuthenticationException(new OAuth2Error("invalid_provider"),
+                        "Looks like you're signed up with " + auth.getProvider() + " account. Please use your " + auth.getProvider() + " account to login.",
+                        null
                 );
             }
 
