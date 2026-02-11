@@ -24,8 +24,13 @@ else
     exit 1
 fi
 
-# 3. 현재 실행 중인 포트 확인 (해당 프로필의 컨테이너 중 실행 중인 녀석을 찾음)
-CURRENT_PORT=$(docker ps --filter "name=${PROFILE}-server" --format "{{.Ports}}" | grep -oP "\d+(?=->8080)" | head -n 1)
+# 3. 현재 실행 중인 포트 확인
+if [ -f "$NGINX_CONF" ]; then
+    CURRENT_PORT=$(grep -oP '(?<=:)\d+(?=;)' $NGINX_CONF)
+else
+    echo "✨ Nginx 설정 파일이 없습니다. 첫 배포로 간주합니다."
+    CURRENT_PORT=""
+fi
 
 if [ -z "$CURRENT_PORT" ]; then
     echo "✨ 현재 실행 중인 컨테이너가 없습니다. 기본 포트($DEFAULT_PORT)로 배포합니다."
@@ -54,7 +59,7 @@ docker run -d \
     --spring.data.redis.database=$( [ "$PROFILE" == "develop" ] && echo 1 || echo 0 ) \
     --spring.config.additional-location=file:/config/
 
-# 5. Health Check (서버 뜰 때까지 대기)
+# 5. Health Check
 echo "🏥 Health Check 시작..."
 for i in {1..10}; do
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${TARGET_PORT}/actuator/health || true)
@@ -76,10 +81,16 @@ done
 
 # 6. Nginx 설정 변경 및 재시작
 echo "🔄 Nginx 포트 변경 -> ${TARGET_PORT}"
-echo "set \$${PROFILE}_url http://127.0.0.1:${TARGET_PORT};" | sudo tee ${NGINX_CONF}
+
+VAR_NAME="service_url"
+if [ "$PROFILE" == "develop" ]; then
+    VAR_NAME="develop_url"
+fi
+
+echo "set \$${VAR_NAME} http://127.0.0.1:${TARGET_PORT};" | sudo tee ${NGINX_CONF}
 sudo nginx -s reload
 
-# 7. 이전 컨테이너 정리 (선택사항: 바로 끄기)
+# 7. 이전 컨테이너 정리
 if [ ! -z "$CURRENT_PORT" ]; then
     OLD_CONTAINER="${PROFILE}-server-${CURRENT_PORT}"
     echo "🗑️ 이전 컨테이너 종료: ${OLD_CONTAINER}"

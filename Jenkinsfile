@@ -10,9 +10,6 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
         
-        // 서버 내 설정 파일 경로
-        HOST_CONF_DIR = '/home/ubuntu/server-conf'
-        
         // Mattermost Webhook URL
         MATTERMOST_URL = 'https://meeting.ssafy.com/hooks/83x1b6t177b59nxcej5ufsxtja'
     }
@@ -30,22 +27,12 @@ stages {
                     // 2. 현재 브랜치 확인 및 변수 설정
                     if (env.BRANCH_NAME == 'master'|| env.GIT_BRANCH?.contains('master')) {
                         echo "🚨 [운영 배포] Master 브랜치 감지 -> Release Server 배포 설정"
-                        env.SERVICE_NAME = 'release-server'
                         env.IMAGE_TAG = 'release'
                         env.SPRING_PROFILE = 'release'
-
-                        env.BLUE_PORT = '8081'
-                        env.GREEN_PORT = '8083'
-                        env.NGINX_INC_FILE = '/etc/nginx/conf.d/release-url.inc'
                     } else {
                         echo "🚧 [개발 배포] Develop 브랜치 감지 -> Develop Server 배포 설정"
-                        env.SERVICE_NAME = 'develop-server'
                         env.IMAGE_TAG = 'develop'
                         env.SPRING_PROFILE = 'develop'
-
-                        env.BLUE_PORT = '8082'
-                        env.GREEN_PORT = '8084'
-                        env.NGINX_INC_FILE = '/etc/nginx/conf.d/develop-url.inc'
                     }
 
                     // 3. backend 폴더 & 인프라 변경 사항 감지
