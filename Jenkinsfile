@@ -10,9 +10,6 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
         
-        // 서버 내 설정 파일 경로
-        HOST_CONF_DIR = '/home/ubuntu/server-conf'
-        
         // Mattermost Webhook URL
         MATTERMOST_URL = 'https://meeting.ssafy.com/hooks/83x1b6t177b59nxcej5ufsxtja'
     }
@@ -30,18 +27,12 @@ stages {
                     // 2. 현재 브랜치 확인 및 변수 설정
                     if (env.BRANCH_NAME == 'master'|| env.GIT_BRANCH?.contains('master')) {
                         echo "🚨 [운영 배포] Master 브랜치 감지 -> Release Server 배포 설정"
-                        env.SERVICE_NAME = 'release-server'
                         env.IMAGE_TAG = 'release'
                         env.SPRING_PROFILE = 'release'
-                        env.CONTAINER_NAME = 'release-server'
-                        env.HOST_PORT = '8081'
                     } else {
                         echo "🚧 [개발 배포] Develop 브랜치 감지 -> Develop Server 배포 설정"
-                        env.SERVICE_NAME = 'develop-server'
                         env.IMAGE_TAG = 'develop'
                         env.SPRING_PROFILE = 'develop'
-                        env.CONTAINER_NAME = 'develop-server'
-                        env.HOST_PORT = '8082'
                     }
 
                     // 3. backend 폴더 & 인프라 변경 사항 감지
@@ -86,31 +77,17 @@ stages {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy (Blue-Green)') {
             when { expression { return env.IS_BACKEND_CHANGED == "true" } }
             steps {
-                echo "🚀 EC2 배포 시작... (Profile: ${env.SPRING_PROFILE}, Port: ${env.HOST_PORT})"
-                script {
-                    // 1. 기존 컨테이너 정리
-                    try {
-                        sh "docker stop ${env.CONTAINER_NAME}"
-                        sh "docker rm ${env.CONTAINER_NAME}"
-                    } catch (Exception e) {
-                        echo '기존에 실행 중인 컨테이너가 없습니다.'
-                    }
-
-                    // 2. 새 컨테이너 실행
-                    sh """
-                        docker run -d \
-                        -p ${env.HOST_PORT}:8080 \
-                        --name ${env.CONTAINER_NAME} \
-                        --network infra_app-network \
-                        -v ${HOST_CONF_DIR}:/config \
-                        -e SPRING_PROFILES_ACTIVE=${env.SPRING_PROFILE} \
-                        ${env.IMAGE_NAME}:${env.IMAGE_TAG} \
-                        --spring.data.redis.database=${env.SPRING_PROFILE == 'develop' ? 1 : 0} \
-                        --spring.config.additional-location=file:/config/
-                    """
+                dir("${BACKEND_DIR}") {
+                    echo "🚀 Blue-Green 배포 스크립트 실행"
+                    
+                    // 스크립트에 실행 권한 주기
+                    sh 'chmod +x deploy.sh'
+                    
+                    // 스크립트 실행 (인자: 프로필, 이미지태그)
+                    sh "./deploy.sh ${env.SPRING_PROFILE} ${env.IMAGE_TAG}"
                 }
             }
         }
@@ -139,9 +116,32 @@ stages {
         }
         failure {
             script {
-                 mattermostSend(color: 'danger', 
-                    message: "### 🚨 E204 백엔드 배포 실패... 로그를 확인해주세요.",
-                    endpoint: "${MATTERMOST_URL}",
+                // Git 정보 가져오기 (실패 시에도 정보 획득 시도)
+                def Author = sh(script: "git show -s --pretty=%an", returnStdout: true).trim()
+                def Msg = sh(script: "git show -s --pretty=%B", returnStdout: true).trim()
+                def Branch = env.BRANCH_NAME ?: env.GIT_BRANCH
+                
+                // 에러 로그 바로가기 링크 생성
+                def BuildUrl = env.BUILD_URL
+                def ConsoleUrl = "${BuildUrl}console"
+                
+                // Mattermost 메시지 포맷팅
+                def failMessage = """### 🚨 **배포 실패 (Build Failed)**
+| 정보 | 내용 |
+|---|---|
+| **프로젝트** | ${env.JOB_NAME} #${env.BUILD_NUMBER} |
+| **브랜치** | ${Branch} |
+| **작성자** | ${Author} |
+| **커밋 메시지** | ${Msg} |
+| **에러 로그** | [👉 **바로가기 (Click Here)**](${ConsoleUrl}) |
+
+> **확인 방법**: 위 링크를 클릭하여 Console Output의 맨 아래 에러 로그를 확인해주세요.
+"""
+
+                mattermostSend(
+                    color: 'danger', 
+                    message: failMessage, 
+                    endpoint: "${MATTERMOST_URL}", 
                     channel: '#team-e204'
                 )
             }
