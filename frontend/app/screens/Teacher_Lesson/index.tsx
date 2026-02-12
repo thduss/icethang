@@ -25,8 +25,10 @@ const TeacherLessonScreen = () => {
   const params = useLocalSearchParams();
   
   const classIdParam = params.classId ? Number(params.classId) : 0;
-  const classId = classIdParam === 0 ? 1 : classIdParam; 
+  const classId = classIdParam === 0 ? 1 : classIdParam;
   const className = params.className ? String(params.className) : "1학년 1반";
+  const subject = params.subject ? String(params.subject) : "";
+  const classNo = params.classNo ? Number(params.classNo) : 0;
 
   const { participantCount, alertList, studentList, classMode, startTime } = useSelector((state: RootState) => state.lesson);
   const token = useSelector((state: RootState) => state.auth?.accessToken);
@@ -107,6 +109,10 @@ const TeacherLessonScreen = () => {
   }, [classId, token, dispatch]);
 
 
+  const handleStartClass = () => {
+    changeClassMode(classId, classMode);
+  };
+
   const handleToggleMode = () => {
     const nextMode = classMode === 'NORMAL' ? 'DIGITAL' : 'NORMAL';
     console.log('[Teacher] 모드 변경 요청:', classMode, '->', nextMode);
@@ -125,8 +131,8 @@ const TeacherLessonScreen = () => {
       date: dateStr,
       startTime: startTime || "09:00:00",
       endTime: endTimeStr,
-      subject: "수학",
-      classNo: 1
+      subject: subject,
+      classNo: classNo
     };
 
     
@@ -166,7 +172,8 @@ const TeacherLessonScreen = () => {
           participantCount={participantCount} 
           currentMode={classMode}       
           onToggleMode={handleToggleMode}
-          onEndClass={handleEndClass} 
+          onEndClass={handleEndClass}
+          onStartClass={handleStartClass}
         />
 
         <View style={styles.bannerWrapper}>
