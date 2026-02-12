@@ -1,0 +1,21 @@
+diff --git a/node_modules/@expo/cli/build/src/run/android/resolveGradlePropsAsync.js b/node_modules/@expo/cli/build/src/run/android/resolveGradlePropsAsync.js
+index f8e14ee..046a404 100644
+--- a/node_modules/@expo/cli/build/src/run/android/resolveGradlePropsAsync.js
++++ b/node_modules/@expo/cli/build/src/run/android/resolveGradlePropsAsync.js
+@@ -57,13 +57,9 @@ async function resolveGradlePropsAsync(projectRoot, options, device) {
+     };
+ }
+ async function getConnectedDeviceABIS(buildType, device, allArch) {
+-    // Follow the same behavior as iOS, only enable this for debug builds
+-    if (allArch || buildType !== 'debug') {
+-        return '';
+-    }
+-    const abis = await (0, _adb.getDeviceABIsAsync)(device);
+-    const validAbis = abis.filter((abi)=>VALID_ARCHITECTURES.includes(abi));
+-    return validAbis.filter((abi, i, arr)=>arr.indexOf(abi) === i).join(',');
++    // On Windows, passing multiple ABIs can exceed native build path limits and fail CMake.
++    // Returning an empty string prevents Expo from adding -PreactNativeArchitectures.
++    return '';
+ }
+ 
+ //# sourceMappingURL=resolveGradlePropsAsync.js.map
