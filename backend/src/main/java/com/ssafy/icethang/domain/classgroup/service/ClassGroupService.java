@@ -79,9 +79,8 @@ public class ClassGroupService {
 
     // 반 학생 목록 조회
     public List<ClassStudentResponse> getClassStudents(Long classId) {
-        if (!classGroupRepository.existsById(classId)) {
-            throw new ResourceNotFoundException("존재하지 않는 반입니다.");
-        }
+        ClassGroup classGroup = classGroupRepository.findById(classId)
+            .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 반입니다."));
 
         return studentRepository.findAllByClassGroupId(classId).stream()
                 .map(ClassStudentResponse::from)
