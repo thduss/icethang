@@ -15,15 +15,17 @@ interface HeaderProps {
   currentMode: 'NORMAL' | 'DIGITAL';
   onToggleMode: () => void;
   onEndClass: () => void;
+  onStartClass: () => void;
 }
 
-export const Header = ({ 
-  classId, 
-  className, 
-  participantCount, 
-  currentMode, 
-  onToggleMode, 
-  onEndClass 
+export const Header = ({
+  classId,
+  className,
+  participantCount,
+  currentMode,
+  onToggleMode,
+  onEndClass,
+  onStartClass
 }: HeaderProps) => {
   const dispatch = useDispatch();
   const { isLessonStarted } = useSelector((state: RootState) => state.lesson);
@@ -32,10 +34,6 @@ export const Header = ({
 
   // 모드 변경 버튼 클릭 시
   const handleToggleSwitch = () => {
-    if (!isLessonStarted) {
-      Alert.alert("알림", "수업 시작 후에만 모드를 변경할 수 있습니다.");
-      return;
-    }
     onToggleMode();
   };
 
@@ -54,7 +52,7 @@ export const Header = ({
       ]);
     } else {
       dispatch(startLesson());
-      Alert.alert("알림", "수업이 시작되었습니다!");
+      onStartClass();
     }
   };
 
