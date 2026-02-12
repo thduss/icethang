@@ -43,7 +43,9 @@ export default function ReusableGridScreen() {
 
   const [activeTab, setActiveTab] = useState<TabType>('character');
   const [previewBackgroundId, setPreviewBackgroundId] = useState<number | null>(null);
-
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [selectedLockedName, setSelectedLockedName] = useState('');
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const scrollRefs = {
     character: useRef<ScrollView>(null),
     theme: useRef<ScrollView>(null),
@@ -143,6 +145,21 @@ export default function ReusableGridScreen() {
     }
     
     return isSelected ? localItem.imageActive : localItem.imageInactive;
+  };
+
+  const handleLockedClick = (name: string, index: number) => {
+    const containerWidth = CARD_WIDTH * VISIBLE_ITEMS + GAP * (VISIBLE_ITEMS - 1);
+    const containerStartX = (SCREEN_WIDTH - containerWidth) / 2;
+    const currentOffset = offsets[activeTab];
+    
+    const cardLeftX = containerStartX + index * (CARD_WIDTH + GAP) - currentOffset;
+    const cardCenterX = cardLeftX + CARD_WIDTH / 2;
+    const cardTopY = 180;
+
+    setPopupPosition({ x: cardCenterX, y: cardTopY });
+    setSelectedLockedName(name);
+    setShowLockModal(true);
+    setTimeout(() => setShowLockModal(false), 2000);
   };
 
   const handleSelect = async (item: ThemeItem) => {
@@ -263,8 +280,7 @@ export default function ReusableGridScreen() {
                 return (
                   <Pressable
                     key={`${item.category}-${targetId}-${index}`}
-                    disabled={isLocked}
-                    onPress={() => !isLocked && handleSelect(item)}
+                    onPress={() => isLocked ? handleLockedClick(item.name, index) : handleSelect(item)}
                     style={[styles.card, isSelected && styles.selectedCard]}
                   >
                     <View style={styles.imageWrapper}>
@@ -311,6 +327,27 @@ export default function ReusableGridScreen() {
           previewBackgroundId={previewBackgroundId}
         />
       </View>
+
+      {showLockModal && (
+        <View style={styles.popupContainer} pointerEvents="box-none">
+          <View style={[
+            styles.speechBubble,
+            {
+              position: 'absolute',
+              left: popupPosition.x,
+              top: popupPosition.y,
+              transform: [{ translateX: '-50%' }, { translateY: '-100%' }],
+            }
+          ]}>
+            <Text style={styles.popupText}>
+              ✨ <Text style={{fontWeight: '900'}}>{selectedLockedName}</Text>✨{'\n'}
+              친구를 만나려면 경험치를 더 모아보세요!
+            </Text>
+            <View style={styles.arrowBorder} />
+            <View style={styles.arrowInner} />
+          </View>
+        </View>
+      )}
     </ImageBackground>
   );
 }
@@ -456,5 +493,59 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     marginBottom: 12,
+  },
+
+  popupContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+  },
+
+  speechBubble: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#FFD86B',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+
+  popupText: {
+    fontSize: 18,
+    color: '#5A4025',
+    textAlign: 'center',
+    lineHeight: 26,
+    fontWeight: '600',
+  },
+
+  arrowBorder: {
+    position: 'absolute',
+    bottom: -18,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 15,
+    borderRightWidth: 15,
+    borderTopWidth: 18,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#FFD86B',
+  },
+
+  arrowInner: {
+    position: 'absolute',
+    bottom: -13,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 15,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#FFFFFF',
   },
 });
