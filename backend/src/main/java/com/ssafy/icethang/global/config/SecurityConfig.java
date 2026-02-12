@@ -83,6 +83,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/students/**", "/classes/**").authenticated()
                         .anyRequest().authenticated() // 나머지는 다 로그인 해야 함
+                        .requestMatchers("/health").permitAll()
                 )
 
                 // 5. 소셜 로그인 설정
