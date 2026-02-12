@@ -8,6 +8,8 @@ import com.ssafy.icethang.domain.student.entity.StudyLog;
 import com.ssafy.icethang.domain.student.repository.LevelRulesRepository;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
 import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
+import com.ssafy.icethang.global.exception.BadRequestException;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,10 +80,10 @@ public class StudentXpService {
     // 학생이 classId에 맞는 학생인지 검증
     private Student validateStudentInClass(Long classId, Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("학생을 찾을 수 없습니다. ID: " + studentId));
+                .orElseThrow(() -> new ResourceNotFoundException("학생을 찾을 수 없습니다. ID: " + studentId));
 
         if (student.getClassGroup() == null || !student.getClassGroup().getId().equals(classId)) {
-            throw new RuntimeException("해당 반(ID: " + classId + ") 소속 학생이 아닙니다.");
+            throw new BadRequestException("해당 반(ID: " + classId + ") 소속 학생이 아닙니다.");
         }
         return student;
     }

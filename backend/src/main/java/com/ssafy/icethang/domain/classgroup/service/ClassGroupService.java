@@ -12,6 +12,9 @@ import com.ssafy.icethang.domain.student.dto.request.StudentUpdateRequest;
 import com.ssafy.icethang.domain.student.dto.response.StudentDetailResponse;
 import com.ssafy.icethang.domain.student.entity.Student;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
+import com.ssafy.icethang.global.exception.BadRequestException;
+import com.ssafy.icethang.global.exception.ForbiddenException;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -70,14 +73,14 @@ public class ClassGroupService {
     // 반 상세 조회
     public ClassResponse getClassDetail(Long classId) {
         ClassGroup classGroup = classGroupRepository.findById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 반이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 반이 존재하지 않습니다."));
         return ClassResponse.from(classGroup);
     }
 
     // 반 학생 목록 조회
     public List<ClassStudentResponse> getClassStudents(Long classId) {
         if (!classGroupRepository.existsById(classId)) {
-            throw new IllegalArgumentException("존재하지 않는 반입니다.");
+            throw new ResourceNotFoundException("존재하지 않는 반입니다.");
         }
 
         return studentRepository.findAllByClassGroupId(classId).stream()
@@ -89,10 +92,10 @@ public class ClassGroupService {
     @Transactional
     public void updateClass(Long classId, ClassUpdateRequest request, Long teacherId) {
         ClassGroup classGroup = classGroupRepository.findById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 반이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 반이 존재하지 않습니다."));
 
         if (!classGroup.getTeacher().getId().equals(teacherId)) {
-            throw new IllegalArgumentException("수정 권한이 없습니다.");
+            throw new ForbiddenException("수정 권한이 없습니다.");
         }
 
         classGroup.updateClassInfo(request.getGrade(), request.getClassNum());
@@ -102,10 +105,10 @@ public class ClassGroupService {
     @Transactional
     public void deleteClass(Long classId, Long teacherId) {
         ClassGroup classGroup = classGroupRepository.findById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 반이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 반이 존재하지 않습니다."));
 
         if (!classGroup.getTeacher().getId().equals(teacherId)) {
-            throw new IllegalArgumentException("삭제 권한이 없습니다.");
+            throw new ForbiddenException("삭제 권한이 없습니다.");
         }
 
         // 해당 반에 속한 학생들도 모두 찾아서 삭제(soft delete)
@@ -121,10 +124,10 @@ public class ClassGroupService {
     // 학생 상세 조회
     public StudentDetailResponse getStudentDetail(Long classId, Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 학생이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 학생이 존재하지 않습니다."));
 
         if (!student.getClassGroup().getId().equals(classId)) {
-            throw new IllegalArgumentException("해당 반의 학생이 x");
+            throw new BadRequestException("해당 반의 해당 학생이 존재하지 않습니다.");
         }
 
         return StudentDetailResponse.from(student);
@@ -134,10 +137,10 @@ public class ClassGroupService {
     @Transactional
     public void updateStudent(Long classId, Long studentId, StudentUpdateRequest request) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 학생이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 학생이 존재하지 않습니다."));
 
         if (!student.getClassGroup().getId().equals(classId)) {
-            throw new IllegalArgumentException("해당 반의 학생이 아닙니다.");
+            throw new BadRequestException("해당 반의 학생이 아닙니다.");
         }
 
         student.updateInfo(request.getName(), request.getStudentNumber());
@@ -147,10 +150,10 @@ public class ClassGroupService {
     @Transactional
     public void deleteStudent(Long classId, Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 학생이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 학생이 존재하지 않습니다."));
 
         if (!student.getClassGroup().getId().equals(classId)) {
-            throw new IllegalArgumentException("해당 반의 학생이 아닙니다.");
+            throw new BadRequestException("해당 반의 학생이 아닙니다.");
         }
 
         studentRepository.delete(student);
