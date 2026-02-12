@@ -6,10 +6,19 @@ export interface Student {
   name: string;
   studentNumber: number;
   status: 'joined' | 'left' | 'unfocus' | 'restroom' | 'activity';
-  avatar: string; 
-  warningCount: number; 
-  awayCount: number;    
-  time: string;         
+  avatar: string;
+  warningCount: number;
+  awayCount: number;
+  time: string;
+}
+
+// 알림 엔트리 타입 (이벤트별 누적)
+export interface AlertEntry {
+  alertId: string;
+  studentId: number;
+  studentName: string;
+  status: 'unfocus' | 'left' | 'restroom' | 'activity';
+  alertTime: string;
 }
 
 // 소켓 데이터 타입
@@ -26,9 +35,9 @@ export interface SocketPayload {
 
 interface LessonState {
   participantCount: number;
-  studentList: Student[]; 
-  alertList: Student[];   
-  classMode: 'NORMAL' | 'DIGITAL'; 
+  studentList: Student[];
+  alertList: AlertEntry[];
+  classMode: 'NORMAL' | 'DIGITAL';
   isLessonStarted: boolean;
   startTime: string | null;
 }
@@ -82,40 +91,50 @@ const lessonSlice = createSlice({
       }
     },
 
-    updateStudentAlert: (state, action: PayloadAction<SocketPayload>) => {
-      const { studentId, type, totalAwayCount, totalUnfocusCount } = action.payload;
+    updateStudentAlert: (state, action: PayloadAction<SocketPayload & { alertId?: string }>) => {
+      const { studentId, type, totalAwayCount, totalUnfocusCount, alertId } = action.payload;
       const studentIndex = state.studentList.findIndex(s => s.id === studentId);
-      
-      if (studentIndex === -1) return; 
+
+      if (studentIndex === -1) return;
 
       const student = state.studentList[studentIndex];
+
+      if (type === 'FOCUS') {
+        student.status = 'joined';
+        return;
+      }
+
+      const nowTime = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
       if (type === 'UNFOCUS') {
         student.status = 'unfocus';
         if (totalUnfocusCount !== undefined) student.warningCount = totalUnfocusCount;
         else student.warningCount += 1;
-        
-        if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
-
       } else if (type === 'AWAY') {
         student.status = 'left';
         if (totalAwayCount !== undefined) student.awayCount = totalAwayCount;
         else student.awayCount += 1;
-
-        if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
-
       } else if (type === 'RESTROOM') {
         student.status = 'restroom';
-        if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
-
       } else if (type === 'ACTIVITY') {
         student.status = 'activity';
-        if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
-
-      } else if (type === 'FOCUS') {
-        student.status = 'joined';
-        state.alertList = state.alertList.filter(s => s.id !== studentId);
       }
+
+      const statusMap: Record<string, AlertEntry['status']> = {
+        'UNFOCUS': 'unfocus', 'AWAY': 'left', 'RESTROOM': 'restroom', 'ACTIVITY': 'activity'
+      };
+
+      state.alertList.push({
+        alertId: alertId || `${studentId}-${Date.now()}`,
+        studentId,
+        studentName: student.name,
+        status: statusMap[type],
+        alertTime: nowTime,
+      });
+    },
+
+    removeAlertById: (state, action: PayloadAction<string>) => {
+      state.alertList = state.alertList.filter(a => a.alertId !== action.payload);
     },
 
     setClientClassMode: (state, action: PayloadAction<'NORMAL' | 'DIGITAL'>) => {
@@ -137,14 +156,15 @@ const lessonSlice = createSlice({
   },
 });
 
-export const { 
-  setInitialStudentList, 
-  updateParticipantCount, 
-  updateStudentAlert, 
-  joinStudent, 
-  setClientClassMode, 
-  startLesson, 
-  endLesson 
+export const {
+  setInitialStudentList,
+  updateParticipantCount,
+  updateStudentAlert,
+  removeAlertById,
+  joinStudent,
+  setClientClassMode,
+  startLesson,
+  endLesson
 } = lessonSlice.actions;
 
 export default lessonSlice.reducer;
