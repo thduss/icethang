@@ -1,45 +1,44 @@
-﻿import { StyleSheet, View, Text, ActivityIndicator } from 'react-native'
+﻿import {
+  StyleSheet,
+  View,
+  Text,
+  ActivityIndicator,
+  FlatList,
+} from 'react-native'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import StudentCard from './StudentCard'
-import { getStudentsByClass, StudentItem } from '../../services/studentService'
+import { getStudentsByClass } from '../../services/studentService'
 import { RootState, AppDispatch } from '../../store/stores'
 import { setStudents, clearStudents } from '../../store/slices/memberSlice'
 
+const NUM_COLUMNS = 4
+
 const StudentGrid = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useDispatch<AppDispatch>()
 
   const selectedClassId = useSelector(
     (state: RootState) => state.class.selectedClassId
   )
 
-  const students = useSelector((state: RootState) => state.member.students);
-  
+  const students = useSelector((state: RootState) => state.member.students)
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchStudents = async (classId: number) => {
-      // 새 학급을 불러오기 전에 기존 목록을 먼저 비워줍니다.
-      dispatch(clearStudents());
-      
+      dispatch(clearStudents())
       setLoading(true)
       setError(null)
-      console.log("📍 현재 요청하는 classId:", classId);
 
       try {
         const data = await getStudentsByClass(classId)
-
-        dispatch(setStudents(data)); 
-        
+        dispatch(setStudents(data))
       } catch (err: any) {
-        console.error("❌ 학생 목록 조회 에러:", err);
-        setError(
-          err?.message || '학생 목록을 불러오지 못했습니다.'
-        )
-        // 에러 시에도 목록 비우기
-        dispatch(clearStudents());
+        setError(err?.message || '학생 목록을 불러오지 못했습니다.')
+        dispatch(clearStudents())
       } finally {
         setLoading(false)
       }
@@ -48,8 +47,7 @@ const StudentGrid = () => {
     if (selectedClassId) {
       fetchStudents(selectedClassId)
     } else {
-      // 학급 선택이 해제되거나 삭제된 경우 목록 비우기
-      dispatch(clearStudents());
+      dispatch(clearStudents())
     }
   }, [selectedClassId, dispatch])
 
@@ -79,38 +77,49 @@ const StudentGrid = () => {
   }
 
   return (
-    <View style={styles.grid}>
-      {students.map((student) => (
-        <StudentCard
-          key={student.studentId}
-          name={student.studentName || (student as any).student_name}
-          number={student.studentNumber}
-          onPress={() => {
-            router.push({
-              pathname: '/Teacher_Statistics',
-              params: {
-                name: student.studentName,
-                number: String(student.studentNumber),
-                studentId: String(student.studentId),
-                classId: String(selectedClassId),
-              },
-            })
-          }}
-        />
-      ))}
-    </View>
+    <FlatList
+      data={students}
+      numColumns={NUM_COLUMNS}
+      keyExtractor={(item) => item.studentId.toString()}
+      contentContainerStyle={styles.list}
+      columnWrapperStyle={styles.row}
+      renderItem={({ item }) => (
+        <View style={styles.cardWrapper}>
+          <StudentCard
+            name={item.studentName}
+            number={item.studentNumber}
+            onPress={() => {
+              router.push({
+                pathname: '/Teacher_Statistics',
+                params: {
+                  name: item.studentName,
+                  number: String(item.studentNumber),
+                  studentId: String(item.studentId),
+                  classId: String(selectedClassId),
+                },
+              })
+            }}
+          />
+        </View>
+      )}
+    />
   )
 }
 
 export default StudentGrid
 
 const styles = StyleSheet.create({
-  grid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  list: {
     padding: 20,
+  },
+  row: {
     justifyContent: 'flex-start',
+    marginBottom: 20,
+  },
+  cardWrapper: {
+    flex: 1,
+    maxWidth: '25%',
+    paddingHorizontal: 10,
   },
   centerState: {
     flex: 1,
