@@ -66,7 +66,7 @@ echo "🏥 Health Check 시작..."
 echo "🔍 확인 대상: http://127.0.0.1:${TARGET_PORT}"
 
 for i in {1..15}; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${TARGET_PORT} || echo "000")
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${TARGET_PORT}/health || echo "000")
 
     if [[ "$HTTP_CODE" =~ ^2 ]]; then
         echo "✅ 서버 정상 구동 확인! (응답 코드: $HTTP_CODE)"
