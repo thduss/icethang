@@ -89,23 +89,38 @@ public class ClassSessionService {
 
             studyLogsToSave.add(studyLog);
         }
-        // 성적표 일괄 저장
-        List<StudyLog> savedLogs = studyLogRepository.saveAll(studyLogsToSave);
 
-        // saveAll을 하면 studylog 객체들에 id가 생김 -> 그걸로 연결
-        for (StudyLog savedLog : studyLogsToSave) {
-            List<ClassEventLog> connectedEvents = eventsByStudentId.get(savedLog.getStudent().getId());
-            if (connectedEvents != null) {
-                for (ClassEventLog event : connectedEvents) {
-                    event.updateStudyLog(savedLog);
+        log.info("🔎 저장할 StudyLog 객체 수: {}개", studyLogsToSave.size());
+
+        try {
+            List<StudyLog> savedLogs = studyLogRepository.saveAll(studyLogsToSave);
+
+            // 저장된 ID 확인
+            List<Long> savedIds = savedLogs.stream().map(StudyLog::getId).collect(Collectors.toList());
+            log.info("✅ DB 저장 성공! 생성된 StudyLog IDs: {}", savedIds);
+
+            // 5. 연결 업데이트
+            for (StudyLog savedLog : savedLogs) {
+                List<ClassEventLog> connectedEvents = eventsByStudentId.get(savedLog.getStudent().getId());
+                if (connectedEvents != null && !connectedEvents.isEmpty()) {
+                    for (ClassEventLog event : connectedEvents) {
+                        event.updateStudyLog(savedLog);
+                    }
+                    log.info("   -> 학생(ID:{}) 이벤트 {}개 연결 완료", savedLog.getStudent().getId(), connectedEvents.size());
                 }
             }
-        }
-        log.info("========== [수업 종료 정산 완료] ==========");
 
-        return savedLogs.stream()
+            log.info("========== [수업 종료 정산 완료] ==========");
+
+            return savedLogs.stream()
                 .map(StudyLogResponse::from)
                 .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("🚨 [Critical Error] DB 저장 중 예외 발생! 트랜잭션 롤백됨.", e);
+            throw e; // 예외를 다시 던져서 롤백 확정
+        }
+
     }
 
     private long calculateLossTime(List<ClassEventLog> events, ClassSessionEndRequest request) {
