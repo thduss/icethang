@@ -37,6 +37,12 @@ public class ClassGroupService {
     // 반 생성
     @Transactional
     public Long createClass(ClassCreateRequest request, Long teacherId) {
+
+        // 학년-반 중복 체크
+        if (classGroupRepository.existsByTeacherIdAndGradeAndClassNum(teacherId, request.getGrade(), request.getClassNum())) {
+            throw new BadRequestException("선생님께서 이미 생성하신 학급입니다.");
+        }
+
         String inviteCode;
         Auth teacher = teacherRepository.getReferenceById(teacherId);
 
