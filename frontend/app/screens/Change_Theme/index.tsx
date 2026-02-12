@@ -50,6 +50,8 @@ export default function ReusableGridScreen() {
     character: useRef<ScrollView>(null),
     theme: useRef<ScrollView>(null),
   };
+  const scrollXRef = useRef<number>(0);
+  const itemRefs = useRef<(View | null)[]>([]);
 
   const [offsets, setOffsets] = useState<Record<TabType, number>>({
     character: 0,
@@ -102,6 +104,8 @@ export default function ReusableGridScreen() {
     if (activeTab === 'character') {
       setPreviewBackgroundId(null);
     }
+    scrollXRef.current = 0;
+    itemRefs.current = [];
   }, [activeTab]);
 
   const currentItems: ThemeItem[] = useMemo(() => {
@@ -114,10 +118,15 @@ export default function ReusableGridScreen() {
     return Math.max(0, total - visible);
   }, [currentItems]);
 
+  const handleScroll = (e: any) => {
+    scrollXRef.current = e.nativeEvent.contentOffset.x;
+  };
+
   const handleScrollEnd = (tab: TabType) => (e: any) => {
     const x = e?.nativeEvent?.contentOffset?.x;
     if (typeof x !== 'number') return;
     setOffsets((prev) => ({ ...prev, [tab]: x }));
+    scrollXRef.current = x;
   };
 
   const moveScroll = (tab: TabType, direction: 'left' | 'right') => {
@@ -148,18 +157,13 @@ export default function ReusableGridScreen() {
   };
 
   const handleLockedClick = (name: string, index: number) => {
-    const containerWidth = CARD_WIDTH * VISIBLE_ITEMS + GAP * (VISIBLE_ITEMS - 1);
-    const containerStartX = (SCREEN_WIDTH - containerWidth) / 2;
-    const currentOffset = offsets[activeTab];
-    
-    const cardLeftX = containerStartX + index * (CARD_WIDTH + GAP) - currentOffset;
-    const cardCenterX = cardLeftX + CARD_WIDTH / 2;
-    const cardTopY = 180;
-
-    setPopupPosition({ x: cardCenterX, y: cardTopY });
-    setSelectedLockedName(name);
-    setShowLockModal(true);
-    setTimeout(() => setShowLockModal(false), 2000);
+    itemRefs.current[index]?.measure((x, y, width, height, pageX, pageY) => {
+      // pageX, pageY: 화면 기준 절대 좌표
+      setPopupPosition({ x: pageX + width / 2, y: pageY });
+      setSelectedLockedName(name);
+      setShowLockModal(true);
+      setTimeout(() => setShowLockModal(false), 4000);
+    });
   };
 
   const handleSelect = async (item: ThemeItem) => {
@@ -262,7 +266,10 @@ export default function ReusableGridScreen() {
               snapToInterval={PAGE_WIDTH}
               decelerationRate="fast"
               contentContainerStyle={styles.scrollContent}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
               onMomentumScrollEnd={handleScrollEnd(activeTab)}
+              onScrollEndDrag={handleScrollEnd(activeTab)}
             >
               {currentItems.map((item, index) => {
                 const targetId = Number(item.assetUrl);       
@@ -280,6 +287,7 @@ export default function ReusableGridScreen() {
                 return (
                   <Pressable
                     key={`${item.category}-${targetId}-${index}`}
+                    ref={(el) => (itemRefs.current[index] = el)}
                     onPress={() => isLocked ? handleLockedClick(item.name, index) : handleSelect(item)}
                     style={[styles.card, isSelected && styles.selectedCard]}
                   >
