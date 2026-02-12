@@ -16,4 +16,7 @@ public interface ClassGroupRepository extends JpaRepository<ClassGroup, Long>{
 
     // 중복체크
     boolean existsByInviteCode(String inviteCode);
+
+    // 특정 학년/반이 이미 존재하는지 확인
+    boolean existsByTeacherIdAndGradeAndClassNum(Long teacherId, int grade, int classNum);
 }
