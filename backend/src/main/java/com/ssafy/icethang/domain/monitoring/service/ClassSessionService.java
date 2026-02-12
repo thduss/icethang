@@ -10,11 +10,11 @@ import com.ssafy.icethang.domain.student.entity.Student;
 import com.ssafy.icethang.domain.student.entity.StudyLog;
 import com.ssafy.icethang.domain.student.repository.StudentRepository;
 import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ public class ClassSessionService {
 
     public void startClass(Long classId) {
         if (!classGroupRepository.existsById(classId)) {
-            throw new IllegalArgumentException("존재하지 않는 반입니다.");
+            throw new ResourceNotFoundException("존재하지 않는 반입니다.");
         }
         log.info("Class {} 수업 시작 신호 수신", classId);
     }

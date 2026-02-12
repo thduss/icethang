@@ -13,17 +13,18 @@ import com.ssafy.icethang.domain.student.repository.StudentRepository;
 import com.ssafy.icethang.domain.student.repository.StudyLogRepository;
 import com.ssafy.icethang.domain.theme.entity.Theme;
 import com.ssafy.icethang.domain.theme.repository.ThemeRepository;
+import com.ssafy.icethang.global.exception.BadRequestException;
+import com.ssafy.icethang.global.exception.DuplicateResourceException;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import com.ssafy.icethang.global.redis.RedisService;
 import com.ssafy.icethang.global.security.TokenProvider;
 import com.ssafy.icethang.global.security.UserPrincipal;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -49,16 +50,16 @@ public class StudentService {
     @Transactional
     public TokenResponseDto join(StudentJoinRequest request){
         if(studentRepository.existsByDeviceUuid(request.getDeviceUuid())){
-            throw new IllegalStateException("이미 등록된 기기.");
+            throw new DuplicateResourceException("이미 등록된 기기.");
         }
         // 초대코드로 반 찾기
         ClassGroup classGroup = classGroupRepository.findByInviteCode(request.getInviteCode())
-                .orElseThrow(() -> new IllegalArgumentException("없는 초대코드 입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("없는 초대코드 입니다."));
 
         Auth teacher = classGroup.getTeacher();
 
         if (teacher == null) {
-            throw new IllegalArgumentException("해당 반의 선생님 정보가 유효하지 않습니다.");
+            throw new BadRequestException("해당 반의 선생님 정보가 유효하지 않습니다.");
         }
 
         // 학교 정보 기입
@@ -67,13 +68,13 @@ public class StudentService {
             schoolId = teacher.getSchool().getSchoolId();
         } else {
             // 선생님이 학교 정보 없이 가입된 경우
-            throw new IllegalStateException("선생님의 학교 정보가 설정되지 않았습니다.");
+            throw new BadRequestException("선생님의 학교 정보가 설정되지 않았습니다.");
         }
 
         Theme defaultBackground = themeRepository.findById(DEFAULT_BACKGROUND_ID)
-                .orElseThrow(() -> new IllegalArgumentException("기본 배경(ID:1)이 DB에 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("기본 배경(ID:1)이 DB에 존재하지 않습니다."));
         Theme defaultCharacter = themeRepository.findById(DEFAULT_CHARACTER_ID)
-                .orElseThrow(() -> new IllegalArgumentException("기본 캐릭터(ID:9)가 DB에 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("기본 캐릭터(ID:9)가 DB에 존재하지 않습니다."));
 
         Student student = Student.builder()
                 .name(request.getName())
@@ -94,15 +95,15 @@ public class StudentService {
     public TokenResponseDto autoLogin(StudentLoginRequest request) {
         // UUID가 null인지 확인
         if (request.getDeviceUuid() == null || request.getDeviceUuid().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "기기 식별 번호가 누락되었습니다.");
+            throw new BadRequestException("기기 식별 번호가 누락되었습니다.");
         }
         // 기기로 학생 찾기
         Student student = studentRepository.findByDeviceUuid(request.getDeviceUuid())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 기기를 찾을 수 없어요!"));
+                .orElseThrow(() -> new ResourceNotFoundException( "해당 기기를 찾을 수 없어요!"));
 
         ClassGroup classGroup = student.getClassGroup();
         if (classGroup == null) {
-            throw new IllegalStateException("소속된 반이 없습니다.");
+            throw new BadRequestException("소속된 반이 없습니다.");
         }
 
         return createStudentToken(student);
@@ -146,7 +147,7 @@ public class StudentService {
         String deviceUuid = authentication.getName();
 
         Student student = studentRepository.findByDeviceUuid(deviceUuid)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 토큰(학생)입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("유효하지 않은 토큰(학생)입니다."));
 
         return StudentLoginResponse.builder()
                 .studentId(student.getId())
@@ -163,16 +164,11 @@ public class StudentService {
 
         // 학생 조회
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 학생을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 학생을 찾을 수 없습니다."));
 
         return studyLogRepository.findAllByStudentOrderByCreatedAtDesc(student)
                 .stream()
                 .map(StudyLogResponse::from)
                 .collect(Collectors.toList());
     }
-
-    //--------------------------------------------
-    // 소켓
-
-    // 속도 -> 비동기 처리 고민
 }
