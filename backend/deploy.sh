@@ -68,7 +68,7 @@ echo "🔍 확인 대상: http://127.0.0.1:${TARGET_PORT}"
 for i in {1..15}; do
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${TARGET_PORT} || echo "000")
 
-    if [ "$HTTP_CODE" != "000" ]; then
+    if [[ "$HTTP_CODE" =~ ^2 ]]; then
         echo "✅ 서버 정상 구동 확인! (응답 코드: $HTTP_CODE)"
         break
     else
@@ -78,7 +78,6 @@ for i in {1..15}; do
 
     if [ $i -eq 15 ]; then
         echo "❌ 배포 실패: 서버가 응답하지 않습니다."
-        echo "💡 힌트: 로컬에서 'curl -v http://127.0.0.1:${TARGET_PORT}'를 실행해서 원인을 확인해보세요."
         docker stop ${CONTAINER_NAME}
         exit 1
     fi
@@ -96,11 +95,11 @@ echo "set \$${VAR_NAME} http://127.0.0.1:${TARGET_PORT};" | sudo tee ${NGINX_CON
 sudo nginx -s reload
 
 # 7. 이전 컨테이너 정리
-if [ ! -z "$CURRENT_PORT" ]; then
+if [ ! -z "$CURRENT_PORT" ] && [ "$CURRENT_PORT" != "$TARGET_PORT" ]; then
     OLD_CONTAINER="${PROFILE}-server-${CURRENT_PORT}"
     echo "🗑️ 이전 컨테이너 종료: ${OLD_CONTAINER}"
-    docker stop ${OLD_CONTAINER}
-    docker rm ${OLD_CONTAINER}
+    sudo docker stop ${OLD_CONTAINER} 2>/dev/null || true
+    sudo docker rm ${OLD_CONTAINER} 2>/dev/null || true
 fi
 
 echo "🎉 배포 성공!"

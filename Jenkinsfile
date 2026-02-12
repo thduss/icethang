@@ -83,11 +83,10 @@ stages {
                 dir("${BACKEND_DIR}") {
                     echo "🚀 Blue-Green 배포 스크립트 실행"
                     
-                    // 스크립트에 실행 권한 주기
-                    sh 'chmod +x deploy.sh'
-                    
-                    // 스크립트 실행 (인자: 프로필, 이미지태그)
-                    sh "./deploy.sh ${env.SPRING_PROFILE} ${env.IMAGE_TAG}"
+                    sshagent (credentials: ['host-ssh-key']) {
+                        sh "scp -o StrictHostKeyChecking=no deploy.sh ubuntu@172.17.0.1:/home/ubuntu/deploy.sh"
+                        sh "ssh -o StrictHostKeyChecking=no ubuntu@172.17.0.1 'chmod +x /home/ubuntu/deploy.sh && /home/ubuntu/deploy.sh ${env.SPRING_PROFILE} ${env.IMAGE_TAG}'"
+                    }
                 }
             }
         }
