@@ -7,6 +7,8 @@ import com.ssafy.icethang.domain.theme.entity.StudentUnlockedTheme;
 import com.ssafy.icethang.domain.theme.entity.Theme;
 import com.ssafy.icethang.domain.theme.repository.StudentUnlockedThemeRepository;
 import com.ssafy.icethang.domain.theme.repository.ThemeRepository;
+import com.ssafy.icethang.global.exception.BadRequestException;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,7 +27,7 @@ public class ThemeService {
     // 보유한 캐릭터 조회
     public List<ThemeResponse> getMyCharacters(Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("학생 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("학생 없음"));
 
         // 테이블에서 해당 학생의 보유 목록 조회
         return unlockedThemeRepository.findByStudentId(studentId).stream()
@@ -63,19 +65,19 @@ public class ThemeService {
     @Transactional
     public void equipCharacter(Long studentId, Long themeId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("학생 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("학생 없음"));
 
         Theme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new IllegalArgumentException("아이템 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("아이템 없음"));
 
-        // 검증 1: 카테고리가 캐릭터가 맞는지
+        // 카테고리가 캐릭터가 맞는지
         if (theme.getCategory() != Theme.ThemeCategory.CHARACTER) {
-            throw new IllegalArgumentException("캐릭터 아이템이 아닙니다.");
+            throw new BadRequestException("캐릭터 아이템이 아닙니다.");
         }
 
-        // 검증 2: 보유하고 있는지 (StudentUnlockedTheme 테이블 조회)
+        // 보유하고 있는지 (StudentUnlockedTheme 테이블 조회)
         if (!unlockedThemeRepository.existsByStudentIdAndThemeId(studentId, themeId)) {
-            throw new IllegalStateException("보유하지 않은 캐릭터입니다.");
+            throw new BadRequestException("보유하지 않은 캐릭터입니다.");
         }
 
         student.equipCharacter(theme);
@@ -85,14 +87,14 @@ public class ThemeService {
     @Transactional
     public void equipBackground(Long studentId, Long themeId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("학생 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("학생 없음"));
 
         Theme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new IllegalArgumentException("아이템 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("아이템 없음"));
 
-        // 검증: 카테고리가 배경이 맞는지
+        // 카테고리가 배경이 맞는지
         if (theme.getCategory() != Theme.ThemeCategory.BACKGROUND) {
-            throw new IllegalArgumentException("배경 아이템이 아닙니다.");
+            throw new BadRequestException("배경 아이템이 아닙니다.");
         }
 
         student.equipBackground(theme);
@@ -134,11 +136,11 @@ public class ThemeService {
 
         Student student = studentRepository.getReferenceById(studentId);
         Theme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new IllegalArgumentException("아이템 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("아이템 없음"));
 
         // 캐릭터인지 검증 (배경은 Unlock 개념 없으므로 막음)
         if (theme.getCategory() != Theme.ThemeCategory.CHARACTER) {
-            throw new IllegalArgumentException("캐릭터만 해제금지할 수 있습니다.");
+            throw new BadRequestException("캐릭터만 해제금지할 수 있습니다.");
         }
 
         StudentUnlockedTheme newUnlock = StudentUnlockedTheme.builder()

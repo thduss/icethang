@@ -6,6 +6,8 @@ import com.ssafy.icethang.domain.timetable.dto.request.TimetableRequest;
 import com.ssafy.icethang.domain.timetable.dto.response.TimetableResponse;
 import com.ssafy.icethang.domain.timetable.entity.Timetable;
 import com.ssafy.icethang.domain.timetable.repository.TimetableRepository;
+import com.ssafy.icethang.global.exception.DuplicateResourceException;
+import com.ssafy.icethang.global.exception.ResourceNotFoundException;
 import com.ssafy.icethang.global.utill.NeisApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -52,7 +54,7 @@ public class TimetableService {
 
         // 3. 반 정보 조회
         ClassGroup group = classGroupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("반 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("반 정보를 찾을 수 없습니다."));
 
         // 4. 기존 데이터 청소
         timetableRepository.deleteByClassGroup_IdAndSem(groupId, sem);
@@ -110,7 +112,7 @@ public class TimetableService {
     @Transactional
     public void updateTimetable(Long timetableId, TimetableRequest dto) {
         Timetable timetable = timetableRepository.findById(timetableId)
-                .orElseThrow(() -> new RuntimeException("해당 시간표를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 시간표를 찾을 수 없습니다."));
 
         // Entity 내의 update 메서드 활용
         timetable.update(dto.getDayOfWeek(), dto.getClassNo(), dto.getSubject(), dto.getSem());
@@ -119,7 +121,7 @@ public class TimetableService {
     @Transactional
     public void deleteTimetable(Long timetableId) {
         if (!timetableRepository.existsById(timetableId)) {
-            throw new RuntimeException("삭제할 시간표가 존재하지 않습니다.");
+            throw new ResourceNotFoundException("삭제할 시간표가 존재하지 않습니다.");
         }
         timetableRepository.deleteById(timetableId);
     }
@@ -129,11 +131,11 @@ public class TimetableService {
     public void createTimetable(Long groupId, TimetableRequest dto) {
         // 1. 해당 그룹(반)이 존재하는지 확인
         ClassGroup classGroup = classGroupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 그룹이 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 그룹이 존재하지 않습니다."));
 
         boolean exists = timetableRepository.existsByClassGroup_IdAndDayOfWeekAndClassNo(groupId, dto.getDayOfWeek(), dto.getClassNo());
         if (exists) {
-            throw new IllegalStateException("이미 해당 교시에 수업이 등록되어 있습니다.");
+            throw new DuplicateResourceException("이미 해당 교시에는 등록된 수업이 있습니다.");
         }
 
         // 2. 새로운 시간표 엔티티 생성
