@@ -21,11 +21,14 @@ export const StudentList = ({ data }: StudentListProps) => {
   const renderItem = ({ item }: { item: Student }) => {
     const isLeft = item.status === 'left';
     const isUnfocus = item.status === 'unfocus';
+    const isRestroom = item.status === 'restroom';
+    const isActivity = item.status === 'activity';
 
-    // 배경색 설정 (이탈: 빨강 / 딴짓: 노랑 / 기본: 투명)
     let rowBackgroundColor = 'transparent';
     if (isLeft) rowBackgroundColor = '#FFF5F5';
     else if (isUnfocus) rowBackgroundColor = '#FFFDE7';
+    else if (isRestroom) rowBackgroundColor = '#E3F2FD';
+    else if (isActivity) rowBackgroundColor = '#E8F5E9';
 
     let statusText = '참여중';
     let statusColor = '#7FA864';
@@ -41,6 +44,16 @@ export const StudentList = ({ data }: StudentListProps) => {
       statusText = '딴짓';
       statusColor = '#F57C00';
       statusIcon = '⚠️';
+      displayCount = item.warningCount;
+    } else if (isRestroom) {
+      statusText = '화장실';
+      statusColor = '#1976D2';
+      statusIcon = '🚽';
+      displayCount = item.warningCount;
+    } else if (isActivity) {
+      statusText = '발표중';
+      statusColor = '#388E3C';
+      statusIcon = '✋';
       displayCount = item.warningCount;
     }
 

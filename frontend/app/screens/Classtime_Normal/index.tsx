@@ -6,7 +6,7 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
 import { useSharedValue, Worklets } from 'react-native-worklets-core';
 import { useRouter, useLocalSearchParams } from "expo-router";
-import axios from 'axios';
+import { getStudentXp } from '../../services/studentService';
 
 import ClassProgressBar from "../../components/ClassProgressBar";
 import AlertButton, { AlertButtonRef } from "../../components/AlertButton";
@@ -16,14 +16,14 @@ import ClassResultModal from "../../components/ClassResultModal";
 import LevelUpRewardModal from "../../components/LevelUpRewardModal";
 
 import { SOCKET_CONFIG } from "../../api/socket";
-import { stompClient, connectSocket, disconnectSocket, enterClass, sendAlert } from "../../utils/socket";
+import { stompClient, connectSocket, disconnectSocket, enterClass, sendAlert, sendStudentRequest } from "../../utils/socket";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/stores";
 
 type AIStatus = "FOCUS" | "BLINKING" | "MOVING" | "GAZE OFF" | "SLEEPING" | "AWAY" | "RESTROOM" | "ACTIVITY" | "UNFOCUS";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// AI 설정값 (생략 없음)
+// AI 설정값
 const MOVEMENT_DEADZONE = 1.5;
 const POS_DIFF_SCALE = 1.0;
 const MOVEMENT_THRESHOLD = 2.0;
@@ -100,10 +100,12 @@ export default function NormalClassScreen() {
   const lastHeadPose = useSharedValue<[number, number, number]>([0,0,0]);
   const smoothedNosePos = useSharedValue<[number, number] | null>(null);
   const personalEarThreshold = useSharedValue(DEFAULT_EAR_THRESHOLD);
+  const aiPaused = useSharedValue(false);
 
   const prevStatusRef = useRef<AIStatus | null>(null);
   const alertRef = useRef<AlertButtonRef>(null);
   const isExiting = useRef(false);
+  const initialXp = useRef<number>(0);
 
   const studentData = useSelector((state: RootState) => state.auth.studentData);
   const classId = params.classId ? String(params.classId) : studentData?.classId?.toString() || "1";
@@ -114,9 +116,9 @@ export default function NormalClassScreen() {
   const fetchClassResult = async () => {
     if (!studentData?.studentId) return;
     try {
-      const response = await axios.get(`/api/class/${classId}/result/${studentData.studentId}`);
-      setResultData({ focusRate: response.data.focusRate || 0, currentXP: response.data.currentXP || 0, maxXP: response.data.maxXP || 100 });
-      setHasLevelUpData(!!response.data.levelUp);
+      const data = await getStudentXp(Number(classId), studentData.studentId);
+      const gained = Math.max(0, data.currentXp - initialXp.current);
+      setResultData({ focusRate: gained, currentXP: data.currentXp, maxXP: 100 });
     } catch (error) {
       console.error("❌ 결과 조회 실패:", error);
     } finally { setIsResultVisible(true); }
@@ -124,7 +126,7 @@ export default function NormalClassScreen() {
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
-    if (model.state !== 'loaded' || isExiting.current) return;
+    if (model.state !== 'loaded' || isExiting.current || aiPaused.value) return;
     const resized = resize(frame, { scale: { width: 192, height: 192 }, pixelFormat: 'rgb', dataType: 'float32', mirror: true });
     const outputs = model.model.runSync([resized]);
 
@@ -242,10 +244,13 @@ export default function NormalClassScreen() {
 
   useEffect(() => {
     if (isSocketConnected && aiStatus !== prevStatusRef.current) {
-      if (studentData) {
-        sendAlert(Number(classId), studentData.studentId, studentData.studentName, aiStatus === "FOCUS" ? "FOCUS" : aiStatus === "AWAY" ? "AWAY" : "UNFOCUS");
+      // AI 일시정지 중, RESTROOM/ACTIVITY 상태면 전송 스킵
+      if (!aiPaused.value && aiStatus !== 'RESTROOM' && aiStatus !== 'ACTIVITY') {
+        if (studentData) {
+          sendAlert(Number(classId), studentData.studentId, studentData.studentName, aiStatus === "FOCUS" ? "FOCUS" : aiStatus === "AWAY" ? "AWAY" : "UNFOCUS");
+        }
+        if (aiStatus !== "FOCUS") alertRef.current?.triggerAlert(aiStatus);
       }
-      if (aiStatus !== "FOCUS") alertRef.current?.triggerAlert(aiStatus);
       prevStatusRef.current = aiStatus;
     }
   }, [aiStatus, isSocketConnected, studentData]);
@@ -254,18 +259,23 @@ export default function NormalClassScreen() {
     const onConnected = () => {
       setIsSocketConnected(true);
       setStudentCount(1);
-      if (studentData) { enterClass(Number(classId), studentData.studentId, studentData.studentName); }
+      if (studentData) {
+        enterClass(Number(classId), studentData.studentId, studentData.studentName);
+        getStudentXp(Number(classId), studentData.studentId)
+          .then(data => { initialXp.current = data.currentXp; })
+          .catch(() => {});
+      }
 
       stompClient.subscribe(SOCKET_CONFIG.SUBSCRIBE.STUDENT_COUNT(classId), (msg) => {
         setStudentCount(JSON.parse(msg.body).count || 0);
       });
 
-      stompClient.subscribe(SOCKET_CONFIG.SUBSCRIBE.CLASS_TOPIC(classId), (msg) => {
+      stompClient.subscribe(SOCKET_CONFIG.SUBSCRIBE.CLASS_TOPIC(classId), async (msg) => {
         const body = JSON.parse(msg.body);
         if (body.type === 'CLASS_FINISHED') {
           isExiting.current = true;
+          await fetchClassResult();
           disconnectSocket();
-          fetchClassResult();
         }
       });
 
@@ -279,8 +289,21 @@ export default function NormalClassScreen() {
   }, [classId, studentData]);
 
   const handleStudentStatusReport = (status: string) => {
-    setAiStatus(status as AIStatus);
-    if (studentData) { sendAlert(Number(classId), studentData.studentId, studentData.studentName, status as any); }
+    if (status === 'RESTROOM' || status === 'ACTIVITY') {
+      aiPaused.value = true;
+      setAiStatus(status as AIStatus);
+      if (studentData) { sendStudentRequest(Number(classId), studentData.studentId, studentData.studentName, status as any); }
+    } else {
+      setAiStatus(status as AIStatus);
+      if (studentData) { sendAlert(Number(classId), studentData.studentId, studentData.studentName, status as any); }
+    }
+  };
+
+  const handleReturn = () => {
+    aiPaused.value = false;
+    setAiStatus("FOCUS");
+    prevStatusRef.current = null;
+    if (studentData) { sendStudentRequest(Number(classId), studentData.studentId, studentData.studentName, "FOCUS"); }
   };
 
   if (!hasPermission) return <View style={styles.permissionContainer}><Text style={{color:'white'}}>카메라 권한 필요</Text></View>;
@@ -303,7 +326,7 @@ export default function NormalClassScreen() {
         <TrafficLight status={aiStatus} />
         <View style={styles.studentCountBadge}><Text style={styles.studentCountText}>👥 {studentCount}</Text></View>
       </View>
-      <View style={styles.alertButtonContainer}><AlertButton ref={alertRef} onStatusChange={handleStudentStatusReport} /></View>
+      <View style={styles.alertButtonContainer}><AlertButton ref={alertRef} onStatusChange={handleStudentStatusReport} onReturn={handleReturn} /></View>
 
       <CalibrationModal visible={showCalibration} onFinish={() => {}} />
 

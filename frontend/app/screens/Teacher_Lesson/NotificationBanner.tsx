@@ -31,8 +31,14 @@ export const NotificationBanner = ({ leftStudents }: NotificationBannerProps) =>
           >
             {leftStudents.map((student) => {
               const isLeft = student.status === 'left';
-              const message = isLeft ? '수업에서 이탈했습니다.' : '딴짓 중입니다!';
-              const icon = isLeft ? '🏃' : '👀';
+              const isRestroom = student.status === 'restroom';
+              const isActivity = student.status === 'activity';
+
+              let message = '딴짓 중입니다!';
+              let icon = '👀';
+              if (isLeft) { message = '수업에서 이탈했습니다.'; icon = '🏃'; }
+              else if (isRestroom) { message = '화장실에 갔습니다.'; icon = '🚽'; }
+              else if (isActivity) { message = '발표 중입니다.'; icon = '✋'; }
 
               return (
                 <View key={student.id} style={styles.messageRow}>

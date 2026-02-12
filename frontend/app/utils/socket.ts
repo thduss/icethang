@@ -108,6 +108,29 @@ export const enterClass = (classId: number, studentId: number, studentName: stri
   }
 };
 
+// 화장실/발표 등 학생 요청 알림을 topic에 직접 전송 (백엔드 /app/alert 우회)
+export const sendStudentRequest = (
+  classId: number,
+  studentId: number,
+  studentName: string,
+  type: 'RESTROOM' | 'ACTIVITY' | 'FOCUS'
+) => {
+  if (stompClient.connected) {
+    console.log(`[Socket] StudentRequest 직접 전송: ${type} -> /topic/class/${classId}`);
+    stompClient.publish({
+      destination: `/topic/class/${classId}`,
+      body: JSON.stringify({
+        classId,
+        studentId,
+        studentName,
+        type,
+      }),
+    });
+  } else {
+    console.warn(`[Socket] StudentRequest 전송 실패 (미연결): ${type}`);
+  }
+};
+
 export const sendAlert = (
   classId: number,
   studentId: number,
