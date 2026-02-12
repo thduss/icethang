@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, StatusBar, LayoutAnimation, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router'; 
@@ -11,11 +11,11 @@ import { NotificationBanner } from './NotificationBanner';
 import { StudentList } from './StudentList';
 
 import { stompClient, connectSocket, disconnectSocket, changeClassMode } from '../../utils/socket';
-import { 
-  updateStudentAlert, 
-  setClientClassMode, 
-  joinStudent, 
-  Student 
+import {
+  updateStudentAlert,
+  removeAlertById,
+  setClientClassMode,
+  joinStudent,
 } from '../../store/slices/lessonSlice';
 import { endClassSession } from '../../api/lesson';
 
@@ -32,6 +32,9 @@ const TeacherLessonScreen = () => {
 
   const { participantCount, alertList, studentList, classMode, startTime, isLessonStarted } = useSelector((state: RootState) => state.lesson);
   const token = useSelector((state: RootState) => state.auth?.accessToken);
+
+  const MIN_DISPLAY_MS = 5000;
+  const alertTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   useEffect(() => {
     const initLesson = async () => {
@@ -63,8 +66,19 @@ const TeacherLessonScreen = () => {
               if (body.type === 'ENTER') {
                 console.log('[Teacher] ENTER 처리 -> joinStudent dispatch');
                 dispatch(joinStudent(body));
-              } else if (['FOCUS', 'UNFOCUS', 'AWAY', 'RESTROOM', 'ACTIVITY'].includes(body.type)) {
+              } else if (['UNFOCUS', 'AWAY', 'RESTROOM', 'ACTIVITY'].includes(body.type)) {
                 console.log('[Teacher] 상태 알림 처리 -> updateStudentAlert dispatch, type:', body.type);
+                const alertId = `${body.studentId}-${Date.now()}`;
+                dispatch(updateStudentAlert({ ...body, alertId }));
+
+                // 개별 알림 5초 후 자동 제거
+                const timer = setTimeout(() => {
+                  dispatch(removeAlertById(alertId));
+                  alertTimersRef.current.delete(timer);
+                }, MIN_DISPLAY_MS);
+                alertTimersRef.current.add(timer);
+              } else if (body.type === 'FOCUS') {
+                console.log('[Teacher] FOCUS 처리 -> studentStatus 업데이트');
                 dispatch(updateStudentAlert(body));
               } else {
                 console.log('[Teacher] 알 수 없는 type:', body.type);
@@ -104,6 +118,8 @@ const TeacherLessonScreen = () => {
 
     return () => {
       console.log('[Teacher] useEffect cleanup - disconnectSocket 호출');
+      alertTimersRef.current.forEach(timer => clearTimeout(timer));
+      alertTimersRef.current.clear();
       disconnectSocket();
     };
   }, [classId, token, dispatch]);
@@ -179,7 +195,7 @@ const TeacherLessonScreen = () => {
         />
 
         <View style={styles.bannerWrapper}>
-           <NotificationBanner leftStudents={alertList} />
+           <NotificationBanner alerts={alertList} />
         </View>
 
         <View style={styles.listWrapper}>
