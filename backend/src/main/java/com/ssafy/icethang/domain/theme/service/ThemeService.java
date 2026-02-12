@@ -65,14 +65,14 @@ public class ThemeService {
     @Transactional
     public void equipCharacter(Long studentId, Long themeId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("학생 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("장착할 학생을 찾을 수 없습니다. ID: " + studentId));
 
         Theme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new ResourceNotFoundException("아이템 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("장착할 테마를 찾을 수 없습니다. ID: " + themeId));
 
         // 카테고리가 캐릭터가 맞는지
         if (theme.getCategory() != Theme.ThemeCategory.CHARACTER) {
-            throw new BadRequestException("캐릭터 아이템이 아닙니다.");
+            throw new BadRequestException("캐릭터 카테고리가 아닙니다. 요청된 테마 ID: " + themeId);
         }
 
         // 보유하고 있는지 (StudentUnlockedTheme 테이블 조회)
@@ -87,10 +87,10 @@ public class ThemeService {
     @Transactional
     public void equipBackground(Long studentId, Long themeId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("학생 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("해금할 학생을 찾을 수 없습니다. ID: " + studentId));
 
         Theme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new ResourceNotFoundException("아이템 없음"));
+                .orElseThrow(() -> new ResourceNotFoundException("해금할 테마를 찾을 수 없습니다. ID: " + themeId));
 
         // 카테고리가 배경이 맞는지
         if (theme.getCategory() != Theme.ThemeCategory.BACKGROUND) {
