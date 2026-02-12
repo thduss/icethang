@@ -5,7 +5,7 @@ export interface Student {
   id: number;
   name: string;
   studentNumber: number;
-  status: 'joined' | 'left' | 'unfocus'; 
+  status: 'joined' | 'left' | 'unfocus' | 'restroom' | 'activity';
   avatar: string; 
   warningCount: number; 
   awayCount: number;    
@@ -14,7 +14,7 @@ export interface Student {
 
 // 소켓 데이터 타입
 export interface SocketPayload {
-  type: 'ENTER' | 'FOCUS' | 'UNFOCUS' | 'AWAY';
+  type: 'ENTER' | 'FOCUS' | 'UNFOCUS' | 'AWAY' | 'RESTROOM' | 'ACTIVITY';
   studentId: number;
   studentName: string;
   studentNumber?: number;   
@@ -102,6 +102,14 @@ const lessonSlice = createSlice({
         if (totalAwayCount !== undefined) student.awayCount = totalAwayCount;
         else student.awayCount += 1;
 
+        if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
+
+      } else if (type === 'RESTROOM') {
+        student.status = 'restroom';
+        if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
+
+      } else if (type === 'ACTIVITY') {
+        student.status = 'activity';
         if (!state.alertList.find(s => s.id === studentId)) state.alertList.push(student);
 
       } else if (type === 'FOCUS') {

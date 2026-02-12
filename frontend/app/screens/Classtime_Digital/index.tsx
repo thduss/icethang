@@ -7,14 +7,15 @@ import { Worklets, useSharedValue } from 'react-native-worklets-core';
 import PipHandler from 'react-native-pip-android';
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
-import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { getStudentXp } from '../../services/studentService';
 
-import { stompClient, connectSocket, disconnectSocket, enterClass, sendAlert } from "../../utils/socket";
+import { stompClient, connectSocket, disconnectSocket, enterClass, sendAlert, sendStudentRequest } from "../../utils/socket";
 import { SOCKET_CONFIG  } from "../../api/socket"
 import { RootState } from "../../store/stores";
 import ClassResultModal from "../../components/ClassResultModal";
 import LevelUpRewardModal from "../../components/LevelUpRewardModal";
+import AlertButton, { AlertButtonRef } from "../../components/AlertButton";
 
 const { OverlayModule } = NativeModules;
 
@@ -130,6 +131,7 @@ export default function DigitalClassScreen() {
   const [isLevelUpVisible, setIsLevelUpVisible] = useState(false);
   const [hasLevelUpData, setHasLevelUpData] = useState(false);
   const [resultData, setResultData] = useState({ focusRate: 0, currentXP: 0, maxXP: 100 });
+  const initialXp = useRef<number>(0);
 
   // Shared Values
   const prevHeadPose = useSharedValue<[number, number, number] | null>(null);
@@ -144,7 +146,9 @@ export default function DigitalClassScreen() {
   const lastHeadPose = useSharedValue<[number, number, number]>([0,0,0]);
   const smoothedNosePos = useSharedValue<[number, number] | null>(null);
   const personalEarThreshold = useSharedValue(DEFAULT_EAR_THRESHOLD);
+  const aiPaused = useSharedValue(false);
   const prevStatusRef = useRef<string>("FOCUS");
+  const alertRef = useRef<AlertButtonRef>(null);
 
   const currentTheme = useMemo(() => ({
     character: charMap[String(themeState?.equippedCharacterId)] || "char_1",
@@ -152,10 +156,11 @@ export default function DigitalClassScreen() {
   }), [themeState]);
 
   const fetchClassResult = async () => {
+    if (!studentData?.studentId) return;
     try {
-      const response = await axios.get(`/api/class/${classId}/result/${studentData?.studentId}`);
-      setResultData({ focusRate: response.data.focusRate || 0, currentXP: response.data.currentXP || 0, maxXP: response.data.maxXP || 100 });
-      setHasLevelUpData(!!response.data.levelUp);
+      const data = await getStudentXp(Number(classId), studentData.studentId);
+      const gained = Math.max(0, data.currentXp - initialXp.current);
+      setResultData({ focusRate: gained, currentXP: data.currentXp, maxXP: 100 });
     } catch (error) {
       console.error("❌ 결과 조회 실패:", error);
     } finally {
@@ -169,6 +174,9 @@ export default function DigitalClassScreen() {
     // 1. 입장 신호 전송
     if (studentData?.studentId) {
       enterClass(Number(classId), studentData.studentId, studentData.studentName);
+      getStudentXp(Number(classId), studentData.studentId)
+        .then(data => { initialXp.current = data.currentXp; })
+        .catch(() => {});
     }
 
     // 2. 모드 변경 구독 (일반 화면 전환용)
@@ -184,14 +192,14 @@ export default function DigitalClassScreen() {
     });
 
     // 3. 수업 종료 구독
-    const classSub = stompClient.subscribe(`/topic/class/${classId}`, (msg) => {
+    const classSub = stompClient.subscribe(`/topic/class/${classId}`, async (msg) => {
       const body = JSON.parse(msg.body);
       if (body.type === 'CLASS_FINISHED') {
         isExiting.current = true;
-        disconnectSocket();
         OverlayModule?.hideOverlay();
         try { OverlayModule?.relaunchApp(); } catch(e) {}
-        setTimeout(() => fetchClassResult(), 1000);
+        await fetchClassResult();
+        disconnectSocket();
       }
     });
 
@@ -231,7 +239,7 @@ export default function DigitalClassScreen() {
   );
 
   const setStatusJS = Worklets.createRunOnJS((newStatus: string, details: string) => {
-    if (isExiting.current) return;
+    if (isExiting.current || aiPaused.value) return;
     if (prevStatusRef.current !== newStatus) {
       prevStatusRef.current = newStatus;
       setStudentStatus(newStatus);
@@ -250,9 +258,32 @@ export default function DigitalClassScreen() {
     setStudentStatus("FOCUS");
   };
 
+  const handleStudentStatusReport = (status: string) => {
+    if (status === 'RESTROOM' || status === 'ACTIVITY') {
+      aiPaused.value = true;
+      setStudentStatus(status);
+      if (stompClient.connected && studentData?.studentId) {
+        sendStudentRequest(Number(classId), studentData.studentId, studentData.studentName, status as any);
+      }
+    } else {
+      if (stompClient.connected && studentData?.studentId) {
+        sendAlert(Number(classId), studentData.studentId, studentData.studentName, status as any);
+      }
+    }
+  };
+
+  const handleReturn = () => {
+    aiPaused.value = false;
+    prevStatusRef.current = "FOCUS";
+    setStudentStatus("FOCUS");
+    if (stompClient.connected && studentData?.studentId) {
+      sendStudentRequest(Number(classId), studentData.studentId, studentData.studentName, "FOCUS");
+    }
+  };
+
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
-    if (model.state !== 'loaded' || isExiting.current) return;
+    if (model.state !== 'loaded' || isExiting.current || aiPaused.value) return;
     const resized = resize(frame, { scale: { width: 192, height: 192 }, pixelFormat: 'rgb', dataType: 'float32', mirror: true });
     const outputs = model.model.runSync([resized]);
 
@@ -443,6 +474,9 @@ export default function DigitalClassScreen() {
       <View style={styles.coverOverlay}>
          <Image source={require('../../../assets/common_IsStudent.png')} style={styles.coverImage} resizeMode="cover" />
       </View>
+      <View style={styles.alertButtonContainer}>
+        <AlertButton ref={alertRef} onStatusChange={handleStudentStatusReport} onReturn={handleReturn} />
+      </View>
       <ClassResultModal visible={isResultVisible} onClose={() => { setIsResultVisible(false); if (hasLevelUpData) setIsLevelUpVisible(true); else router.replace('/screens/Student_Home'); }} focusRate={resultData.focusRate} currentXP={resultData.currentXP} maxXP={resultData.maxXP} />
       <LevelUpRewardModal visible={isLevelUpVisible} onClose={() => { setIsLevelUpVisible(false); router.replace('/screens/Student_Home'); }} />
     </View>
@@ -454,4 +488,5 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
   coverOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 999, backgroundColor: 'black' },
   coverImage: { width: '100%', height: '100%' },
+  alertButtonContainer: { position: 'absolute', top: 50, right: 30, zIndex: 1000 },
 });
