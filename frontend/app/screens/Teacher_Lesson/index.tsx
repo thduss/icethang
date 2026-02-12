@@ -30,7 +30,7 @@ const TeacherLessonScreen = () => {
   const subject = params.subject ? String(params.subject) : "";
   const classNo = params.classNo ? Number(params.classNo) : 0;
 
-  const { participantCount, alertList, studentList, classMode, startTime } = useSelector((state: RootState) => state.lesson);
+  const { participantCount, alertList, studentList, classMode, startTime, isLessonStarted } = useSelector((state: RootState) => state.lesson);
   const token = useSelector((state: RootState) => state.auth?.accessToken);
 
   useEffect(() => {
@@ -116,7 +116,9 @@ const TeacherLessonScreen = () => {
   const handleToggleMode = () => {
     const nextMode = classMode === 'NORMAL' ? 'DIGITAL' : 'NORMAL';
     console.log('[Teacher] 모드 변경 요청:', classMode, '->', nextMode);
-    changeClassMode(classId, nextMode);
+    if (isLessonStarted) {
+      changeClassMode(classId, nextMode);
+    }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     dispatch(setClientClassMode(nextMode));
   };
