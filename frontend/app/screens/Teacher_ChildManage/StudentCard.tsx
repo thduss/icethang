@@ -28,13 +28,12 @@ export default StudentCard
 const styles = StyleSheet.create({
 
   card: {
-    width: 180,
-    height: 220,
+    width: '100%',
+    aspectRatio: 0.82,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 12,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -42,8 +41,8 @@ const styles = StyleSheet.create({
   },
 
   image: {
-    width: 120,
-    height: 120,
+    width: '65%',
+    height: '55%',
     marginBottom: 12,
   },
 
@@ -53,9 +52,9 @@ const styles = StyleSheet.create({
   },
 
   titleWrapper: {
-    paddingHorizontal: 15,   
-    paddingVertical: 8, 
-    backgroundColor: '#f0e3ba', 
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    backgroundColor: '#f0e3ba',
     borderRadius: 30,
   },
 })
