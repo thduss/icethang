@@ -8,7 +8,8 @@ import PipHandler from 'react-native-pip-android';
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useSelector } from "react-redux";
 import * as SecureStore from 'expo-secure-store';
-import { getStudentXp } from '../../services/studentService';
+import { getStudentXp, getStudentLogs } from '../../services/studentService';
+import { LEVEL_RULES } from '../../constants/levelRules';
 
 import { stompClient, connectSocket, disconnectSocket, enterClass, sendAlert, sendStudentRequest } from "../../utils/socket";
 import { SOCKET_CONFIG  } from "../../api/socket"
@@ -131,7 +132,6 @@ export default function DigitalClassScreen() {
   const [isLevelUpVisible, setIsLevelUpVisible] = useState(false);
   const [hasLevelUpData, setHasLevelUpData] = useState(false);
   const [resultData, setResultData] = useState({ focusRate: 0, currentXP: 0, maxXP: 100 });
-  const initialXp = useRef<number>(0);
 
   // Shared Values
   const prevHeadPose = useSharedValue<[number, number, number] | null>(null);
@@ -158,9 +158,21 @@ export default function DigitalClassScreen() {
   const fetchClassResult = async () => {
     if (!studentData?.studentId) return;
     try {
-      const data = await getStudentXp(Number(classId), studentData.studentId);
-      const gained = Math.max(0, data.currentXp - initialXp.current);
-      setResultData({ focusRate: gained, currentXP: data.currentXp, maxXP: 100 });
+      const [xpData, logs] = await Promise.all([
+        getStudentXp(Number(classId), studentData.studentId),
+        getStudentLogs(Number(classId), studentData.studentId),
+      ]);
+
+      const latestLog = logs.length > 0 ? logs[0] : null;
+      const gained = latestLog?.focusRate ?? 0;
+
+      const currentLevel = xpData.currentLevel;
+      const levelXp = LEVEL_RULES[currentLevel] ?? 0;
+      const nextLevelXp = LEVEL_RULES[currentLevel + 1] ?? levelXp;
+      const maxXpForLevel = nextLevelXp - levelXp || 1;
+
+      const xpInLevel = xpData.currentXp - levelXp;
+      setResultData({ focusRate: gained, currentXP: xpInLevel + gained, maxXP: maxXpForLevel });
     } catch (error) {
       console.error("❌ 결과 조회 실패:", error);
     } finally {
@@ -174,9 +186,6 @@ export default function DigitalClassScreen() {
     // 1. 입장 신호 전송
     if (studentData?.studentId) {
       enterClass(Number(classId), studentData.studentId, studentData.studentName);
-      getStudentXp(Number(classId), studentData.studentId)
-        .then(data => { initialXp.current = data.currentXp; })
-        .catch(() => {});
     }
 
     // 2. 모드 변경 구독 (일반 화면 전환용)

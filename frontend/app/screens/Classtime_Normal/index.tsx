@@ -6,7 +6,8 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
 import { useSharedValue, Worklets } from 'react-native-worklets-core';
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { getStudentXp } from '../../services/studentService';
+import { getStudentXp, getStudentLogs } from '../../services/studentService';
+import { LEVEL_RULES } from '../../constants/levelRules';
 
 import ClassProgressBar from "../../components/ClassProgressBar";
 import AlertButton, { AlertButtonRef } from "../../components/AlertButton";
@@ -105,7 +106,6 @@ export default function NormalClassScreen() {
   const prevStatusRef = useRef<AIStatus | null>(null);
   const alertRef = useRef<AlertButtonRef>(null);
   const isExiting = useRef(false);
-  const initialXp = useRef<number>(0);
 
   const studentData = useSelector((state: RootState) => state.auth.studentData);
   const classId = params.classId ? String(params.classId) : studentData?.classId?.toString() || "1";
@@ -116,9 +116,21 @@ export default function NormalClassScreen() {
   const fetchClassResult = async () => {
     if (!studentData?.studentId) return;
     try {
-      const data = await getStudentXp(Number(classId), studentData.studentId);
-      const gained = Math.max(0, data.currentXp - initialXp.current);
-      setResultData({ focusRate: gained, currentXP: data.currentXp, maxXP: 100 });
+      const [xpData, logs] = await Promise.all([
+        getStudentXp(Number(classId), studentData.studentId),
+        getStudentLogs(Number(classId), studentData.studentId),
+      ]);
+
+      const latestLog = logs.length > 0 ? logs[0] : null;
+      const gained = latestLog?.focusRate ?? 0;
+
+      const currentLevel = xpData.currentLevel;
+      const levelXp = LEVEL_RULES[currentLevel] ?? 0;
+      const nextLevelXp = LEVEL_RULES[currentLevel + 1] ?? levelXp;
+      const maxXpForLevel = nextLevelXp - levelXp || 1;
+
+      const xpInLevel = xpData.currentXp - levelXp;
+      setResultData({ focusRate: gained, currentXP: xpInLevel + gained, maxXP: maxXpForLevel });
     } catch (error) {
       console.error("❌ 결과 조회 실패:", error);
     } finally { setIsResultVisible(true); }
@@ -261,9 +273,6 @@ export default function NormalClassScreen() {
       setStudentCount(1);
       if (studentData) {
         enterClass(Number(classId), studentData.studentId, studentData.studentName);
-        getStudentXp(Number(classId), studentData.studentId)
-          .then(data => { initialXp.current = data.currentXp; })
-          .catch(() => {});
       }
 
       stompClient.subscribe(SOCKET_CONFIG.SUBSCRIBE.STUDENT_COUNT(classId), (msg) => {
