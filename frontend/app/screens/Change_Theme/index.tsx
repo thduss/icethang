@@ -52,6 +52,9 @@ export default function ReusableGridScreen() {
   };
   const scrollXRef = useRef<number>(0);
   const itemRefs = useRef<(View | null)[]>([]);
+  const isMounted = useRef(true);
+  const lockModalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
 
   const [offsets, setOffsets] = useState<Record<TabType, number>>({
     character: 0,
@@ -105,8 +108,13 @@ export default function ReusableGridScreen() {
       setPreviewBackgroundId(null);
     }
     scrollXRef.current = 0;
-    itemRefs.current = [];
   }, [activeTab]);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const currentItems: ThemeItem[] = useMemo(() => {
     return activeTab === 'character' ? allCharacters : allBackgrounds;
@@ -156,17 +164,37 @@ export default function ReusableGridScreen() {
     return isSelected ? localItem.imageActive : localItem.imageInactive;
   };
 
+  const hideLockModal = () => {
+    if (lockModalTimeoutRef.current) {
+      clearTimeout(lockModalTimeoutRef.current);
+      lockModalTimeoutRef.current = null;
+    }
+    setShowLockModal(false);
+  };
+
   const handleLockedClick = (name: string, index: number) => {
+    const now = Date.now();
+    lastClickTimeRef.current = now;
+    hideLockModal();
+
     itemRefs.current[index]?.measure((x, y, width, height, pageX, pageY) => {
+      if (!isMounted.current) return;
+      if (lastClickTimeRef.current !== now) return;
+
       // pageX, pageY: 화면 기준 절대 좌표
       setPopupPosition({ x: pageX + width / 2, y: pageY });
       setSelectedLockedName(name);
       setShowLockModal(true);
-      setTimeout(() => setShowLockModal(false), 4000);
+
+      lockModalTimeoutRef.current = setTimeout(() => {
+        if (isMounted.current) setShowLockModal(false);
+      }, 4000);
     });
   };
 
   const handleSelect = async (item: ThemeItem) => {
+    hideLockModal();
+
     if (!studentId) {
       console.error('❌ studentId가 없습니다.');
       return;
@@ -195,8 +223,12 @@ export default function ReusableGridScreen() {
         })
       ).unwrap();
 
+      if (!isMounted.current) return;
+
       console.log(`✅ [완료] ${item.category} ID: ${targetId} 장착 완료`);
     } catch (e: any) {
+      if (!isMounted.current) return;
+
       console.error('❌ 장착 실패 - 상세 정보:', {
         message: e?.message,
         status: e?.response?.status,
@@ -227,18 +259,21 @@ export default function ReusableGridScreen() {
     : null;
   const previewItem = previewCharacter ? itemData[Number(previewCharacter.assetUrl)] : null;
 
+  const isLeftDisabled = offsets[activeTab] <= 0;
+  const isRightDisabled = offsets[activeTab] >= maxOffset - 1;
+
   return (
     <ImageBackground source={background} style={styles.container}>
       <View style={styles.toggleWrapper}>
         <Pressable
-          onPress={() => setActiveTab('character')}
+          onPress={() => { setActiveTab('character'); hideLockModal(); }}
           style={[styles.topBtn, activeTab !== 'character' && styles.topBtnInactive]}
         >
           <Text style={styles.topBtnText}>캐릭터</Text>
         </Pressable>
 
         <Pressable
-          onPress={() => setActiveTab('theme')}
+          onPress={() => { setActiveTab('theme'); hideLockModal(); }}
           style={[styles.topBtn, activeTab !== 'theme' && styles.topBtnInactive]}
         >
           <Text style={styles.topBtnText}>테마</Text>
@@ -253,9 +288,15 @@ export default function ReusableGridScreen() {
         </View>
 
         <View style={styles.carouselWrapper}>
-          <Pressable style={styles.arrowBtn} onPress={() => moveScroll(activeTab, 'left')}>
-            <Text style={styles.arrowText}>◀</Text>
-          </Pressable>
+          {activeTab === 'character' && (
+            <Pressable
+              style={[styles.arrowBtn, isLeftDisabled && styles.arrowBtnDisabled]}
+              onPress={() => { if (!isLeftDisabled) { moveScroll(activeTab, 'left'); hideLockModal(); } }}
+              disabled={isLeftDisabled}
+            >
+              <Text style={[styles.arrowText, isLeftDisabled && styles.arrowTextDisabled]}>◀</Text>
+            </Pressable>
+          )}
 
           <View style={styles.scrollViewContainer}>
             <ScrollView
@@ -287,7 +328,7 @@ export default function ReusableGridScreen() {
                 return (
                   <Pressable
                     key={`${item.category}-${targetId}-${index}`}
-                    ref={(el) => (itemRefs.current[index] = el)}
+                    ref={(el) => { itemRefs.current[index] = el; }}
                     onPress={() => isLocked ? handleLockedClick(item.name, index) : handleSelect(item)}
                     style={[styles.card, isSelected && styles.selectedCard]}
                   >
@@ -315,9 +356,15 @@ export default function ReusableGridScreen() {
             </ScrollView>
           </View>
 
-          <Pressable style={styles.arrowBtn} onPress={() => moveScroll(activeTab, 'right')}>
-            <Text style={styles.arrowText}>▶</Text>
-          </Pressable>
+          {activeTab === 'character' && (
+            <Pressable
+              style={[styles.arrowBtn, isRightDisabled && styles.arrowBtnDisabled]}
+              onPress={() => { if (!isRightDisabled) { moveScroll(activeTab, 'right'); hideLockModal(); } }}
+              disabled={isRightDisabled}
+            >
+              <Text style={[styles.arrowText, isRightDisabled && styles.arrowTextDisabled]}>▶</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -438,6 +485,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#D6C29A',
     fontWeight: 'bold',
+  },
+
+  arrowBtnDisabled: {
+    opacity: 0.3,
+  },
+  arrowTextDisabled: {
+    color: '#BDBDBD',
   },
 
   card: {
