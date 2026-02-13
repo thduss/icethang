@@ -1,7 +1,8 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native'
+import { useMemo } from 'react'
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { WeeklyStat } from 'app/store/slices/statisticsSlice'
 
-const CHART_HEIGHT = 150
+const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI'] as const
 
 interface WeekRange {
   start: Date
@@ -14,42 +15,62 @@ interface WeeklyStatisticsProps {
   data: WeeklyStat[]
 }
 
-// 요일 변환 헬퍼 함수
+interface NormalizedWeeklyStat {
+  dayOfWeek: (typeof WEEKDAYS)[number]
+  averageFocusRate: number
+}
+
 const mapDayToKorean = (day: string) => {
   const dayMap: Record<string, string> = {
-    'MON': '월', 'TUE': '화', 'WED': '수', 'THU': '목', 'FRI': '금',
+    MON: '월',
+    TUE: '화',
+    WED: '수',
+    THU: '목',
+    FRI: '금',
   }
   return dayMap[day] || day
 }
 
-const filterWeekdays = (data: WeeklyStat[]) =>
-  data.filter(
-    (item) => item.dayOfWeek !== 'SAT' && item.dayOfWeek !== 'SUN'
-  )
+const clampPercentage = (value: number) => Math.min(100, Math.max(0, value))
 
-const WeeklyStatistics = ({
-  weekRange,
-  onPressCalendar,
-  data,
-}: WeeklyStatisticsProps) => {
-  const weekdayData = filterWeekdays(data)
+const normalizeWeekdayData = (data: WeeklyStat[]): NormalizedWeeklyStat[] =>
+  WEEKDAYS.map((day) => {
+    const found = data.find((item) => item.dayOfWeek === day)
+    return {
+      dayOfWeek: day,
+      averageFocusRate: clampPercentage(Number(found?.averageFocusRate ?? 0)),
+    }
+  })
 
-  const average = weekdayData.length > 0
-    ? weekdayData.reduce((sum, d) =>
-      sum + d.averageFocusRate, 0) / weekdayData.length
-    : 0
+const WeeklyStatistics = ({ weekRange, onPressCalendar, data }: WeeklyStatisticsProps) => {
+  const { width } = useWindowDimensions()
+  const isCompact = width < 900
+  const chartHeight = Math.max(120, Math.min(180, width * 0.16))
+  const barWidth = Math.max(16, Math.min(44, width * 0.036))
+  const titleFontSize = Math.max(18, Math.min(26, width * 0.026))
+  const percentFontSize = Math.max(16, Math.min(22, width * 0.021))
+  const dayFontSize = Math.max(18, Math.min(28, width * 0.026))
+  const chartContentHeight = chartHeight + percentFontSize + dayFontSize + 28
 
-  const bestDay = weekdayData.length > 0
-    ? weekdayData.reduce((prev, curr) =>
-      curr.averageFocusRate > prev.averageFocusRate ? curr : prev)
-    : null
+  const weekdayData = useMemo(() => normalizeWeekdayData(data), [data])
+  const average =
+    weekdayData.length > 0
+      ? weekdayData.reduce((sum, d) => sum + d.averageFocusRate, 0) / weekdayData.length
+      : 0
+
+  const bestDay = useMemo(() => {
+    if (weekdayData.length === 0) return null
+    const result = weekdayData.reduce((prev, curr) =>
+      curr.averageFocusRate > prev.averageFocusRate ? curr : prev
+    )
+    return result.averageFocusRate > 0 ? result : null
+  }, [weekdayData])
 
   return (
     <View style={styles.wrapper}>
-      {/* ───── 상단 헤더 ───── */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.headerText}>
+          <Text style={[styles.headerText, { fontSize: titleFontSize }]}>
             {weekRange
               ? `주간 추세: ${formatDate(weekRange.start)} - ${formatDate(weekRange.end)}`
               : '날짜를 선택해주세요'}
@@ -57,44 +78,40 @@ const WeeklyStatistics = ({
 
           {onPressCalendar && (
             <Pressable onPress={onPressCalendar}>
-              <Text style={styles.calendarIcon}>📅</Text>
+              <Text style={[styles.calendarIcon, { fontSize: titleFontSize + 2 }]}>📅</Text>
             </Pressable>
           )}
         </View>
       </View>
 
-      {!weekRange || weekdayData.length === 0 ? (
+      {!weekRange ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>
-            {!weekRange ? '달력 아이콘을 눌러 날짜를 선택하세요' : '데이터를 불러오는 중입니다...'}
-          </Text>
+          <Text style={styles.emptyText}>달력 아이콘을 눌러 날짜를 선택하세요</Text>
         </View>
       ) : (
         <>
-          {/* 그래프 카드 */}
-          <View style={styles.chartCard}>
-            <View style={styles.chart}>
+          <View style={[styles.chartCard, { paddingHorizontal: isCompact ? 8 : 14 }]}>
+            <View style={[styles.chart, { height: chartContentHeight }]}>
               {weekdayData.map((item) => (
                 <View key={item.dayOfWeek} style={styles.barWrap}>
-                  <Text style={styles.percentText}>{item.averageFocusRate.toFixed(0)}%</Text>
+                  <Text style={[styles.percentText, { fontSize: percentFontSize }]}>
+                    {item.averageFocusRate.toFixed(0)}%
+                  </Text>
 
-                  <View style={styles.barContainer}>
+                  <View style={[styles.barContainer, { height: chartHeight }]}>
                     <View
                       style={[
                         styles.bar,
                         {
-
-                          height: item.averageFocusRate > 0
-                            ? (item.averageFocusRate / 100) * CHART_HEIGHT
-                            : 2,
-                          backgroundColor:
-                            item.averageFocusRate > 70 ? '#5E79A8' : '#A89B5E'
+                          width: barWidth,
+                          height: item.averageFocusRate > 0 ? (item.averageFocusRate / 100) * chartHeight : 2,
+                          backgroundColor: item.averageFocusRate >= 70 ? '#5E79A8' : '#A89B5E',
                         },
                       ]}
                     />
                   </View>
 
-                  <Text style={styles.dayLabel}>
+                  <Text style={[styles.dayLabel, { fontSize: dayFontSize }]}>
                     {mapDayToKorean(item.dayOfWeek)}
                   </Text>
                 </View>
@@ -102,19 +119,18 @@ const WeeklyStatistics = ({
             </View>
           </View>
 
-          {/* 요약 카드 */}
           <View style={styles.summaryRow}>
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>주간 평균</Text>
-              <Text style={styles.summaryValue}>
-                {average.toFixed(1)}%
-              </Text>
+              <Text style={styles.summaryValue}>{average.toFixed(1)}%</Text>
             </View>
 
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>최고 요일</Text>
               <Text style={styles.summaryValue}>
-                {bestDay ? `${mapDayToKorean(bestDay.dayOfWeek)}요일(${bestDay.averageFocusRate.toFixed(1)}%)` : '-'}
+                {bestDay
+                  ? `${mapDayToKorean(bestDay.dayOfWeek)}요일(${bestDay.averageFocusRate.toFixed(1)}%)`
+                  : '-'}
               </Text>
             </View>
           </View>
@@ -134,105 +150,82 @@ const formatDate = (date: Date) => {
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: 8
+    marginTop: 8,
   },
-
   emptyWrap: {
     alignItems: 'center',
-    marginVertical: 32
+    marginVertical: 32,
   },
-
   emptyText: {
-    color: '#999'
+    color: '#999',
   },
-
   header: {
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 12,
   },
-
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10
+    gap: 10,
   },
-
   headerText: {
-    fontSize: 25,
     fontWeight: '700',
-    textAlign: 'center'
+    textAlign: 'center',
   },
-
   calendarIcon: {
-    fontSize: 30
+    lineHeight: 32,
   },
-
   chartCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    paddingVertical: 16,
     borderWidth: 1,
     borderColor: '#DDD',
-    height: 350,
   },
-
   chart: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: CHART_HEIGHT,
+    alignItems: 'stretch',
   },
-
   barWrap: {
+    flex: 1,
     alignItems: 'center',
-    width: 100,
-    height: 100,
+    justifyContent: 'space-between',
+    height: '100%',
   },
-
   barContainer: {
-    height: CHART_HEIGHT,     
-    justifyContent: 'flex-end', 
+    justifyContent: 'flex-end',
   },
-
   percentText: {
-    fontSize: 25,
-    marginBottom: 8,
-    fontWeight: '600'
+    marginBottom: 6,
+    fontWeight: '600',
   },
-
   bar: {
-    width: 45,
-    backgroundColor: '#5E79A8',
-    borderRadius: 4
+    borderRadius: 4,
   },
-
   dayLabel: {
-    fontSize: 25,
-    marginTop: 10
+    marginTop: 8,
+    fontWeight: '500',
   },
-
   summaryRow: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 16,
   },
-
   summaryBox: {
     flex: 1,
     backgroundColor: '#F6F3DC',
     borderRadius: 16,
     padding: 16,
-    alignItems: 'center'
+    alignItems: 'center',
   },
-
   summaryLabel: {
     fontSize: 14,
-    color: '#555'
+    color: '#555',
   },
-
   summaryValue: {
     fontSize: 18,
     fontWeight: '700',
-    marginTop: 4
+    marginTop: 4,
   },
 })
