@@ -12,7 +12,6 @@ export interface StudentLogResponse {
   date: string
   subject: string
   classNo: number
-  earnedXp: number
   focusRate: number | null
   reason: string | null
   startTime: string | null
