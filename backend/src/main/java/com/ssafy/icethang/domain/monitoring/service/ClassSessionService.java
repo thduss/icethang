@@ -72,6 +72,8 @@ public class ClassSessionService {
             int focusRate = (int) (((double)(totalSeconds - lossSeconds) / totalSeconds) * 100);
             focusRate = Math.max(0, Math.min(100, focusRate));
 
+            student.addXp(focusRate);
+
             // 자리이탈 횟수 계산
             int awayCount = (int) myEvents.stream().filter(e -> e.getEventType() == AlertType.AWAY).count();
 
