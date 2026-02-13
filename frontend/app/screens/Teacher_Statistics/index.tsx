@@ -315,6 +315,6 @@ export default index
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row', backgroundColor: '#F3EED4' },
   content: { flex: 1, padding: 16 },
-  monthlyLayout: { flex: 1, justifyContent: 'space-between' },
+  monthlyLayout: { flex: 1, justifyContent: 'space-between', minHeight: 0 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 })
