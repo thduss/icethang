@@ -96,6 +96,7 @@ const StudentGrid = () => {
                   number: String(item.studentNumber),
                   studentId: String(item.studentId),
                   classId: String(selectedClassId),
+                  hideSidebar: 'true',
                 },
               })
             }}
