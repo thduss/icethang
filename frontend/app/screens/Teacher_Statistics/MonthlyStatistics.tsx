@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { StyleSheet, Text, View, Pressable } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { MonthlyStat } from 'app/store/slices/statisticsSlice'
 
 interface MonthlyStatisticsProps {
@@ -9,6 +9,11 @@ interface MonthlyStatisticsProps {
   onSelectDate: (date: string) => void
 }
 
+interface GridLayout {
+  width: number
+  height: number
+}
+
 const getColorByScore = (score?: number) => {
   if (score === undefined || score === 0) return '#E0E0E0'
   if (score > 70) return '#2B482C'
@@ -16,14 +21,9 @@ const getColorByScore = (score?: number) => {
   return '#E6C85C'
 }
 
-const GRID_GAP = 6
-const WEEK_ROW_MARGIN_BOTTOM = 12
-const LEGEND_MARGIN_TOP = 27
-
 const MonthlyStatistics = ({ year, month, data, onSelectDate }: MonthlyStatisticsProps) => {
-  const [gridWidth, setGridWidth] = useState(0)
+  const [gridLayout, setGridLayout] = useState<GridLayout>({ width: 0, height: 0 })
 
-  // API의 배열 데이터를 { "2026-01-01": 78.5 } 형태의 객체로 변환하여 검색 속도 최적화
   const focusMap = useMemo(() => {
     const map: Record<string, number> = {}
     data.forEach((item) => {
@@ -34,33 +34,74 @@ const MonthlyStatistics = ({ year, month, data, onSelectDate }: MonthlyStatistic
 
   const daysInMonth = new Date(year, month, 0).getDate()
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay()
-  const weekDays = ['일', '월', '화', '수', '목', '금', '토']
-  const totalCells = 42
+  const weekDays = ['\uC77C', '\uC6D4', '\uD654', '\uC218', '\uBAA9', '\uAE08', '\uD1A0']
+  const usedCells = firstDayOfWeek + daysInMonth
+  const weekCount = Math.ceil(usedCells / 7)
+  const totalCells = weekCount * 7
 
-  const cellSize = useMemo(() => {
-    if (!gridWidth) return 0
-    return Math.floor((gridWidth - GRID_GAP * 6) / 7)
-  }, [gridWidth])
+  const layout = useMemo(() => {
+    const width = gridLayout.width
+    const height = gridLayout.height
+
+    if (!width) {
+      return {
+        gap: 6,
+        cellWidth: 0,
+        cellHeight: 0,
+        pillWidth: 0,
+        pillHeight: 0,
+        dayFontSize: 16,
+        weekFontSize: 18,
+      }
+    }
+
+    const gap = Math.max(4, Math.min(10, Math.floor(width * 0.01)))
+    const cellWidth = Math.max(30, Math.floor((width - gap * 6) / 7))
+    const maxCellHeight = height > 0 ? Math.floor((height - gap * (weekCount - 1)) / weekCount) : cellWidth
+    const cellHeight = Math.max(30, Math.min(cellWidth, maxCellHeight))
+    const pillBase = Math.min(cellWidth, cellHeight)
+    const pillWidth = Math.round(Math.min(cellWidth * 0.86, pillBase * 0.86))
+    const pillHeight = Math.max(20, Math.min(46, Math.round(pillBase * 0.52)))
+
+    return {
+      gap,
+      cellWidth,
+      cellHeight,
+      pillWidth,
+      pillHeight,
+      dayFontSize: Math.max(14, Math.min(30, Math.round(pillBase * 0.34))),
+      weekFontSize: Math.max(15, Math.min(28, Math.round(cellWidth * 0.34))),
+    }
+  }, [gridLayout.height, gridLayout.width, weekCount])
 
   return (
     <View style={styles.container}>
       <View style={styles.calendarContainer}>
-        {/* 요일 헤더 */}
-        <View style={[styles.weekRow, cellSize ? { gap: GRID_GAP } : null]}>
+        <View style={[styles.weekRow, layout.cellWidth ? { gap: layout.gap } : null]}>
           {weekDays.map((day) => (
             <Text
               key={day}
-              style={[styles.weekText, cellSize ? { width: cellSize } : null]}
+              style={[
+                styles.weekText,
+                layout.cellWidth
+                  ? {
+                      width: layout.cellWidth,
+                      fontSize: layout.weekFontSize,
+                    }
+                  : null,
+              ]}
             >
               {day}
             </Text>
           ))}
         </View>
 
-        {/* 날짜 그리드 */}
         <View
-          style={[styles.grid, cellSize ? { gap: GRID_GAP } : null]}
-          onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+          style={[styles.grid, layout.cellWidth ? { gap: layout.gap } : null]}
+          onLayout={(event) => {
+            const { width, height } = event.nativeEvent.layout
+            setGridLayout({ width, height })
+          }}
         >
           {Array.from({ length: totalCells }, (_, index) => {
             const date = index - firstDayOfWeek + 1
@@ -70,20 +111,30 @@ const MonthlyStatistics = ({ year, month, data, onSelectDate }: MonthlyStatistic
               return (
                 <View
                   key={`empty-${index}`}
-                  style={[styles.dayCell, cellSize ? { width: cellSize, height: cellSize } : null]}
+                  style={[
+                    styles.dayCell,
+                    layout.cellWidth
+                      ? { width: layout.cellWidth, height: layout.cellHeight }
+                      : null,
+                  ]}
                 >
                   <View
                     style={[
                       styles.dayBox,
                       styles.emptyBox,
-                      cellSize ? { borderRadius: Math.round(cellSize * 0.25) } : null,
+                      layout.cellWidth
+                        ? {
+                            width: layout.pillWidth,
+                            height: layout.pillHeight,
+                            borderRadius: Math.round(layout.pillHeight / 2),
+                          }
+                        : null,
                     ]}
                   />
                 </View>
               )
             }
 
-            // 현재 날짜 키 생성 (API 규격: yyyy-MM-dd)
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`
             const score = focusMap[dateStr]
             const bgColor = getColorByScore(score)
@@ -91,17 +142,34 @@ const MonthlyStatistics = ({ year, month, data, onSelectDate }: MonthlyStatistic
             return (
               <View
                 key={date}
-                style={[styles.dayCell, cellSize ? { width: cellSize, height: cellSize } : null]}
+                style={[
+                  styles.dayCell,
+                  layout.cellWidth
+                    ? { width: layout.cellWidth, height: layout.cellHeight }
+                    : null,
+                ]}
               >
                 <Pressable
                   style={[
                     styles.dayBox,
                     { backgroundColor: bgColor },
-                    cellSize ? { borderRadius: Math.round(cellSize * 0.25) } : null,
+                    layout.cellWidth
+                      ? {
+                          width: layout.pillWidth,
+                          height: layout.pillHeight,
+                          borderRadius: Math.round(layout.pillHeight / 2),
+                        }
+                      : null,
                   ]}
                   onPress={() => onSelectDate(dateStr)}
                 >
-                  <Text style={[styles.dayText, score > 70 && styles.highScoreText]}>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      layout.cellWidth ? { fontSize: layout.dayFontSize } : null,
+                      score > 70 && styles.highScoreText,
+                    ]}
+                  >
                     {date}
                   </Text>
                 </Pressable>
@@ -111,11 +179,11 @@ const MonthlyStatistics = ({ year, month, data, onSelectDate }: MonthlyStatistic
         </View>
 
         <View style={styles.legend}>
-          <Text style={styles.legendText}>낮음</Text>
+          <Text style={styles.legendText}>{'\uB0AE\uC74C'}</Text>
           <View style={[styles.legendColor, { backgroundColor: '#E6C85C' }]} />
           <View style={[styles.legendColor, { backgroundColor: '#9DB27C' }]} />
           <View style={[styles.legendColor, { backgroundColor: '#4F6F3A' }]} />
-          <Text style={styles.legendText}>높음</Text>
+          <Text style={styles.legendText}>{'\uB192\uC74C'}</Text>
         </View>
       </View>
     </View>
@@ -125,20 +193,78 @@ const MonthlyStatistics = ({ year, month, data, onSelectDate }: MonthlyStatistic
 export default MonthlyStatistics
 
 const styles = StyleSheet.create({
-  container: { paddingBottom: 10, alignItems: 'center', width: '100%', flexGrow: 1, flex: 1 },
-  calendarContainer: {
-    borderWidth: 2, borderColor: '#3A2E1F', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 12,
-    backgroundColor: '#F7F3E6', marginTop: 12, width: '100%', alignSelf: 'stretch', flexGrow: 1, flex: 1,
+  container: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    paddingBottom: 10,
+    minHeight: 0,
   },
-  weekRow: { flexDirection: 'row', marginBottom: WEEK_ROW_MARGIN_BOTTOM, justifyContent: 'flex-start' },
-  weekText: { textAlign: 'center', fontWeight: '600', fontSize: 18 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
-  dayCell: { padding: 17, marginBottom: -88 },
-  dayBox: { width: '90%', height: '40%', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  emptyBox: { backgroundColor: '#D9D9D9' },
-  dayText: { fontWeight: '700', color: '#1F2A1F' },
-  highScoreText: { color: '#FFFFFF' },
-  legend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: LEGEND_MARGIN_TOP },
-  legendColor: { width: 50, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 15, fontWeight: '600', color: '#555' },
+  calendarContainer: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+    marginTop: 12,
+    borderWidth: 2,
+    borderColor: '#3A2E1F',
+    borderRadius: 16,
+    backgroundColor: '#F7F3E6',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    minHeight: 0,
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginBottom: 10,
+  },
+  weekText: {
+    textAlign: 'center',
+    fontWeight: '700',
+    color: '#1F1F1F',
+  },
+  grid: {
+    flex: 1,
+    minHeight: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    alignContent: 'flex-start',
+  },
+  dayCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayBox: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyBox: {
+    backgroundColor: '#D9D9D9',
+  },
+  dayText: {
+    fontWeight: '700',
+    color: '#1F2A1F',
+  },
+  highScoreText: {
+    color: '#FFFFFF',
+  },
+  legend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginTop: 10,
+    paddingBottom: 2,
+  },
+  legendColor: {
+    width: 50,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#555',
+  },
 })
