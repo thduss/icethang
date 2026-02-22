@@ -51,7 +51,7 @@
 <table>
     <tr>
         <td width="33%" align="center"> <a href="https://github.com/thduss">
-            <img src="./readme-assets/soyeon_kim.jpg" width="160px" /> <br> 김소연 <br>(Backend & DevOps & Leader) </a> <br></td>
+            <img src="./readme-assets/soyeon_kim.png" width="160px" /> <br> 김소연 <br>(Backend & DevOps & Leader) </a> <br></td>
         <td width="33%" align="center"> <a href="https://github.com/theundergroundt">
             <img src="./readme-assets/sangji_kim.jpg" width="160px" /> <br> 김상지 <br>(Backend & JiraOps) </a> <br></td>
         <td width="33%" align="center"> <a href="https://github.com/sehyeon262">
@@ -132,7 +132,7 @@
 
 |    **구분**    |                                                       **파일**                                                        | **용량** |                       **설명**                       |
 | :------------: | :-------------------------------------------------------------------------------------------------------------------: | :------: | :--------------------------------------------------: |
-| 📱 Android App |     [icethang.apk](https://drive.google.com/file/d/1lT7qeTpIp3ij1IIns72Zh2-i9saZs1YP/view?usp=drive_link)      | 204.2 MB |            Android 설치 패키지 (APK)             |
+| 📱 Android App |     [icethang.apk](https://drive.google.com/file/d/1Opf2AkC9Zqgd-QuibJGMWFg2XSJc5y9P/view?usp=drive_link)      | 32 KB |            Android 설치 패키지 (APK)             |
 |   🤖 AI Model    |        [face_landmarker.tflite](https://drive.google.com/file/d/1po5cS7FCgX4DeItQsja_TTWwlYCIy43T/view?usp=sharing)         | 178.7 MB |    집중도 분석 모델 가중치 <br>   |
 
 </div><br>
@@ -298,27 +298,27 @@
 
 <table>
   <tbody align="center"> 
-    <tr> <th style="text-align: center"> 데스크톱 앱 다운로드 </th> <th style="text-align: center"> 회원가입 </th> </tr>
-    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/desktop_app_download.gif"/></td> 
-        <td width="50%"><img width="100%" src="./readme-assets/demostration/sign_up.gif"/></td> </tr> </tbody>
+    <tr> <th style="text-align: center"> [선생님 화면] 수업 시작 </th> <th style="text-align: center"> [학생 화면] 수업 시작 </th> </tr>
+    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/class_start_teacher.gif"/></td> 
+        <td width="50%"><img width="100%" src="./readme-assets/demostration/class_start_student.gif"/></td> </tr> </tbody>
   <tbody align="center"> 
-    <tr> <th style="text-align: center"> 일반 사용자 튜토리얼 </th> <th style="text-align: center"> 구화 사용자 튜토리얼 </th> </tr>
-    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/tutorial_common_user.gif"/></td>
-    <td width="50%"><img width="100%" src="./readme-assets/demostration/tutorial_lip_reading_user.gif"/></td> </tr> </tbody>
+    <tr> <th style="text-align: center"> [선생님 화면] 이탈 알림 </th> <th style="text-align: center"> [학생 화면] 이탈 알림 </th> </tr>
+    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/alter_teacher.gif"/></td>
+    <td width="50%"><img width="100%" src="./readme-assets/demostration/alter_student.gif"/></td> </tr> </tbody>
   <tbody align="center"> 
-    <tr> <th style="text-align: center"> 마이페이지 </th> <th style="text-align: center"> 대기방 생성 </th> </tr>
-    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/mypage.gif"/></td>
-    <td width="50%"><img width="100%" src="./readme-assets/demostration/meeting_room_creating.gif"/></td> </tr>
+    <tr> <th style="text-align: center"> [선생님 화면] 발표&화장실 알림 </th> <th style="text-align: center"> [학생 화면] 발표&화장실 알림 </th> </tr>
+    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/stop_alter_teacher.gif"/></td>
+    <td width="50%"><img width="100%" src="./readme-assets/demostration/stop_alter_student.gif"/></td> </tr>
   </tbody>
   <tbody align="center"> 
-    <tr> <th style="text-align: center"> 대기방 채팅 </th> <th style="text-align: center"> 대기방 설정 </th> </tr>
-    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/chat.gif"/></td>
-    <td width="50%"><img width="100%" src="./readme-assets/demostration/meeting_room_setting.gif"/></td> </tr>
+    <tr> <th style="text-align: center"> [선생님 화면] 수업 종료 </th> <th style="text-align: center"> [학생 화면] 수업 종료 </th> </tr>
+    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/finish_teacher.gif"/></td>
+    <td width="50%"><img width="100%" src="./readme-assets/demostration/finish_student.gif"/></td> </tr>
   </tbody>
   <tbody align="center"> 
-    <tr> <th style="text-align: center"> 통계 대시보드 </th> <th style="text-align: center"> 통계 대시보드 </th> </tr>
-    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/live_room_common_user.gif"/></td>
-    <td width="50%"><img width="100%" src="./readme-assets/demostration/live_room_lip_reading_user.gif"/></td> </tr>
+    <tr> <th style="text-align: center"> [선생님 화면] 경험치 수정 </th> <th style="text-align: center"> [선생님 화면] 통계 대시보드 </th> </tr>
+    <tr> <td width="50%"><img width="100%" src="./readme-assets/demostration/edit_xp_teacher.gif"/></td>
+    <td width="50%"><img width="100%" src="./readme-assets/demostration/statistics_teacher.gif"/></td> </tr>
   </tbody>
 </table>
 </div>
